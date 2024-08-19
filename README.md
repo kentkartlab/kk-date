@@ -11,51 +11,63 @@ It's easy to use kk-date to parse, validate, manipulate, and display dates and t
 ### Examples:
 #### format:
 ```javascript
-new kk_date('2024-01-01 23:00:00').format('YYYY-MM-DD') // 2024-01-01
+new kk_date('2024-01-01 23:00:00').format('YYYY-MM-DD')
+// 2024-01-01
 ```
 #### format:
 ```javascript
-new kk_date('2024-01-01 23:00:00').format('HH:mm:ss') // 23:00:00
+new kk_date('2024-01-01 23:00:00').format('HH:mm:ss')
+// 23:00:00
 ```
 #### format:
 ```javascript
-new kk_date('2024-01-01 23:00:00').format('YYYY-MM-DD HH:mm:ss') // 2024-01-01 23:00:00
+new kk_date('2024-01-01 23:00:00').format('YYYY-MM-DD HH:mm:ss')
+// 2024-01-01 23:00:00
 ```
 #### add:
 ```javascript
-new kk_date('2024-01-01').add(1, 'days').format('YYYY-MM-DD') // 2024-01-02
+new kk_date('2024-01-01').add(1, 'days').format('YYYY-MM-DD')
+// 2024-01-02
 ```
 #### add (subtract):
 ```javascript
-new kk_date('2024-01-05').add(-1, 'days').format('YYYY-MM-DD') // 2024-01-04
+new kk_date('2024-01-05').add(-1, 'days').format('YYYY-MM-DD')
+// 2024-01-04
 ```
 #### diff:
 ```javascript
-new kk_date('2024-07-19').diff('2024-09-19', 'months') // 2
+new kk_date('2024-07-19').diff('2024-09-19', 'months')
+// 2
 ```
 #### diff_range:
 ```javascript
-new kk_date('2024-07-19').diff_range('2024-09-19', 'months') // [ '2024-07-19', '2024-08-18', '2024-09-18' ]
+new kk_date('2024-07-19').diff_range('2024-09-19', 'months')
+// [ '2024-07-19', '2024-08-18', '2024-09-18' ]
 ```
 #### isBefore:
 ```javascript
-new kk_date('2024-09-19').isBefore('2024-09-20') // true
+new kk_date('2024-09-19').isBefore('2024-09-20')
+// true
 ```
 #### isAfter:
 ```javascript
-new kk_date('2024-09-19').isAfter('2024-09-20') // false
+new kk_date('2024-09-19').isAfter('2024-09-20')
+// false
 ```
 #### isSameOrAfter:
 ```javascript
-new kk_date('2024-09-19 18:00:00').isSameOrAfter('2024-09-19 18:01:00') // false
+new kk_date('2024-09-19 18:00:00').isSameOrAfter('2024-09-19 18:01:00')
+// false
 ```
 #### isSameOrAfter:
 ```javascript
-new kk_date('2024-09-19 18:00:00').isSame('2024-09-19 18:00:00') // true
+new kk_date('2024-09-19 18:00:00').isSame('2024-09-19 18:00:00')
+// true
 ```
 #### isBetween:
 ```javascript
-new kk_date('2024-09-19 18:00:00').isBetween('2024-09-19 12:00:00', '2024-09-19 19:00:00') // true
+new kk_date('2024-09-19 18:00:00').isBetween('2024-09-19 12:00:00', '2024-09-19 19:00:00')
+// true
 ```
 
 #### Others:
