@@ -59,7 +59,7 @@ new kk_date('2024-09-19').isAfter('2024-09-20')
 new kk_date('2024-09-19 18:00:00').isSameOrAfter('2024-09-19 18:01:00')
 // false
 ```
-#### isSameOrAfter:
+#### isSame:
 ```javascript
 new kk_date('2024-09-19 18:00:00').isSame('2024-09-19 18:00:00')
 // true
