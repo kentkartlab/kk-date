@@ -1,4 +1,50 @@
 
+# kk-date
+
+kk-date is a fastest JavaScript library that parses, validations, manipulates, and displays dates and times. If you use Moment.js or Day.js already you can easily use kk-date.
+
+## Install 
+
+
+```bash 
+npm install kk-date
+```
+## Performance
+
+#### if the same function is called 400k times.
+
+```console
+date: '23:50:55' expected format: YYYY-MM-DD HH:mm:ss
+```
+
+| Package | ms   |
+| :-------- | :------------------------- |
+| kk-date | 446.264ms | WIN!
+| moment | 933.953ms |
+| day.js | 1267ms |
+
+```console
+date: '2024-09-17 23:50:55' expected format: HH:mm:ss
+```
+
+| Package | ms   |
+| :-------- | :------------------------- |
+| kk-date | 111.182ms | WIN!
+| day.js | 588.194ms |
+| moment | 1760ms |
+
+```console
+diff 2024-01-01 - 2024-01-30
+```
+
+| Package | ms   |
+| :-------- | :------------------------- |
+| kk-date | 127.343ms | WIN!
+| day.js | 313.93ms |
+| moment | 1806ms |
+
+
+
 ## API
 It's easy to use kk-date to parse, validate, manipulate, and display dates and times.
 
@@ -114,4 +160,15 @@ DD.MM.YYYY HH:mm
 dddd
 HH:mm:ss
 HH:mm
+```
+
+#### .add() supported types:
+
+```console
+seconds
+minutes
+hours
+days
+months
+years
 ```
