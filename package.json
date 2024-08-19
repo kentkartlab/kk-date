@@ -1,0 +1,32 @@
+{
+	"name": "kk-date",
+	"version": "1.0.0",
+	"description": "kk-date is a fastest JavaScript library that parses, validations, manipulates, and displays dates and times. If you use Moment.js or Day.js already you can easily use kk-date.",
+	"main": "index.js",
+	"scripts": {
+		"test": "jest"
+	},
+	"author": "kentkartlabs",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/kentkartlab/kk-date.git"
+	},
+	"keywords": [
+		"kk-date",
+		"date",
+		"time",
+		"parse",
+		"format",
+		"validate",
+		"moment",
+		"dayjs",
+		"diff date",
+		"date range",
+		"diff range"
+	],
+	"bugs": {
+		"url": "https://github.com/kentkartlab/kk-date/issues"
+	},
+	"homepage": "https://github.com/kentkartlab/kk-date#readme"
+}
