@@ -45,21 +45,24 @@ class KkDate {
 			} else if (stringed_date_length > 10) {
 				this.date = new Date(date);
 			}
+			this.date_string = this.date.toISOString();
 		} else if (isKkDate(date)) {
-			this.date_string = `${this.date}`;
 			this.date = date.date;
-			this.date_string = `${date.date}`;
+			this.date_string = this.date.toISOString();
+		} else if (date instanceof Date) {
+			this.date = date;
+			this.date_string = `${this.date.toString()}`;
 		} else {
 			if (!date) {
 				this.date = new Date();
-				this.date_string = `${this.date}`;
+				this.date_string = this.date.toISOString();
+			} else if (isValid(date, format_types['HH:mm:ss']) || isValid(date, format_types['HH:mm'])) {
+				this.date = new Date(`${new Date().toISOString().split('T')[0]} ${date}`);
+				this.date_string = this.date.toISOString();
 			} else {
 				this.date = new Date(`${date}`);
-				this.date_string = `${date}`;
-			}
-			if (Number.isNaN(this.date.getTime())) {
-				if (isValid(this.date_string, format_types['HH:mm:ss']) || isValid(this.date_string, format_types['HH:mm'])) {
-					this.date = new Date(`${new Date().toISOString().split('T')[0]} ${this.date_string}`);
+				if (Number.isNaN(this.date.getTime()) === false) {
+					this.date_string = this.date.toISOString();
 				} else {
 					this.date = false;
 				}
@@ -68,68 +71,68 @@ class KkDate {
 	}
 
 	/**
+	 * returns native Date getTime value
+	 *
+	 * @returns {number|Error}
+	 */
+	getTime() {
+		isInvalid(this.date);
+		return this.date.getTime();
+	}
+
+	/**
 	 * isBefore
 	 *
 	 * @param {string|Date|KkDate} date - date/datetime/time
-	 * @returns {boolean}
+	 * @returns {boolean|Error}
 	 */
 	isBefore(date) {
-		const converted = isKkDate(date) ? date.date : new KkDate(date).date;
-		isInvalid(this.date);
-		isInvalid(converted);
-		return this.date.getTime() < converted.getTime();
+		const converted = isKkDate(date) ? date.getTime() : new KkDate(date).getTime();
+		return this.getTime() < converted;
 	}
 
 	/**
 	 * isSameOrBefore
 	 *
 	 * @param {string|Date|KkDate} date - date/datetime/time
-	 * @returns {boolean}
+	 * @returns {boolean|Error}
 	 */
 	isSameOrBefore(date) {
-		const converted = isKkDate(date) ? date.date : new KkDate(date).date;
-		isInvalid(this.date);
-		isInvalid(converted);
-		return this.date.getTime() <= converted.getTime();
+		const converted = isKkDate(date) ? date.getTime() : new KkDate(date).getTime();
+		return this.getTime() <= converted;
 	}
 
 	/**
 	 * isAfter
 	 *
 	 * @param {string|Date|KkDate} date - date/datetime/time
-	 * @returns {boolean}
+	 * @returns {boolean|Error}
 	 */
 	isAfter(date) {
-		const converted = isKkDate(date) ? date.date : new KkDate(date).date;
-		isInvalid(this.date);
-		isInvalid(converted);
-		return this.date.getTime() > converted.getTime();
+		const converted = isKkDate(date) ? date.getTime() : new KkDate(date).getTime();
+		return this.date.getTime() > converted;
 	}
 
 	/**
 	 * isSameOrAfter
 	 *
 	 * @param {string|Date|KkDate} date - date/datetime/time
-	 * @returns {boolean}
+	 * @returns {boolean|Error}
 	 */
 	isSameOrAfter(date) {
-		const converted = isKkDate(date) ? date.date : new KkDate(date).date;
-		isInvalid(this.date);
-		isInvalid(converted);
-		return this.date.getTime() >= converted.getTime();
+		const converted = isKkDate(date) ? date.getTime() : new KkDate(date).getTime();
+		return this.date.getTime() >= converted;
 	}
 
 	/**
 	 * isSame
 	 *
 	 * @param {string|Date|KkDate} date - date/datetime/time
-	 * @returns {boolean}
+	 * @returns {boolean|Error}
 	 */
 	isSame(date) {
-		const converted = isKkDate(date) ? date.date : new KkDate(date).date;
-		isInvalid(this.date);
-		isInvalid(converted);
-		return this.date.getTime() === converted.getTime();
+		const converted = isKkDate(date) ? date.getTime() : new KkDate(date).getTime();
+		return this.date.getTime() === converted;
 	}
 
 	/**
@@ -137,21 +140,19 @@ class KkDate {
 	 *
 	 * @param {string|Date|KkDate} date - date/datetime/time
 	 * @param {string|Date|KkDate} date - date/datetime/time
-	 * @returns {boolean}
+	 * @returns {boolean|Error}
 	 */
 	isBetween(start, end) {
-		const starts = isKkDate(start) ? start.date : new KkDate(start).date;
-		const ends = isKkDate(end) ? end.date : new KkDate(end).date;
-		isInvalid(this.date);
-		isInvalid(starts);
-		isInvalid(ends);
-		return this.date.getTime() >= starts.getTime() && this.date.getTime() <= ends.getTime();
+		const starts = isKkDate(start) ? start.getTime() : new KkDate(start).getTime();
+		const ends = isKkDate(end) ? end.getTime() : new KkDate(end).getTime();
+		const date_time = this.date.getTime();
+		return date_time >= starts && date_time <= ends;
 	}
 
 	/**
 	 * returns string of date
 	 *
-	 * @returns {string}
+	 * @returns {string|Error}
 	 */
 	toString() {
 		isInvalid(this.date);
@@ -161,7 +162,7 @@ class KkDate {
 	/**
 	 * The toDateString() method of Date instances returns a string representing the date portion of this date interpreted in the local timezone.
 	 * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toDateString
-	 * @returns {string}
+	 * @returns {string|Error}
 	 */
 	toDateString() {
 		isInvalid(this.date);
@@ -172,7 +173,7 @@ class KkDate {
 	 * The toISOString() method of Date instances returns a string representing this date in the date time string format, a simplified format based on ISO 8601, which is always 24 or 27 characters long (YYYY-MM-DDTHH:mm:ss.sssZ or ±YYYYYY-MM-DDTHH:mm:ss.sssZ, respectively). The timezone is always UTC, as denoted by the suffix Z.
 	 * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toISOString
 	 *
-	 * @returns {string}
+	 * @returns {string|Error}
 	 */
 	toISOString() {
 		isInvalid(this.date);
@@ -183,7 +184,7 @@ class KkDate {
 	 * The toJSON() method of Date instances returns a string representing this date in the same ISO format as toISOString().
 	 * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toJSON
 	 *
-	 * @returns {Object}
+	 * @returns {Object|Error}
 	 */
 	toJSON() {
 		isInvalid(this.date);
@@ -194,9 +195,10 @@ class KkDate {
 	 * The toUTCString() method of Date instances returns a string representing this date in the RFC 7231 format, with negative years allowed. The timezone is always UTC. toGMTString() is an alias of this method.
 	 * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toUTCString
 	 *
-	 * @returns {string}
+	 * @returns {string|Error}
 	 */
 	toUTCString() {
+		isInvalid(this.date);
 		return this.date.toUTCString();
 	}
 
@@ -206,9 +208,10 @@ class KkDate {
 	 *
 	 * @param {*} locales
 	 * @param {*} options
-	 * @returns {string}
+	 * @returns {string|Error}
 	 */
 	toLocaleDateString(locales, options) {
+		isInvalid(this.date);
 		return this.date.toLocaleDateString(locales, options);
 	}
 
@@ -218,9 +221,10 @@ class KkDate {
 	 *
 	 * @param {*} locales
 	 * @param {*} options
-	 * @returns
+	 * @returns {string|Error}
 	 */
 	toLocaleString(locales, options) {
+		isInvalid(this.date);
 		return this.date.toLocaleString(locales, options);
 	}
 
@@ -230,9 +234,10 @@ class KkDate {
 	 *
 	 * @param {*} locales
 	 * @param {*} options
-	 * @returns
+	 * @returns {string|Error}
 	 */
 	toLocaleTimeString(locales, options) {
+		isInvalid(this.date);
 		return this.date.toLocaleTimeString(locales, options);
 	}
 
@@ -240,7 +245,7 @@ class KkDate {
 	 * The toTimeString() method of Date instances returns a string representing the time portion of this date interpreted in the local timezone.
 	 * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toTimeString
 	 *
-	 * @returns {string}
+	 * @returns {string|Error}
 	 */
 	toTimeString() {
 		isInvalid(this.date);
@@ -251,7 +256,7 @@ class KkDate {
 	 * The valueOf() method of Date instances returns the number of milliseconds for this date since the epoch, which is defined as the midnight at the beginning of January 1, 1970, UTC.
 	 * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/valueOf
 	 *
-	 * @returns {number|NaN}
+	 * @returns {number|Error}
 	 */
 	valueOf() {
 		isInvalid(this.date);
@@ -263,7 +268,7 @@ class KkDate {
 	 *
 	 * @param {number} amount
 	 * @param {'seconds'|'minutes'|'hours'|'days'|'months'|'years'} type - The unit of time type
-	 * @returns {KkDate}
+	 * @returns {KkDate|Error}
 	 */
 	add(amount, type) {
 		isInvalid(this.date);
@@ -302,10 +307,10 @@ class KkDate {
 	 * @param {string|Date|KkDate} end
 	 * @param {'seconds'|'minutes'|'hours'|'days'|'months'|'years'} type - The unit of time type
 	 * @param {boolean} is_decimal
-	 * @returns {number}
+	 * @returns {number|Error}
 	 */
 	diff(end, type, is_decimal = false) {
-		return diff(this, end, type, is_decimal).diffTime;
+		return diff(this, end, type, is_decimal, true);
 	}
 
 	/**
@@ -314,7 +319,7 @@ class KkDate {
 	 * @param {string|Date|KkDate} end
 	 * @param {'seconds'|'minutes'|'hours'|'days'|'months'|'years'} type - The unit of time type
 	 * @param {*} template
-	 * @returns {Array}
+	 * @returns {Array|Error}
 	 */
 	diff_range(end, type, template = 'YYYY-MM-DD') {
 		const diffed = diff(this, end, type);
@@ -332,7 +337,7 @@ class KkDate {
 	 *
 	 * @param {string} separator [separator=' '] - The separator used to join the formatted date parts.
 	 * @param  {...any} template
-	 * @returns {string}
+	 * @returns {string|Error}
 	 */
 	format_c(separator = ' ', ...template) {
 		isInvalid(this.date);
@@ -347,7 +352,7 @@ class KkDate {
 	 * basic formatter
 	 *
 	 * @param {string} template
-	 * @returns {string}
+	 * @returns {string|Error}
 	 */
 	format(template) {
 		isInvalid(this.date);
@@ -372,7 +377,7 @@ class KkDate {
 	/**
 	 * returns native Date Object
 	 *
-	 * @returns {Date}
+	 * @returns {Date|Error}
 	 */
 	getDate() {
 		isInvalid(this.date);
@@ -391,7 +396,6 @@ function isInvalid(date) {
 			throw new Error('Invalid Date');
 		}
 	} catch (error) {
-		console.error(error);
 		throw new Error('Invalid Date');
 	}
 	return true;
@@ -414,7 +418,7 @@ function isKkDate(value = {}) {
  *
  * @param {KkDate|Date} date
  * @param {string} template
- * @returns
+ * @returns {string|Error}
  */
 function format(date, template) {
 	switch (template) {
@@ -467,20 +471,16 @@ function absFloor(number) {
  * @param {boolean} is_decimal
  * @returns {object}
  */
-function diff(start, end, type, is_decimal = false) {
-	const startDate = start.date;
-	isInvalid(startDate);
+function diff(start, end, type, is_decimal = false, turn_difftime = false) {
+	const startDate = start.getDate();
 	const endDate = new KkDate(end).getDate();
-	if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
-		throw new Error('invalid date check start or end');
-	}
 	let type_value = null;
 	switch (type) {
-		case 'minutes':
-			type_value = 60;
-			break;
 		case 'seconds':
 			type_value = 1;
+			break;
+		case 'minutes':
+			type_value = 60;
 			break;
 		case 'hours':
 			type_value = 3600;
@@ -498,6 +498,9 @@ function diff(start, end, type, is_decimal = false) {
 			throw new Error('invalid type for diff');
 	}
 	const diffTime_value = (endDate - startDate) / 1000 / type_value;
+	if (turn_difftime) {
+		return is_decimal ? diffTime_value : absFloor(diffTime_value);
+	}
 	return {
 		start,
 		type_value,

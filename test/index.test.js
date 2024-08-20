@@ -24,4 +24,19 @@ test('GENERAL TEST', () => {
 	expect(new kk_date(timestamp).format('dddd')).toBe('monday');
 	expect(new kk_date(timestamp).format('YYYY-MM-DD')).toBe(`${test_date}`);
 	expect(new kk_date(timestamp).format('YYYY-MM-DD HH:mm:ss')).toBe(`${test_date} ${test_time}`);
+	expect(new kk_date(`${test_date} ${test_time}`).isAfter('2024-08-18')).toBe(true);
+	expect(new kk_date(`${test_date} ${test_time}`).isSameOrAfter('2024-08-18')).toBe(true);
+	expect(new kk_date(`${test_date} ${test_time}`).isBefore('2024-08-20')).toBe(true);
+	expect(new kk_date(`${test_date} ${test_time}`).isBetween('2024-08-19', '2024-08-19 23:51')).toBe(true);
+	expect(new kk_date(`${test_date} ${test_time}`).isValid()).toBe(true);
+	expect(new kk_date(`${test_date} ${test_time}`).isSame(`${test_date} ${test_time}`)).toBe(true);
+	expect(() => {
+		new kk_date('asfasf1231231231asdasd').getDate();
+	}).toThrow('Invalid Date');
+	expect(() => {
+		new kk_date(new Date('123123asdsad21231')).getDate();
+	}).toThrow('Invalid Date');
+	expect(() => {
+		new kk_date(`${test_date} ${test_time}`).isSame('123123assadfa21312s');
+	}).toThrow('Invalid Date');
 });
