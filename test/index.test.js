@@ -3,6 +3,7 @@ const kk_date = require('../index');
 test('GENERAL TEST', () => {
 	const test_date = '2024-08-19';
 	const test_time = '23:50:59';
+	const timestamp = 1724100659;
 
 	// Checking time parse and format with time;
 	expect(new kk_date(`${test_time}`).format('HH:mm:ss')).toBe(`${test_time}`);
@@ -20,4 +21,7 @@ test('GENERAL TEST', () => {
 	expect(new kk_date(`${test_date} ${test_time}`).format_c(' ', 'YYYY', 'MM', 'DD', 'HH:mm:ss')).toBe('2024 08 19 23:50:59');
 	expect(new kk_date(`${test_date} ${test_time}`).format_c(' ', 'YYYY', 'MM', 'dddd', 'HH:mm:ss')).toBe('2024 08 monday 23:50:59');
 	expect(new kk_date(`${test_date} ${test_time}`).format('dddd')).toBe('monday');
+	expect(new kk_date(timestamp).format('dddd')).toBe('monday');
+	expect(new kk_date(timestamp).format('YYYY-MM-DD')).toBe(`${test_date}`);
+	expect(new kk_date(timestamp).format('YYYY-MM-DD HH:mm:ss')).toBe(`${test_date} ${test_time}`);
 });

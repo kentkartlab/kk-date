@@ -28,24 +28,24 @@ const format_types_regex = {
 };
 
 /**
- * @newDate method
+ * @kkDate method
  */
-class newDate {
+class KkDate {
 	/**
 	 *
-	 * @param {string|Date|newDate} date - date/datetime/time
+	 * @param {string|Date|KkDate} date - date/datetime/time
 	 */
 	constructor(date = null) {
 		this.date = null;
 		this.date_string = null;
-		if (isNewDate(date)) {
+		if (isKkDate(date)) {
 			this.date = date.date;
 			this.date_string = `${date.date}`;
-		} else if (typeof date === 'number') {
-			const stringed_date = `${date}`;
-			if (stringed_date.length <= 10) {
+		} else if (Number.isFinite(date)) {
+			const stringed_date_length = `${date}`.length;
+			if (stringed_date_length <= 10) {
 				this.date = new Date(date * 1000);
-			} else if (stringed_date.length > 10) {
+			} else if (stringed_date_length > 10) {
 				this.date = new Date(date);
 			}
 			this.date_string = `${this.date}`;
@@ -61,7 +61,7 @@ class newDate {
 				if (isValid(this.date_string, format_types['HH:mm:ss']) || isValid(this.date_string, format_types['HH:mm'])) {
 					this.date = new Date(`${new Date().toISOString().split('T')[0]} ${this.date_string}`);
 				} else {
-					throw new Error('Invalid Date');
+					this.date = false;
 				}
 			}
 		}
@@ -70,68 +70,81 @@ class newDate {
 	/**
 	 * isBefore
 	 *
-	 * @param {string|Date|newDate} date - date/datetime/time
+	 * @param {string|Date|KkDate} date - date/datetime/time
 	 * @returns {boolean}
 	 */
 	isBefore(date) {
-		const converted = isNewDate(date) ? date.date : new newDate(date).date;
+		const converted = isKkDate(date) ? date.date : new KkDate(date).date;
+		isInvalid(this.date);
+		isInvalid(converted);
 		return this.date.getTime() < converted.getTime();
 	}
 
 	/**
 	 * isSameOrBefore
 	 *
-	 * @param {string|Date|newDate} date - date/datetime/time
+	 * @param {string|Date|KkDate} date - date/datetime/time
 	 * @returns {boolean}
 	 */
 	isSameOrBefore(date) {
-		const converted = isNewDate(date) ? date.date : new newDate(date).date;
+		const converted = isKkDate(date) ? date.date : new KkDate(date).date;
+		isInvalid(this.date);
+		isInvalid(converted);
 		return this.date.getTime() <= converted.getTime();
 	}
 
 	/**
 	 * isAfter
 	 *
-	 * @param {string|Date|newDate} date - date/datetime/time
+	 * @param {string|Date|KkDate} date - date/datetime/time
 	 * @returns {boolean}
 	 */
 	isAfter(date) {
-		const converted = isNewDate(date) ? date.date : new newDate(date).date;
+		const converted = isKkDate(date) ? date.date : new KkDate(date).date;
+		isInvalid(this.date);
+		isInvalid(converted);
 		return this.date.getTime() > converted.getTime();
 	}
 
 	/**
 	 * isSameOrAfter
 	 *
-	 * @param {string|Date|newDate} date - date/datetime/time
+	 * @param {string|Date|KkDate} date - date/datetime/time
 	 * @returns {boolean}
 	 */
 	isSameOrAfter(date) {
-		const converted = isNewDate(date) ? date.date : new newDate(date).date;
+		const converted = isKkDate(date) ? date.date : new KkDate(date).date;
+		isInvalid(this.date);
+		isInvalid(converted);
 		return this.date.getTime() >= converted.getTime();
 	}
 
 	/**
 	 * isSame
 	 *
-	 * @param {string|Date|newDate} date - date/datetime/time
+	 * @param {string|Date|KkDate} date - date/datetime/time
 	 * @returns {boolean}
 	 */
 	isSame(date) {
-		const converted = isNewDate(date) ? date.date : new newDate(date).date;
+		const converted = isKkDate(date) ? date.date : new KkDate(date).date;
+		isInvalid(this.date);
+		isInvalid(converted);
 		return this.date.getTime() === converted.getTime();
 	}
 
 	/**
 	 * isBetween
 	 *
-	 * @param {string|Date|newDate} date - date/datetime/time
-	 * @param {string|Date|newDate} date - date/datetime/time
+	 * @param {string|Date|KkDate} date - date/datetime/time
+	 * @param {string|Date|KkDate} date - date/datetime/time
 	 * @returns {boolean}
 	 */
 	isBetween(start, end) {
-		const starts = isNewDate(start) ? start.date : new newDate(start).date;
-		const ends = isNewDate(end) ? end.date : new newDate(end).date;
+		const starts = isKkDate(start) ? start.date : new KkDate(start).date;
+		const ends = isKkDate(end) ? end.date : new KkDate(end).date;
+		isInvalid(this.date);
+		isInvalid(starts);
+		isInvalid(ends);
 		return this.date.getTime() >= starts.getTime() && this.date.getTime() <= ends.getTime();
 	}
 
@@ -141,6 +154,7 @@ class newDate {
 	 * @returns {string}
 	 */
 	toString() {
+		isInvalid(this.date);
 		return this.date.toString();
 	}
 
@@ -150,6 +164,7 @@ class newDate {
 	 * @returns {string}
 	 */
 	toDateString() {
+		isInvalid(this.date);
 		return this.date.toDateString();
 	}
 
@@ -160,6 +175,7 @@ class newDate {
 	 * @returns {string}
 	 */
 	toISOString() {
+		isInvalid(this.date);
 		return this.date.toISOString();
 	}
 
@@ -170,6 +186,7 @@ class newDate {
 	 * @returns {Object}
 	 */
 	toJSON() {
+		isInvalid(this.date);
 		return this.date.toJSON();
 	}
 
@@ -226,6 +243,7 @@ class newDate {
 	 * @returns {string}
 	 */
 	toTimeString() {
+		isInvalid(this.date);
 		return this.date.toTimeString();
 	}
 
@@ -236,6 +254,7 @@ class newDate {
 	 * @returns {number|NaN}
 	 */
 	valueOf() {
+		isInvalid(this.date);
 		return this.date.valueOf();
 	}
 
@@ -244,9 +263,10 @@ class newDate {
 	 *
 	 * @param {number} amount
 	 * @param {'seconds'|'minutes'|'hours'|'days'|'months'|'years'} type - The unit of time type
-	 * @returns {newDate}
+	 * @returns {KkDate}
 	 */
 	add(amount, type) {
+		isInvalid(this.date);
 		if (typeof amount !== 'number') {
 			throw new Error('amount is not number !');
 		}
@@ -278,8 +298,8 @@ class newDate {
 	}
 	/**
 	 *
-	 * @param {string|Date|newDate} start
-	 * @param {string|Date|newDate} end
+	 * @param {string|Date|KkDate} start
+	 * @param {string|Date|KkDate} end
 	 * @param {'seconds'|'minutes'|'hours'|'days'|'months'|'years'} type - The unit of time type
 	 * @param {boolean} is_decimal
 	 * @returns {number}
@@ -290,8 +310,8 @@ class newDate {
 
 	/**
 	 *
-	 * @param {string|Date|newDate} start
-	 * @param {string|Date|newDate} end
+	 * @param {string|Date|KkDate} start
+	 * @param {string|Date|KkDate} end
 	 * @param {'seconds'|'minutes'|'hours'|'days'|'months'|'years'} type - The unit of time type
 	 * @param {*} template
 	 * @returns {Array}
@@ -303,7 +323,7 @@ class newDate {
 		for (let index = 1; index < diffed.diffTime + 1; index++) {
 			const date = new Date(diffed.start.date);
 			date.setSeconds(diffed.start.date.getSeconds() + diffed.type_value * index);
-			rangeDates.push(format(new newDate(date), template));
+			rangeDates.push(format(new KkDate(date), template));
 		}
 		return rangeDates;
 	}
@@ -315,6 +335,7 @@ class newDate {
 	 * @returns {string}
 	 */
 	format_c(separator = ' ', ...template) {
+		isInvalid(this.date);
 		const result = [];
 		for (let index = 0; index < template.length; index++) {
 			result.push(formatter(this.date, template[index]));
@@ -329,18 +350,61 @@ class newDate {
 	 * @returns {string}
 	 */
 	format(template) {
+		isInvalid(this.date);
 		return format(this, template);
+	}
+
+	/**
+	 * returns boolean about invalid date or not
+	 * if invalid will be turn false
+	 *
+	 * @returns {boolean}
+	 */
+	isValid() {
+		try {
+			isInvalid(this.date);
+		} catch (error) {
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	 * returns native Date Object
+	 *
+	 * @returns {Date}
+	 */
+	getDate() {
+		isInvalid(this.date);
+		return this.date;
 	}
 }
 
 /**
- * isNewDate
  *
- * @param {newDate} value
+ * @param {KkDate.date|Date} date
+ * @returns
+ */
+function isInvalid(date) {
+	try {
+		if (!date || Number.isNaN(date.valueOf())) {
+			throw new Error('Invalid Date');
+		}
+	} catch (error) {
+		console.error(error);
+		throw new Error('Invalid Date');
+	}
+	return true;
+}
+
+/**
+ * isKkDate
+ *
+ * @param {KkDate} value
  * @returns {boolean}
  */
-function isNewDate(value = {}) {
-	if (value instanceof newDate) {
+function isKkDate(value = {}) {
+	if (value instanceof KkDate) {
 		return true;
 	}
 	return false;
@@ -348,7 +412,7 @@ function isNewDate(value = {}) {
 
 /**
  *
- * @param {newDate|Date} date
+ * @param {KkDate|Date} date
  * @param {string} template
  * @returns
  */
@@ -397,15 +461,16 @@ function absFloor(number) {
 
 /**
  *
- * @param {string|Date|newDate} start
- * @param {string|Date|newDate} end
+ * @param {string|Date|KkDate} start
+ * @param {string|Date|KkDate} end
  * @param {'seconds'|'minutes'|'hours'|'days'|'months'|'years'} type - The unit of time type
  * @param {boolean} is_decimal
  * @returns {object}
  */
 function diff(start, end, type, is_decimal = false) {
 	const startDate = start.date;
-	const endDate = new Date(new newDate(end).date);
+	isInvalid(startDate);
+	const endDate = new KkDate(end).getDate();
 	if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
 		throw new Error('invalid date check start or end');
 	}
@@ -448,57 +513,55 @@ function diff(start, end, type, is_decimal = false) {
  * @returns {string}
  */
 function formatter(orj_this, template) {
-	try {
-		const year = orj_this.getFullYear();
-		const month = String(orj_this.getMonth() + 1).padStart(2, '0'); // Aylar 0-11 arası olduğu için +1 ekliyoruz
-		const day = String(orj_this.getDate()).padStart(2, '0');
-		const minutes = String(orj_this.getMinutes()).padStart(2, '0');
-		const seconds = String(orj_this.getSeconds()).padStart(2, '0');
-		const hours = String(orj_this.getHours()).padStart(2, '0');
+	isInvalid(orj_this);
 
-		switch (template) {
-			case format_types.dddd:
-				return days[orj_this.getDay()];
-			case format_types.DD:
-				return day;
-			case format_types.MM:
-				return month;
-			case format_types['DD-MM-YYYY']:
-				return `${day}-${month}-${year}`;
-			case format_types['DD.MM.YYYY']:
-				return `${day}-${month}-${year}`;
-			case format_types['YYYY-MM-DD']:
-				return `${year}-${month}-${day}`;
-			case format_types['YYYY.MM.DD']:
-				return `${year}.${month}.${day}`;
-			case format_types.YYYY:
-				return `${year}`;
-			case format_types['HH:mm:ss']: {
-				return `${hours}:${minutes}:${seconds}`;
-			}
-			case format_types['HH:mm']: {
-				return `${hours}:${minutes}`;
-			}
-			case format_types.mm: {
-				return `${minutes}`;
-			}
-			case format_types.ss: {
-				return `${seconds}`;
-			}
-			case format_types.HH: {
-				return `${hours}`;
-			}
-			default:
-				throw new Error('template is not right (2)');
+	const year = orj_this.getFullYear();
+	const month = String(orj_this.getMonth() + 1).padStart(2, '0'); // Aylar 0-11 arası olduğu için +1 ekliyoruz
+	const day = String(orj_this.getDate()).padStart(2, '0');
+	const minutes = String(orj_this.getMinutes()).padStart(2, '0');
+	const seconds = String(orj_this.getSeconds()).padStart(2, '0');
+	const hours = String(orj_this.getHours()).padStart(2, '0');
+
+	switch (template) {
+		case format_types.dddd:
+			return days[orj_this.getDay()];
+		case format_types.DD:
+			return day;
+		case format_types.MM:
+			return month;
+		case format_types['DD-MM-YYYY']:
+			return `${day}-${month}-${year}`;
+		case format_types['DD.MM.YYYY']:
+			return `${day}-${month}-${year}`;
+		case format_types['YYYY-MM-DD']:
+			return `${year}-${month}-${day}`;
+		case format_types['YYYY.MM.DD']:
+			return `${year}.${month}.${day}`;
+		case format_types.YYYY:
+			return `${year}`;
+		case format_types['HH:mm:ss']: {
+			return `${hours}:${minutes}:${seconds}`;
 		}
-	} catch (error) {
-		throw new Error('Invalid Date');
+		case format_types['HH:mm']: {
+			return `${hours}:${minutes}`;
+		}
+		case format_types.mm: {
+			return `${minutes}`;
+		}
+		case format_types.ss: {
+			return `${seconds}`;
+		}
+		case format_types.HH: {
+			return `${hours}`;
+		}
+		default:
+			throw new Error('template is not right (2)');
 	}
 }
 
 /**
  *
- * @param {newDate.date_string} date_string
+ * @param {KkDate.date_string} date_string
  * @param {string} template
  * @returns {boolean}
  */
@@ -518,4 +581,4 @@ function isValid(date_string, template) {
 	return true;
 }
 
-module.exports = newDate;
+module.exports = KkDate;
