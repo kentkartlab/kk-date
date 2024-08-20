@@ -38,17 +38,17 @@ class KkDate {
 	constructor(date = null) {
 		this.date = null;
 		this.date_string = null;
-		if (isKkDate(date)) {
-			this.date = date.date;
-			this.date_string = `${date.date}`;
-		} else if (Number.isFinite(date)) {
+		if (Number.isFinite(date)) {
 			const stringed_date_length = `${date}`.length;
 			if (stringed_date_length <= 10) {
 				this.date = new Date(date * 1000);
 			} else if (stringed_date_length > 10) {
 				this.date = new Date(date);
 			}
+		} else if (isKkDate(date)) {
 			this.date_string = `${this.date}`;
+			this.date = date.date;
+			this.date_string = `${date.date}`;
 		} else {
 			if (!date) {
 				this.date = new Date();
