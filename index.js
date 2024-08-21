@@ -535,7 +535,7 @@ function formatter(orj_this, template) {
 		case format_types['DD-MM-YYYY']:
 			return `${day}-${month}-${year}`;
 		case format_types['DD.MM.YYYY']:
-			return `${day}-${month}-${year}`;
+			return `${day}.${month}.${year}`;
 		case format_types['YYYY-MM-DD']:
 			return `${year}-${month}-${day}`;
 		case format_types['YYYY.MM.DD']:
