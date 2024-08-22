@@ -38,33 +38,35 @@ class KkDate {
 	constructor(date = null) {
 		this.date = null;
 		this.date_string = null;
-		if (Number.isFinite(date)) {
-			const stringed_date_length = `${date}`.length;
-			if (stringed_date_length <= 10) {
-				this.date = new Date(date * 1000);
-			} else if (stringed_date_length > 10) {
-				this.date = new Date(date);
-			}
+		if (!date) {
+			this.date = new Date();
 			this.date_string = this.date.toISOString();
-		} else if (isKkDate(date)) {
-			this.date = date.date;
-			this.date_string = this.date.toISOString();
-		} else if (date instanceof Date) {
-			this.date = date;
-			this.date_string = `${this.date.toString()}`;
 		} else {
-			if (!date) {
-				this.date = new Date();
+			if (Number.isFinite(date)) {
+				const stringed_date_length = `${date}`.length;
+				if (stringed_date_length <= 10) {
+					this.date = new Date(date * 1000);
+				} else if (stringed_date_length > 10) {
+					this.date = new Date(date);
+				}
 				this.date_string = this.date.toISOString();
-			} else if (isValid(date, format_types['HH:mm:ss']) || isValid(date, format_types['HH:mm'])) {
-				this.date = new Date(`${new Date().toISOString().split('T')[0]} ${date}`);
+			} else if (isKkDate(date)) {
+				this.date = date.date;
 				this.date_string = this.date.toISOString();
+			} else if (date instanceof Date) {
+				this.date = date;
+				this.date_string = `${this.date.toString()}`;
 			} else {
-				this.date = new Date(`${date}`);
-				if (Number.isNaN(this.date.getTime()) === false) {
+				if (isValid(date, format_types['HH:mm:ss']) || isValid(date, format_types['HH:mm'])) {
+					this.date = new Date(`${new Date().toISOString().split('T')[0]} ${date}`);
 					this.date_string = this.date.toISOString();
 				} else {
-					this.date = false;
+					this.date = new Date(`${date}`);
+					if (Number.isNaN(this.date.getTime()) === false) {
+						this.date_string = this.date.toISOString();
+					} else {
+						this.date = false;
+					}
 				}
 			}
 		}
@@ -430,6 +432,8 @@ function format(date, template) {
 			return `${formatter(date.date, 'YYYY-MM-DD')} ${formatter(date.date, 'HH:mm')}`;
 		case 'YYYY-MM-DD':
 			return formatter(date.date, template);
+		case 'DD.MM.YYYY':
+			return formatter(date.date, template);
 		case 'YYYY.MM.DD HH:mm':
 			return `${formatter(date.date, 'YYYY.MM.DD')} ${formatter(date.date, 'HH:mm')}`;
 		case 'YYYY.MM.DD HH':
@@ -535,7 +539,7 @@ function formatter(orj_this, template) {
 		case format_types['DD-MM-YYYY']:
 			return `${day}-${month}-${year}`;
 		case format_types['DD.MM.YYYY']:
-			return `${day}-${month}-${year}`;
+			return `${day}.${month}.${year}`;
 		case format_types['YYYY-MM-DD']:
 			return `${year}-${month}-${day}`;
 		case format_types['YYYY.MM.DD']:
