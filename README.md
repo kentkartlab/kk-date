@@ -148,6 +148,7 @@ Whether you're building a lightweight application or need a reliable solution fo
 #### .format() supported templates:
 
 ```console
+YYYY-MM-DDTHH:mm:ss
 YYYY-MM-DD HH:mm:ss
 YYYY-MM-DD HH:mm
 YYYY-MM-DD HH
@@ -162,6 +163,8 @@ DD.MM.YYYY HH:mm
 dddd
 HH:mm:ss
 HH:mm
+x (Unix timestamps in seconds),
+X (Unix timestamps in milliseconds)
 ```
 
 #### .add() supported types:

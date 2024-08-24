@@ -24,6 +24,9 @@ test('GENERAL TEST', () => {
 	expect(new kk_date(`${test_date} ${test_time}`).format('dddd')).toBe('monday');
 	expect(new kk_date(timestamp).format('dddd')).toBe('monday');
 	expect(new kk_date(timestamp).format('YYYY-MM-DD')).toBe(`${test_date}`);
+	expect(new kk_date(timestamp).format('YYYY-MM-DDTHH:mm:ss')).toBe('2024-08-19T23:50:59');
+	expect(new kk_date(timestamp).format('X')).toBe(timestamp);
+	expect(new kk_date(timestamp).format('x')).toBe(timestamp * 1000);
 	expect(new kk_date(timestamp).format('YYYY-MM-DD HH:mm:ss')).toBe(`${test_date} ${test_time}`);
 	expect(new kk_date(`${test_date} ${test_time}`).isAfter('2024-08-18')).toBe(true);
 	expect(new kk_date(`${test_date} ${test_time}`).isSameOrAfter('2024-08-18')).toBe(true);
