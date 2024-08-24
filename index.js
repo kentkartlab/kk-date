@@ -353,7 +353,7 @@ class KkDate {
 	/**
 	 * basic formatter
 	 *
-	 * @param {string} template
+	 * @param {'YYYY-MM-DD HH:mm:ss'|'YYYY-MM-DDTHH:mm:ss'|'YYYY-MM-DD HH:mm'|'YYYY-MM-DD HH'|'YYYY-MM-DD'|'DD.MM.YYYY'|'YYYY.MM.DD HH:mm'|'YYYY.MM.DD HH'|'YYYY.MM.DD HH:mm:ss'|'DD.MM.YYYY HH:mm:ss'|'DD.MM.YYYY HH:mm'|'dddd'|'HH:mm:ss'|'HH:mm'|'X'|'x'} template - format template
 	 * @returns {string|Error}
 	 */
 	format(template) {
@@ -426,6 +426,8 @@ function format(date, template) {
 	switch (template) {
 		case 'YYYY-MM-DD HH:mm:ss':
 			return `${formatter(date.date, 'YYYY-MM-DD')} ${formatter(date.date, 'HH:mm:ss')}`;
+		case 'YYYY-MM-DDTHH:mm:ss':
+			return `${formatter(date.date, 'YYYY-MM-DD')}T${formatter(date.date, 'HH:mm:ss')}`;
 		case 'YYYY-MM-DD HH:mm':
 			return `${formatter(date.date, 'YYYY-MM-DD')} ${formatter(date.date, 'HH:mm')}`;
 		case 'YYYY-MM-DD HH':
@@ -450,6 +452,10 @@ function format(date, template) {
 			return `${formatter(date.date, template)}`;
 		case 'HH:mm':
 			return `${formatter(date.date, template)}`;
+		case 'X':
+			return formatter(date.date, template);
+		case 'x':
+			return formatter(date.date, template);
 		default:
 			throw new Error('template is not right (3)');
 	}
@@ -521,7 +527,12 @@ function diff(start, end, type, is_decimal = false, turn_difftime = false) {
  */
 function formatter(orj_this, template) {
 	isInvalid(orj_this);
-
+	if (template === 'X') {
+		return parseInt(orj_this.valueOf() / 1000, 10);
+	}
+	if (template === 'x') {
+		return parseInt(orj_this.valueOf(), 10);
+	}
 	const year = orj_this.getFullYear();
 	const month = String(orj_this.getMonth() + 1).padStart(2, '0'); // Aylar 0-11 arası olduğu için +1 ekliyoruz
 	const day = String(orj_this.getDate()).padStart(2, '0');
