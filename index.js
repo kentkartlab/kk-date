@@ -6,12 +6,16 @@ const format_types = {
 	MM: 'MM',
 	'YYYY-MM-DD': 'YYYY-MM-DD',
 	'YYYY-MM-DD HH:mm:ss': 'YYYY-MM-DD HH:mm:ss',
+	'YYYY-MM-DD HH:mm': 'YYYY-MM-DD HH:mm',
 	'YYYY.MM.DD': 'YYYY.MM.DD',
 	'YYYY.MM.DD HH:mm:ss': 'YYYY.MM.DD HH:mm:ss',
+	'YYYY.MM.DD HH:mm': 'YYYY.MM.DD HH:mm',
 	'DD.MM.YYYY': 'DD.MM.YYYY',
 	'DD.MM.YYYY HH:mm:ss': 'DD.MM.YYYY HH:mm:ss',
+	'DD.MM.YYYY HH:mm': 'DD.MM.YYYY HH:mm',
 	'DD-MM-YYYY': 'DD-MM-YYYY',
 	'DD-MM-YYYY HH:mm:ss': 'DD-MM-YYYY HH:mm:ss',
+	'DD-MM-YYYY HH:mm': 'DD-MM-YYYY HH:mm',
 	'HH:mm:ss': 'HH:mm:ss',
 	'HH:mm': 'HH:mm',
 	HH: 'HH',
@@ -24,12 +28,16 @@ const format_types_regex = {
 	DD: /^(0[1-9]|[12][0-9]|3[01])$/,
 	'YYYY-MM-DD': /^(|17|18|19|20|21)\d\d-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$/,
 	'YYYY-MM-DD HH:mm:ss': /^(|17|18|19|20|21)\d\d-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01]) ([01]\d|2[0-9]):([0-5]\d):([0-5]\d)$/,
+	'YYYY-MM-DD HH:mm': /^(|17|18|19|20|21)\d\d-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01]) ([01]\d|2[0-9]):([0-5]\d)$/,
 	'YYYY.MM.DD': /^(|17|18|19|20|21)\d\d.(0[1-9]|1[0-2]).(0[1-9]|[12][0-9]|3[01])$/,
 	'YYYY.MM.DD HH:mm:ss': /^(|17|18|19|20|21)\d\d.(0[1-9]|1[0-2]).(0[1-9]|[12][0-9]|3[01]) ([01]\d|2[0-9]):([0-5]\d):([0-5]\d)$/,
+	'YYYY.MM.DD HH:mm': /^(|17|18|19|20|21)\d\d.(0[1-9]|1[0-2]).(0[1-9]|[12][0-9]|3[01]) ([01]\d|2[0-9]):([0-5]\d)$/,
 	'DD.MM.YYYY': /^(0[1-9]|[12][0-9]|3[01]).(0[1-9]|1[0-2]).(|17|18|19|20|21)\d\d$/,
 	'DD.MM.YYYY HH:mm:ss': /^(0[1-9]|[12][0-9]|3[01]).(0[1-9]|1[0-2]).(|17|18|19|20|21)\d\d ([01]\d|2[0-9]):([0-5]\d):([0-5]\d)$/,
+	'DD.MM.YYYY HH:mm': /^(0[1-9]|[12][0-9]|3[01]).(0[1-9]|1[0-2]).(|17|18|19|20|21)\d\d ([01]\d|2[0-9]):([0-5]\d)$/,
 	'DD-MM-YYYY': /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-(|17|18|19|20|21)\d\d$/,
 	'DD-MM-YYYY HH:mm:ss': /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-(|17|18|19|20|21)\d\d ([01]\d|2[0-9]):([0-5]\d):([0-5]\d)$/,
+	'DD-MM-YYYY HH:mm': /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-(|17|18|19|20|21)\d\d ([01]\d|2[0-9]):([0-5]\d)$/,
 	'HH:mm:ss': /^([01]\d|2[0-9]):([0-5]\d):([0-5]\d)$/,
 	'HH:mm': /^([01]\d|2[0-9]):([0-5]\d)$/,
 	HH: /^([01]\d|2[0-9])$/,
@@ -64,18 +72,15 @@ class KkDate {
 			} else {
 				if (isValid(date, format_types['HH:mm:ss']) || isValid(date, format_types['HH:mm'])) {
 					let [hours, minutes, seconds] = date.split(':').map(Number);
-					// Eğer saat 24 veya daha büyükse
 					if (hours >= 24) {
-						const extraDays = Math.floor(hours / 24); // Kaç gün eklememiz gerektiğini bul
-						hours = hours % 24; // Saat kısmını 24 saatlik dilime getir
+						const extraDays = Math.floor(hours / 24);
+						hours = hours % 24;
 
-						// Günü artır
 						const dateObj = new Date();
 						dateObj.setDate(dateObj.getDate() + extraDays);
 
-						// Yeni gün, ay, yıl bilgilerini güncelle
 						const newDay = String(dateObj.getDate()).padStart(2, '0');
-						const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0'); // Aylar 0 bazlıdır, bu yüzden +1 ekliyoruz
+						const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
 						const newYear = dateObj.getFullYear();
 						let date_string = `${newYear}-${newMonth}-${newDay}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
 						if (seconds) {
@@ -93,23 +98,39 @@ class KkDate {
 							const [datePart, timePart] = date.split(' ');
 							const [day, month, year] = datePart.split('.');
 							let [hours, minutes, seconds] = timePart.split(':').map(Number);
-							// Eğer saat 24 veya daha büyükse
 							if (hours >= 24) {
-								const extraDays = Math.floor(hours / 24); // Kaç gün eklememiz gerektiğini bul
-								hours = hours % 24; // Saat kısmını 24 saatlik dilime getir
+								const extraDays = Math.floor(hours / 24);
+								hours = hours % 24;
 
-								// Günü artır
 								const dateObj = new Date(`${year}-${month}-${day}`);
 								dateObj.setDate(dateObj.getDate() + extraDays);
 
-								// Yeni gün, ay, yıl bilgilerini güncelle
 								const newDay = String(dateObj.getDate()).padStart(2, '0');
-								const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0'); // Aylar 0 bazlıdır, bu yüzden +1 ekliyoruz
+								const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
 								const newYear = dateObj.getFullYear();
 
 								this.date = new Date(
 									`${newYear}-${newMonth}-${newDay}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`,
 								);
+							} else {
+								this.date = new Date(`${year}-${month}-${day}T${timePart}`);
+							}
+						} else if (isValid(date, format_types['DD.MM.YYYY HH:mm'])) {
+							const [datePart, timePart] = date.split(' ');
+							const [day, month, year] = datePart.split('.');
+							let [hours, minutes] = timePart.split(':').map(Number);
+							if (hours >= 24) {
+								const extraDays = Math.floor(hours / 24);
+								hours = hours % 24;
+
+								const dateObj = new Date(`${year}-${month}-${day}`);
+								dateObj.setDate(dateObj.getDate() + extraDays);
+
+								const newDay = String(dateObj.getDate()).padStart(2, '0');
+								const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
+								const newYear = dateObj.getFullYear();
+
+								this.date = new Date(`${newYear}-${newMonth}-${newDay}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`);
 							} else {
 								this.date = new Date(`${year}-${month}-${day}T${timePart}`);
 							}
@@ -120,18 +141,14 @@ class KkDate {
 							const [datePart, timePart] = date.split(' ');
 							const [year, month, day] = datePart.split('-');
 							let [hours, minutes, seconds] = timePart.split(':').map(Number);
-							// Eğer saat 24 veya daha büyükse
 							if (hours >= 24) {
-								const extraDays = Math.floor(hours / 24); // Kaç gün eklememiz gerektiğini bul
-								hours = hours % 24; // Saat kısmını 24 saatlik dilime getir
-
-								// Günü artır
+								const extraDays = Math.floor(hours / 24);
+								hours = hours % 24;
 								const dateObj = new Date(`${year}-${month}-${day}`);
 								dateObj.setDate(dateObj.getDate() + extraDays);
 
-								// Yeni gün, ay, yıl bilgilerini güncelle
 								const newDay = String(dateObj.getDate()).padStart(2, '0');
-								const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0'); // Aylar 0 bazlıdır, bu yüzden +1 ekliyoruz
+								const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
 								const newYear = dateObj.getFullYear();
 
 								this.date = new Date(
@@ -140,27 +157,61 @@ class KkDate {
 							} else {
 								this.date = new Date(`${year}-${month}-${day}T${timePart}`);
 							}
+						} else if (isValid(date, format_types['YYYY-MM-DD HH:mm'])) {
+							const [datePart, timePart] = date.split(' ');
+							const [year, month, day] = datePart.split('-');
+							let [hours, minutes] = timePart.split(':').map(Number);
+							if (hours >= 24) {
+								const extraDays = Math.floor(hours / 24);
+								hours = hours % 24;
+								const dateObj = new Date(`${year}-${month}-${day}`);
+								dateObj.setDate(dateObj.getDate() + extraDays);
+
+								const newDay = String(dateObj.getDate()).padStart(2, '0');
+								const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
+								const newYear = dateObj.getFullYear();
+
+								this.date = new Date(`${newYear}-${newMonth}-${newDay}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`);
+							} else {
+								this.date = new Date(`${year}-${month}-${day}T${timePart}`);
+							}
 						} else if (isValid(date, format_types['YYYY.MM.DD HH:mm:ss'])) {
 							const [datePart, timePart] = date.split(' ');
 							const [year, month, day] = datePart.split('.');
 							let [hours, minutes, seconds] = timePart.split(':').map(Number);
-							// Eğer saat 24 veya daha büyükse
 							if (hours >= 24) {
-								const extraDays = Math.floor(hours / 24); // Kaç gün eklememiz gerektiğini bul
-								hours = hours % 24; // Saat kısmını 24 saatlik dilime getir
+								const extraDays = Math.floor(hours / 24);
+								hours = hours % 24;
 
-								// Günü artır
 								const dateObj = new Date(`${year}-${month}-${day}`);
 								dateObj.setDate(dateObj.getDate() + extraDays);
 
-								// Yeni gün, ay, yıl bilgilerini güncelle
 								const newDay = String(dateObj.getDate()).padStart(2, '0');
-								const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0'); // Aylar 0 bazlıdır, bu yüzden +1 ekliyoruz
+								const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
 								const newYear = dateObj.getFullYear();
 
 								this.date = new Date(
 									`${newYear}-${newMonth}-${newDay}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`,
 								);
+							} else {
+								this.date = new Date(`${year}-${month}-${day}T${timePart}`);
+							}
+						} else if (isValid(date, format_types['YYYY.MM.DD HH:mm'])) {
+							const [datePart, timePart] = date.split(' ');
+							const [year, month, day] = datePart.split('.');
+							let [hours, minutes] = timePart.split(':').map(Number);
+							if (hours >= 24) {
+								const extraDays = Math.floor(hours / 24);
+								hours = hours % 24;
+
+								const dateObj = new Date(`${year}-${month}-${day}`);
+								dateObj.setDate(dateObj.getDate() + extraDays);
+
+								const newDay = String(dateObj.getDate()).padStart(2, '0');
+								const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
+								const newYear = dateObj.getFullYear();
+
+								this.date = new Date(`${newYear}-${newMonth}-${newDay}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}}`);
 							} else {
 								this.date = new Date(`${year}-${month}-${day}T${timePart}`);
 							}
@@ -171,23 +222,39 @@ class KkDate {
 							const [datePart, timePart] = date.split(' ');
 							const [day, month, year] = datePart.split('-');
 							let [hours, minutes, seconds] = timePart.split(':').map(Number);
-							// Eğer saat 24 veya daha büyükse
 							if (hours >= 24) {
-								const extraDays = Math.floor(hours / 24); // Kaç gün eklememiz gerektiğini bul
-								hours = hours % 24; // Saat kısmını 24 saatlik dilime getir
+								const extraDays = Math.floor(hours / 24);
+								hours = hours % 24;
 
-								// Günü artır
 								const dateObj = new Date(`${year}-${month}-${day}`);
 								dateObj.setDate(dateObj.getDate() + extraDays);
 
-								// Yeni gün, ay, yıl bilgilerini güncelle
 								const newDay = String(dateObj.getDate()).padStart(2, '0');
-								const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0'); // Aylar 0 bazlıdır, bu yüzden +1 ekliyoruz
+								const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
 								const newYear = dateObj.getFullYear();
 
 								this.date = new Date(
 									`${newYear}-${newMonth}-${newDay}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`,
 								);
+							} else {
+								this.date = new Date(`${year}-${month}-${day}T${timePart}`);
+							}
+						} else if (isValid(date, format_types['DD-MM-YYYY HH:mm'])) {
+							const [datePart, timePart] = date.split(' ');
+							const [day, month, year] = datePart.split('-');
+							let [hours, minutes] = timePart.split(':').map(Number);
+							if (hours >= 24) {
+								const extraDays = Math.floor(hours / 24);
+								hours = hours % 24;
+
+								const dateObj = new Date(`${year}-${month}-${day}`);
+								dateObj.setDate(dateObj.getDate() + extraDays);
+
+								const newDay = String(dateObj.getDate()).padStart(2, '0');
+								const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
+								const newYear = dateObj.getFullYear();
+
+								this.date = new Date(`${newYear}-${newMonth}-${newDay}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`);
 							} else {
 								this.date = new Date(`${year}-${month}-${day}T${timePart}`);
 							}
