@@ -1,6 +1,6 @@
 {
 	"name": "kk-date",
-	"version": "1.0.6",
+	"version": "1.0.7",
 	"description": "kk-date is a fastest JavaScript library that parses, validations, manipulates, and displays dates and times. If you use Moment.js or Day.js already you can easily use kk-date.",
 	"main": "index.js",
 	"scripts": {
@@ -16,6 +16,7 @@
 		"kk-date",
 		"date",
 		"time",
+		"immutable",
 		"parse",
 		"format",
 		"validate",

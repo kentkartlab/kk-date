@@ -3,6 +3,14 @@
 
 kk-date is a fastest JavaScript library that parses, validations, manipulates, and displays dates and times. If you use Moment.js or Day.js already you can easily use kk-date.
 
+- 🕒 Familiar Moment.js API & Day.js
+- 💪 Immutable
+- 🔥 Chainable
+- 🚀 Native Date
+- 🏁 Performance
+- ✅ All browsers supported
+
+
 ## Install 
 
 
@@ -160,11 +168,15 @@ YYYY.MM.DD HH
 YYYY.MM.DD HH:mm:ss
 DD.MM.YYYY HH:mm:ss
 DD.MM.YYYY HH:mm
+DD-MM-YYYY
+DD-MM-YYYY HH:mm
+DD-MM-YYYY HH:mm:ss
+DD-MM-YYYY HH
 dddd
 HH:mm:ss
 HH:mm
-x (Unix timestamps in seconds),
-X (Unix timestamps in milliseconds)
+x (Unix timestamps in milliseconds),
+X (Unix timestamps in seconds)
 ```
 
 #### .add() supported types:
@@ -177,3 +189,24 @@ days
 months
 years
 ```
+#### Performance Tests:
+| Test No | input                            | Output                  | kk-date  | Moment  | Day.js | date-fns  |
+|---------|----------------------------------|------------------------|----------------|---------------|---------------|-----------------|
+| Test 0  | `new Date`                       | `2024-09-04 15:30:00`  | 337.529ms      | 374.127ms     | N/A           | 799.957ms       |
+| Test 1  | `23:50:55`                       | `2024-09-04 23:50:55`  | 450.225ms      | 954.643ms     | 1.202s        | 807.904ms       |
+| Test 2  | `23:50`                          | `23:50`                | 410.597ms      | 591.453ms     | 796.459ms     | 331.762ms       |
+| Test 3  | `23:50:55`                       | `2024.09.04 23:50:55`  | 451.571ms      | 952.301ms     | 1.183s        | 798.924ms       |
+| Test 4  | `2024-09-17 23:50:55`            | `23:50:55`             | 123.55ms       | 1.635s        | 569.191ms     | N/A             |
+| Test 5  | `2024-09-17 23:50:55`            | `2024-09-17`           | 119.81ms       | 1.620s        | 571.845ms     | N/A             |
+| Test 6  | `2024-09-17 23:50:55`            | `2024-09-17 23:50:55`  | 163.857ms      | 1.769s        | 721.491ms     | N/A             |
+| Test 7  | `2024-09-17 23:50:55`            | `17.09.2024 23:50:55`  | 162.367ms      | 1.787s        | 740.896ms     | N/A             |
+| Test 8  | `2024-09-17 23:50:55`            | `2024.09.17 23:50:55`  | 163.413ms      | 1.789s        | 738.167ms     | N/A             |
+| Test 9  | `23:50:55` isValid                      | `Boolean`                | 350.785ms      | 671.449ms     | N/A           | N/A             |
+| Test 10 | `1723996677`                     | `27.08.2024 05:51:17`  | 139.895ms      | 416.96ms      | 797.691ms     | N/A             |
+| Test 11 | `19843077000`                    | `27.08.2056 05:55:00`  | 138.668ms      | 414.394ms     | 757.555ms     | N/A             |
+| Test 12 | `19843077000`                    | `27.08.2056 05:55:00`  | 136.85ms       | 416.481ms     | 753.213ms     | N/A             |
+| Test 13 | `diff (days) 2024-01-01, 2024-01-30` | `29`               | 149.738ms      | 1.662s        | 312.043ms     | N/A             |
+| Test 14 | `isBefore 2024-01-01, 2024-01-30` | `true`               | 122.651ms      | 1.617s        | 345.618ms     | N/A             |
+| Test 15 | `isBetween 2024-01-01, 2024-01-30` | `true`               | 174.48ms       | 2.357s        | 717.21ms      | N/A             |
+| Test 16 | `isAfter 2024-01-01, 2024-01-30` | `true`                 | 115.112ms      | 1.565s        | 335.345ms     | N/A             |
+| Test 17 | `isSame 2024-01-01`              | `true`                 | 114.669ms      | 1.576s        | 456.979ms     | N/A             |
