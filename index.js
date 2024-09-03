@@ -5,8 +5,13 @@ const format_types = {
 	DD: 'DD',
 	MM: 'MM',
 	'YYYY-MM-DD': 'YYYY-MM-DD',
+	'YYYY-MM-DD HH:mm:ss': 'YYYY-MM-DD HH:mm:ss',
 	'YYYY.MM.DD': 'YYYY.MM.DD',
+	'YYYY.MM.DD HH:mm:ss': 'YYYY.MM.DD HH:mm:ss',
 	'DD.MM.YYYY': 'DD.MM.YYYY',
+	'DD.MM.YYYY HH:mm:ss': 'DD.MM.YYYY HH:mm:ss',
+	'DD-MM-YYYY': 'DD-MM-YYYY',
+	'DD-MM-YYYY HH:mm:ss': 'DD-MM-YYYY HH:mm:ss',
 	'HH:mm:ss': 'HH:mm:ss',
 	'HH:mm': 'HH:mm',
 	HH: 'HH',
@@ -18,11 +23,16 @@ const format_types_regex = {
 	MM: /^(0[1-9]|1[0-2])$/,
 	DD: /^(0[1-9]|[12][0-9]|3[01])$/,
 	'YYYY-MM-DD': /^(|17|18|19|20|21)\d\d-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$/,
+	'YYYY-MM-DD HH:mm:ss': /^(|17|18|19|20|21)\d\d-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01]) ([01]\d|2[0-9]):([0-5]\d):([0-5]\d)$/,
 	'YYYY.MM.DD': /^(|17|18|19|20|21)\d\d.(0[1-9]|1[0-2]).(0[1-9]|[12][0-9]|3[01])$/,
+	'YYYY.MM.DD HH:mm:ss': /^(|17|18|19|20|21)\d\d.(0[1-9]|1[0-2]).(0[1-9]|[12][0-9]|3[01]) ([01]\d|2[0-9]):([0-5]\d):([0-5]\d)$/,
 	'DD.MM.YYYY': /^(0[1-9]|[12][0-9]|3[01]).(0[1-9]|1[0-2]).(|17|18|19|20|21)\d\d$/,
-	'HH:mm:ss': /^([01]\d|2[0-3]):([0-5]\d):([0-5]\d)$/,
-	'HH:mm': /^([01]\d|2[0-3]):([0-5]\d)$/,
-	HH: /^([01]\d|2[0-3])$/,
+	'DD.MM.YYYY HH:mm:ss': /^(0[1-9]|[12][0-9]|3[01]).(0[1-9]|1[0-2]).(|17|18|19|20|21)\d\d ([01]\d|2[0-9]):([0-5]\d):([0-5]\d)$/,
+	'DD-MM-YYYY': /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-(|17|18|19|20|21)\d\d$/,
+	'DD-MM-YYYY HH:mm:ss': /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-(|17|18|19|20|21)\d\d ([01]\d|2[0-9]):([0-5]\d):([0-5]\d)$/,
+	'HH:mm:ss': /^([01]\d|2[0-9]):([0-5]\d):([0-5]\d)$/,
+	'HH:mm': /^([01]\d|2[0-9]):([0-5]\d)$/,
+	HH: /^([01]\d|2[0-9])$/,
 	mm: /^([0-5]\d)$/,
 	ss: /^([0-5]\d)$/,
 };
@@ -37,35 +47,151 @@ class KkDate {
 	 */
 	constructor(date = null) {
 		this.date = null;
-		this.date_string = null;
 		if (!date) {
 			this.date = new Date();
-			this.date_string = this.date.toISOString();
 		} else {
-			if (Number.isFinite(date)) {
+			if (Number.isInteger(date)) {
 				const stringed_date_length = `${date}`.length;
 				if (stringed_date_length <= 10) {
 					this.date = new Date(date * 1000);
 				} else if (stringed_date_length > 10) {
 					this.date = new Date(date);
 				}
-				this.date_string = this.date.toISOString();
 			} else if (isKkDate(date)) {
-				this.date = date.date;
-				this.date_string = this.date.toISOString();
+				this.date = new Date(date.date.toUTCString());
 			} else if (date instanceof Date) {
-				this.date = date;
-				this.date_string = `${this.date.toString()}`;
+				this.date = new Date(date.toUTCString());
 			} else {
 				if (isValid(date, format_types['HH:mm:ss']) || isValid(date, format_types['HH:mm'])) {
-					this.date = new Date(`${new Date().toISOString().split('T')[0]} ${date}`);
-					this.date_string = this.date.toISOString();
+					let [hours, minutes, seconds] = date.split(':').map(Number);
+					// Eğer saat 24 veya daha büyükse
+					if (hours >= 24) {
+						const extraDays = Math.floor(hours / 24); // Kaç gün eklememiz gerektiğini bul
+						hours = hours % 24; // Saat kısmını 24 saatlik dilime getir
+
+						// Günü artır
+						const dateObj = new Date();
+						dateObj.setDate(dateObj.getDate() + extraDays);
+
+						// Yeni gün, ay, yıl bilgilerini güncelle
+						const newDay = String(dateObj.getDate()).padStart(2, '0');
+						const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0'); // Aylar 0 bazlıdır, bu yüzden +1 ekliyoruz
+						const newYear = dateObj.getFullYear();
+						let date_string = `${newYear}-${newMonth}-${newDay}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+						if (seconds) {
+							date_string += seconds.toString().padStart(2, '0');
+						}
+						this.date = new Date(date_string);
+					} else {
+						this.date = new Date(`${new Date().toISOString().split('T')[0]} ${date}`);
+					}
 				} else {
 					this.date = new Date(`${date}`);
-					if (Number.isNaN(this.date.getTime()) === false) {
-						this.date_string = this.date.toISOString();
-					} else {
+					if (Number.isNaN(this.date.getTime()) === true) {
 						this.date = false;
+						if (isValid(date, format_types['DD.MM.YYYY HH:mm:ss'])) {
+							const [datePart, timePart] = date.split(' ');
+							const [day, month, year] = datePart.split('.');
+							let [hours, minutes, seconds] = timePart.split(':').map(Number);
+							// Eğer saat 24 veya daha büyükse
+							if (hours >= 24) {
+								const extraDays = Math.floor(hours / 24); // Kaç gün eklememiz gerektiğini bul
+								hours = hours % 24; // Saat kısmını 24 saatlik dilime getir
+
+								// Günü artır
+								const dateObj = new Date(`${year}-${month}-${day}`);
+								dateObj.setDate(dateObj.getDate() + extraDays);
+
+								// Yeni gün, ay, yıl bilgilerini güncelle
+								const newDay = String(dateObj.getDate()).padStart(2, '0');
+								const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0'); // Aylar 0 bazlıdır, bu yüzden +1 ekliyoruz
+								const newYear = dateObj.getFullYear();
+
+								this.date = new Date(
+									`${newYear}-${newMonth}-${newDay}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`,
+								);
+							} else {
+								this.date = new Date(`${year}-${month}-${day}T${timePart}`);
+							}
+						} else if (isValid(date, format_types['DD.MM.YYYY'])) {
+							const [day, month, year] = date.split('.');
+							this.date = new Date(`${year}-${month}-${day}`);
+						} else if (isValid(date, format_types['YYYY-MM-DD HH:mm:ss'])) {
+							const [datePart, timePart] = date.split(' ');
+							const [year, month, day] = datePart.split('-');
+							let [hours, minutes, seconds] = timePart.split(':').map(Number);
+							// Eğer saat 24 veya daha büyükse
+							if (hours >= 24) {
+								const extraDays = Math.floor(hours / 24); // Kaç gün eklememiz gerektiğini bul
+								hours = hours % 24; // Saat kısmını 24 saatlik dilime getir
+
+								// Günü artır
+								const dateObj = new Date(`${year}-${month}-${day}`);
+								dateObj.setDate(dateObj.getDate() + extraDays);
+
+								// Yeni gün, ay, yıl bilgilerini güncelle
+								const newDay = String(dateObj.getDate()).padStart(2, '0');
+								const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0'); // Aylar 0 bazlıdır, bu yüzden +1 ekliyoruz
+								const newYear = dateObj.getFullYear();
+
+								this.date = new Date(
+									`${newYear}-${newMonth}-${newDay}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`,
+								);
+							} else {
+								this.date = new Date(`${year}-${month}-${day}T${timePart}`);
+							}
+						} else if (isValid(date, format_types['YYYY.MM.DD HH:mm:ss'])) {
+							const [datePart, timePart] = date.split(' ');
+							const [year, month, day] = datePart.split('.');
+							let [hours, minutes, seconds] = timePart.split(':').map(Number);
+							// Eğer saat 24 veya daha büyükse
+							if (hours >= 24) {
+								const extraDays = Math.floor(hours / 24); // Kaç gün eklememiz gerektiğini bul
+								hours = hours % 24; // Saat kısmını 24 saatlik dilime getir
+
+								// Günü artır
+								const dateObj = new Date(`${year}-${month}-${day}`);
+								dateObj.setDate(dateObj.getDate() + extraDays);
+
+								// Yeni gün, ay, yıl bilgilerini güncelle
+								const newDay = String(dateObj.getDate()).padStart(2, '0');
+								const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0'); // Aylar 0 bazlıdır, bu yüzden +1 ekliyoruz
+								const newYear = dateObj.getFullYear();
+
+								this.date = new Date(
+									`${newYear}-${newMonth}-${newDay}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`,
+								);
+							} else {
+								this.date = new Date(`${year}-${month}-${day}T${timePart}`);
+							}
+						} else if (isValid(date, format_types['DD-MM-YYYY'])) {
+							const [day, month, year] = datePart.split('-');
+							this.date = new Date(`${day}-${month}-${year}`);
+						} else if (isValid(date, format_types['DD-MM-YYYY HH:mm:ss'])) {
+							const [datePart, timePart] = date.split(' ');
+							const [day, month, year] = datePart.split('-');
+							let [hours, minutes, seconds] = timePart.split(':').map(Number);
+							// Eğer saat 24 veya daha büyükse
+							if (hours >= 24) {
+								const extraDays = Math.floor(hours / 24); // Kaç gün eklememiz gerektiğini bul
+								hours = hours % 24; // Saat kısmını 24 saatlik dilime getir
+
+								// Günü artır
+								const dateObj = new Date(`${year}-${month}-${day}`);
+								dateObj.setDate(dateObj.getDate() + extraDays);
+
+								// Yeni gün, ay, yıl bilgilerini güncelle
+								const newDay = String(dateObj.getDate()).padStart(2, '0');
+								const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0'); // Aylar 0 bazlıdır, bu yüzden +1 ekliyoruz
+								const newYear = dateObj.getFullYear();
+
+								this.date = new Date(
+									`${newYear}-${newMonth}-${newDay}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`,
+								);
+							} else {
+								this.date = new Date(`${year}-${month}-${day}T${timePart}`);
+							}
+						}
 					}
 				}
 			}
@@ -353,7 +479,7 @@ class KkDate {
 	/**
 	 * basic formatter
 	 *
-	 * @param {'YYYY-MM-DD HH:mm:ss'|'YYYY-MM-DDTHH:mm:ss'|'YYYY-MM-DD HH:mm'|'YYYY-MM-DD HH'|'YYYY-MM-DD'|'DD.MM.YYYY'|'YYYY.MM.DD HH:mm'|'YYYY.MM.DD HH'|'YYYY.MM.DD HH:mm:ss'|'DD.MM.YYYY HH:mm:ss'|'DD.MM.YYYY HH:mm'|'dddd'|'HH:mm:ss'|'HH:mm'|'X'|'x'} template - format template
+	 * @param {'YYYY-MM-DD HH:mm:ss'|'YYYY-MM-DDTHH:mm:ss'|'YYYY-MM-DD HH:mm'|'YYYY-MM-DD HH'|'YYYY-MM-DD'|'DD.MM.YYYY'|'YYYY.MM.DD HH:mm'|'YYYY.MM.DD HH'|'YYYY.MM.DD HH:mm:ss'|'DD.MM.YYYY HH:mm:ss'|'DD.MM.YYYY HH:mm'|'dddd'|'HH:mm:ss'|'HH:mm'|'X'|'x'|'DD-MM-YYYY'|'YYYY.MM.DD'|'DD-MM-YYYY HH'|'DD-MM-YYYY HH:mm'|'DD-MM-YYYY HH:mm:ss'} template - format template
 	 * @returns {string|Error}
 	 */
 	format(template) {
@@ -436,12 +562,22 @@ function format(date, template) {
 			return formatter(date.date, template);
 		case 'DD.MM.YYYY':
 			return formatter(date.date, template);
+		case 'YYYY.MM.DD':
+			return `${formatter(date.date, 'YYYY.MM.DD')}`;
 		case 'YYYY.MM.DD HH:mm':
 			return `${formatter(date.date, 'YYYY.MM.DD')} ${formatter(date.date, 'HH:mm')}`;
 		case 'YYYY.MM.DD HH':
 			return `${formatter(date.date, 'YYYY.MM.DD')} ${formatter(date.date, 'HH')}`;
 		case 'YYYY.MM.DD HH:mm:ss':
 			return `${formatter(date.date, 'YYYY.MM.DD')} ${formatter(date.date, 'HH:mm:ss')}`;
+		case 'DD-MM-YYYY HH:mm:ss':
+			return `${formatter(date.date, 'YYYY-MM-DD')} ${formatter(date.date, 'HH:mm:ss')}`;
+		case 'DD-MM-YYYY HH:mm':
+			return `${formatter(date.date, 'YYYY-MM-DD')} ${formatter(date.date, 'HH:mm')}`;
+		case 'DD-MM-YYYY HH':
+			return `${formatter(date.date, 'YYYY-MM-DD')} ${formatter(date.date, 'HH:mm')}`;
+		case 'DD-MM-YYYY':
+			return `${formatter(date.date, 'YYYY-MM-DD')}`;
 		case 'DD.MM.YYYY HH:mm:ss':
 			return `${formatter(date.date, 'DD.MM.YYYY')} ${formatter(date.date, 'HH:mm:ss')}`;
 		case 'DD.MM.YYYY HH:mm':

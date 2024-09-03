@@ -1,15 +1,22 @@
 const kk_date = require('../index');
 
-test('GENERAL TEST', () => {
+test('GENERAL TESTS - 39 TESTS', () => {
 	const test_date = '2024-08-19';
 	const test_time = '23:50:59';
 	const timestamp = 1724100659;
-
 	// Checking time parse and format with time;
 	expect(new kk_date(`${test_time}`).format('HH:mm:ss')).toBe(`${test_time}`);
 	expect(new kk_date(`${test_time}`).add(1, 'minutes').format('HH:mm:ss')).toBe('23:51:59');
 	expect(new kk_date(`${test_date} ${test_time}`).format('HH:mm:ss')).toBe(`${test_time}`);
 	expect(new kk_date(`${test_date} ${test_time}`).format('YYYY-MM-DD')).toBe(`${test_date}`);
+	expect(new kk_date('24:00:00').format('HH:mm:ss')).toBe('00:00:00');
+	expect(new kk_date('25:00:00').format('HH:mm:ss')).toBe('01:00:00');
+	expect(new kk_date('26:00:00').format('HH:mm:ss')).toBe('02:00:00');
+	expect(new kk_date(`${test_date} 26:00:00`).format('YYYY.MM.DD')).toBe('2024.08.20');
+	expect(new kk_date(`${test_date} 00:00:00`).format('YYYY.MM.DD HH:mm:ss')).toBe('2024.08.19 00:00:00');
+	expect(new kk_date(`${test_date} 24:00:00`).format('YYYY.MM.DD HH:mm:ss')).toBe('2024.08.20 00:00:00');
+	expect(new kk_date(`${test_date} 26:00:00`).format('YYYY.MM.DD HH:mm:ss')).toBe('2024.08.20 02:00:00');
+	expect(new kk_date(`${test_date} ${test_time}`).format('YYYY.MM.DD')).toBe('2024.08.19');
 	expect(new kk_date(`${test_date} ${test_time}`).format('DD.MM.YYYY')).toBe('19.08.2024');
 	expect(new kk_date(`${test_date} ${test_time}`).format('YYYY-MM-DD HH:mm:ss')).toBe(`${test_date} ${test_time}`);
 	expect(new kk_date(`${test_date} ${test_time}`).add(1, 'days').format('YYYY-MM-DD HH:mm:ss')).toBe('2024-08-20 23:50:59');
