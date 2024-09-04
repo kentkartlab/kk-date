@@ -660,7 +660,7 @@ function format(date, template) {
 		case 'x':
 			return formatter(date.date, template);
 		default:
-			throw new Error('template is not right (3)');
+			return formatter(date.date, template);
 	}
 }
 
@@ -728,7 +728,7 @@ function diff(start, end, type, is_decimal = false, turn_difftime = false) {
  * @param {string} template
  * @returns {string}
  */
-function formatter(orj_this, template) {
+function formatter(orj_this, template = null) {
 	isInvalid(orj_this);
 	if (template === 'X') {
 		return parseInt(orj_this.valueOf() / 1000, 10);
@@ -775,10 +775,25 @@ function formatter(orj_this, template) {
 		case format_types.HH: {
 			return `${hours}`;
 		}
+		case null: {
+			const timezoneOffset = -orj_this.getTimezoneOffset();
+			const sign = timezoneOffset >= 0 ? '+' : '-';
+			const absOffset = Math.abs(timezoneOffset);
+			const offsetHours = padZero(Math.floor(absOffset / 60));
+			const offsetMinutes = padZero(absOffset % 60);
+			return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${sign}${offsetHours}:${offsetMinutes}`;
+		}
 		default:
-			throw new Error('template is not right (2)');
+			throw new Error('template is not right');
 	}
 }
+/**
+ * padZero
+ *
+ * @param {number} num
+ * @returns {string}
+ */
+const padZero = (num) => String(num).padStart(2, '0');
 
 /**
  *
