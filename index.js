@@ -624,7 +624,7 @@ function format(date, template) {
 		case 'YYYY-MM-DD HH:mm':
 			return `${formatter(date.date, 'YYYY-MM-DD')} ${formatter(date.date, 'HH:mm')}`;
 		case 'YYYY-MM-DD HH':
-			return `${formatter(date.date, 'YYYY-MM-DD')} ${formatter(date.date, 'HH:mm')}`;
+			return `${formatter(date.date, 'YYYY-MM-DD')} ${formatter(date.date, 'HH')}`;
 		case 'YYYY-MM-DD':
 			return formatter(date.date, template);
 		case 'DD.MM.YYYY':
@@ -638,13 +638,13 @@ function format(date, template) {
 		case 'YYYY.MM.DD HH:mm:ss':
 			return `${formatter(date.date, 'YYYY.MM.DD')} ${formatter(date.date, 'HH:mm:ss')}`;
 		case 'DD-MM-YYYY HH:mm:ss':
-			return `${formatter(date.date, 'YYYY-MM-DD')} ${formatter(date.date, 'HH:mm:ss')}`;
+			return `${formatter(date.date, 'DD-MM-YYYY')} ${formatter(date.date, 'HH:mm:ss')}`;
 		case 'DD-MM-YYYY HH:mm':
-			return `${formatter(date.date, 'YYYY-MM-DD')} ${formatter(date.date, 'HH:mm')}`;
+			return `${formatter(date.date, 'DD-MM-YYYY')} ${formatter(date.date, 'HH:mm')}`;
 		case 'DD-MM-YYYY HH':
-			return `${formatter(date.date, 'YYYY-MM-DD')} ${formatter(date.date, 'HH:mm')}`;
+			return `${formatter(date.date, 'DD-MM-YYYY')} ${formatter(date.date, 'HH')}`;
 		case 'DD-MM-YYYY':
-			return `${formatter(date.date, 'YYYY-MM-DD')}`;
+			return `${formatter(date.date, 'DD-MM-YYYY')}`;
 		case 'DD.MM.YYYY HH:mm:ss':
 			return `${formatter(date.date, 'DD.MM.YYYY')} ${formatter(date.date, 'HH:mm:ss')}`;
 		case 'DD.MM.YYYY HH:mm':
