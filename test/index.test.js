@@ -52,4 +52,10 @@ test('GENERAL TESTS - 41 TESTS', () => {
 	expect(() => {
 		new kk_date(`${test_date} ${test_time}`).isSame('123123assadfa21312s');
 	}).toThrow('Invalid Date');
+	expect(() => {
+		new kk_date(`${test_date} asdasd`);
+	}).toThrow('Invalid Date');
+	expect(() => {
+		new kk_date(`${test_date}a 23:25:00`);
+	}).toThrow('Invalid Date');
 });
