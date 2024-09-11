@@ -260,10 +260,9 @@ class KkDate {
 					if (this.date === false) {
 						this.date = new Date(`${date}`);
 					}
-					if (Number.isNaN(this.date.getTime()) === true) {
-					}
 				}
 			}
+			isInvalid(this.date);
 		}
 	}
 
@@ -521,10 +520,10 @@ class KkDate {
 	diff_range(end, type, template = 'YYYY-MM-DD') {
 		const diffed = diff(this, end, type);
 		const rangeDates = [];
-		rangeDates.push(format(diffed.start, template));
+		rangeDates.push(format(this, template));
 		for (let index = 1; index < diffed.diffTime + 1; index++) {
-			const date = new Date(diffed.start.date);
-			date.setSeconds(diffed.start.date.getSeconds() + diffed.type_value * index);
+			const date = new Date(this.date.getTime());
+			date.setSeconds(this.date.getSeconds() + diffed.type_value * index);
 			rangeDates.push(format(new KkDate(date), template));
 		}
 		return rangeDates;
@@ -589,7 +588,10 @@ class KkDate {
  */
 function isInvalid(date) {
 	try {
-		if (!date || Number.isNaN(date.valueOf())) {
+		if (!date) {
+			throw new Error('Invalid Date');
+		}
+		if (Number.isNaN(date.valueOf())) {
 			throw new Error('Invalid Date');
 		}
 	} catch (error) {
@@ -687,8 +689,8 @@ function absFloor(number) {
  * @returns {object}
  */
 function diff(start, end, type, is_decimal = false, turn_difftime = false) {
-	const startDate = start.getDate();
-	const endDate = new KkDate(end).getDate();
+	const startDate = start.getTime();
+	const endDate = new KkDate(end).getTime();
 	let type_value = null;
 	switch (type) {
 		case 'seconds':
@@ -717,9 +719,7 @@ function diff(start, end, type, is_decimal = false, turn_difftime = false) {
 		return is_decimal ? diffTime_value : absFloor(diffTime_value);
 	}
 	return {
-		start,
 		type_value,
-		endDate,
 		diffTime: is_decimal ? diffTime_value : absFloor(diffTime_value),
 	};
 }
