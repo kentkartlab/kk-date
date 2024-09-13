@@ -530,6 +530,38 @@ class KkDate {
 	}
 
 	/**
+	 * set method of Date instances changes
+	 *
+	 * @param {'second'|'minute'|'hour'|'day'|'month'|'year'} type - The unit of time type
+	 * @param {number} value
+	 */
+	set(type, value) {
+		switch (type) {
+			case 'second':
+				this.date.setSeconds(value);
+				break;
+			case 'minute':
+				this.date.setMinutes(value);
+				break;
+			case 'hour':
+				this.date.setHours(value);
+				break;
+			case 'day':
+				this.date.setDate(value);
+				break;
+			case 'month':
+				this.date.setMonth(value);
+				break;
+			case 'year':
+				this.date.setFullYear(value);
+				break;
+			default:
+				throw new Error('type wrong');
+		}
+		return this;
+	}
+
+	/**
 	 *
 	 * @param {string} separator [separator=' '] - The separator used to join the formatted date parts.
 	 * @param  {...any} template

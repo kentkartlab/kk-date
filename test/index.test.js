@@ -43,6 +43,8 @@ test('GENERAL TESTS - 41 TESTS', () => {
 	expect(new kk_date(`${test_date} ${test_time}`).isBetween('2024-08-19', '2024-08-19 23:51')).toBe(true);
 	expect(new kk_date(`${test_date} ${test_time}`).isValid()).toBe(true);
 	expect(new kk_date(`${test_date} ${test_time}`).isSame(`${test_date} ${test_time}`)).toBe(true);
+	expect(new kk_date(`${test_date} ${test_time}`).set('year', 2025).isSame(`2025-08-19 ${test_time}`)).toBe(true);
+	expect(new kk_date(`${test_date} ${test_time}`).set('day', 20).set('year', '2025').isSame(`2025-08-20 ${test_time}`)).toBe(true);
 	expect(() => {
 		new kk_date('asfasf1231231231asdasd').getDate();
 	}).toThrow('Invalid Date');
