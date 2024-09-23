@@ -88,6 +88,16 @@ new kk_date('2024-01-01').add(1, 'days').format('YYYY-MM-DD')
 new kk_date('2024-01-05').add(-1, 'days').format('YYYY-MM-DD')
 // 2024-01-04
 ```
+#### set (day):
+```javascript
+new kk_date('2024-01-05').set(1, 'day').format('YYYY-MM-DD')
+// 2024-01-01
+```
+#### set (month):
+```javascript
+new kk_date('2024-01-05').set(3, 'month').format('YYYY-MM-DD')
+// 2024-03-05
+```
 #### diff:
 ```javascript
 new kk_date('2024-07-19').diff('2024-09-19', 'months')
