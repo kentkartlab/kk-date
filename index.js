@@ -53,11 +53,11 @@ class KkDate {
 	 *
 	 * @param {string|Date|KkDate} date - date/datetime/time
 	 */
-	constructor(date = null) {
-		this.date = null;
-		if (!date) {
+	constructor(...params) {
+		if (params.length === 0) {
 			this.date = new Date();
 		} else {
+			const date = params[0];
 			if (Number.isInteger(date)) {
 				const stringed_date_length = `${date}`.length;
 				if (stringed_date_length <= 10) {
