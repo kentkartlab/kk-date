@@ -42,6 +42,10 @@ describe('kk_date format', () => {
 		expect(new kk_date(timestamp).format('YYYY-MM-DD HH:mm:ss')).toBe(`${test_date} ${test_time}`);
 	});
 
+	test('YYYYMMDD', () => {
+		expect(new kk_date(`${test_date}`).format('YYYYMMDD')).toBe('20240819');
+	});
+
 	test('DD-MM-YYYY', () => {
 		expect(new kk_date(`${test_date} ${test_time}`).format('DD-MM-YYYY')).toBe('19-08-2024');
 	});

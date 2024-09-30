@@ -8,6 +8,7 @@ const format_types = {
 	'YYYY-MM-DD HH:mm:ss': 'YYYY-MM-DD HH:mm:ss',
 	'YYYY-MM-DD HH:mm': 'YYYY-MM-DD HH:mm',
 	'YYYY.MM.DD': 'YYYY.MM.DD',
+	YYYYMMDD: 'YYYYMMDD',
 	'YYYY.MM.DD HH:mm:ss': 'YYYY.MM.DD HH:mm:ss',
 	'YYYY.MM.DD HH:mm': 'YYYY.MM.DD HH:mm',
 	'DD.MM.YYYY': 'DD.MM.YYYY',
@@ -579,7 +580,7 @@ class KkDate {
 	/**
 	 * basic formatter
 	 *
-	 * @param {'YYYY-MM-DD HH:mm:ss'|'YYYY-MM-DDTHH:mm:ss'|'YYYY-MM-DD HH:mm'|'YYYY-MM-DD HH'|'YYYY-MM-DD'|'DD.MM.YYYY'|'YYYY.MM.DD HH:mm'|'YYYY.MM.DD HH'|'YYYY.MM.DD HH:mm:ss'|'DD.MM.YYYY HH:mm:ss'|'DD.MM.YYYY HH:mm'|'dddd'|'HH:mm:ss'|'HH:mm'|'X'|'x'|'DD-MM-YYYY'|'YYYY.MM.DD'|'DD-MM-YYYY HH'|'DD-MM-YYYY HH:mm'|'DD-MM-YYYY HH:mm:ss'} template - format template
+	 * @param {'YYYY-MM-DD HH:mm:ss'|'YYYY-MM-DDTHH:mm:ss'|'YYYY-MM-DD HH:mm'|'YYYY-MM-DD HH'|'YYYY-MM-DD'|'YYYYMMDD'|'DD.MM.YYYY'|'YYYY.MM.DD HH:mm'|'YYYY.MM.DD HH'|'YYYY.MM.DD HH:mm:ss'|'DD.MM.YYYY HH:mm:ss'|'DD.MM.YYYY HH:mm'|'dddd'|'HH:mm:ss'|'HH:mm'|'X'|'x'|'DD-MM-YYYY'|'YYYY.MM.DD'|'DD-MM-YYYY HH'|'DD-MM-YYYY HH:mm'|'DD-MM-YYYY HH:mm:ss'} template - format template
 	 * @returns {string|Error}
 	 */
 	format(template) {
@@ -662,6 +663,8 @@ function format(date, template) {
 		case 'YYYY-MM-DD HH':
 			return `${formatter(date.date, 'YYYY-MM-DD')} ${formatter(date.date, 'HH')}`;
 		case 'YYYY-MM-DD':
+			return formatter(date.date, template);
+		case 'YYYYMMDD':
 			return formatter(date.date, template);
 		case 'DD.MM.YYYY':
 			return formatter(date.date, template);
@@ -792,6 +795,8 @@ function formatter(orj_this, template = null) {
 			return `${year}-${month}-${day}`;
 		case format_types['YYYY.MM.DD']:
 			return `${year}.${month}.${day}`;
+		case format_types['YYYYMMDD']:
+			return `${year}${month}${day}`;
 		case format_types.YYYY:
 			return `${year}`;
 		case format_types['HH:mm:ss']: {
