@@ -28,6 +28,7 @@ const format_types_regex = {
 	MM: /^(0[1-9]|1[0-2])$/,
 	DD: /^(0[1-9]|[12][0-9]|3[01])$/,
 	'YYYY-MM-DD': /^(|17|18|19|20|21)\d\d-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$/,
+	YYYYMMDD: /^(|17|18|19|20|21)\d\d(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])$/,
 	'YYYY-MM-DD HH:mm:ss': /^(|17|18|19|20|21)\d\d-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01]) ([01]\d|2[0-9]):([0-5]\d):([0-5]\d)$/,
 	'YYYY-MM-DD HH:mm': /^(|17|18|19|20|21)\d\d-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01]) ([01]\d|2[0-9]):([0-5]\d)$/,
 	'YYYY.MM.DD': /^(|17|18|19|20|21)\d\d\.(0[1-9]|1[0-2])\.(0[1-9]|[12][0-9]|3[01])$/,
@@ -135,7 +136,7 @@ class KkDate {
 						}
 					} else if (isValid(date, format_types['DD.MM.YYYY'])) {
 						const [day, month, year] = date.split('.');
-						this.date = new Date(`${year}-${month}-${day}`);
+						this.date = new Date(year, month, day);
 					} else if (isValid(date, format_types['YYYY-MM-DD HH:mm:ss'])) {
 						const [datePart, timePart] = date.split(' ');
 						const [year, month, day] = datePart.split('-');
@@ -216,7 +217,7 @@ class KkDate {
 						}
 					} else if (isValid(date, format_types['DD-MM-YYYY'])) {
 						const [day, month, year] = date.split('-');
-						this.date = new Date(`${year}-${month}-${day}`);
+						this.date = new Date(year, month, day);
 					} else if (isValid(date, format_types['DD-MM-YYYY HH:mm:ss'])) {
 						const [datePart, timePart] = date.split(' ');
 						const [day, month, year] = datePart.split('-');
@@ -257,6 +258,12 @@ class KkDate {
 						} else {
 							this.date = new Date(`${year}-${month}-${day}T${timePart}`);
 						}
+					} else if (isValid(date, format_types['YYYYMMDD'])) {
+						const year = parseInt(date.substring(0, 4), 10); // Extract year
+						const month = parseInt(date.substring(4, 6), 10) - 1; // Extract month (0-based index)
+						const day = parseInt(date.substring(6, 8), 10); // Extract day
+
+						this.date = new Date(year, month, day);
 					}
 					if (this.date === false) {
 						this.date = new Date(`${date}`);
