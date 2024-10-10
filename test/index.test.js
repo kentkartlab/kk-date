@@ -152,17 +152,17 @@ describe('kk_date valid / invalid', () => {
 describe('kk_date duration', () => {
   test('duration year', () => {
     const response = new kk_date().duration(
-      31556926 * 2 +
-        2629743 * 3 +
-        604800 * 1 +
+      31556926 * 1 +
+        2629743 * 2 +
+        604800 * 3 +
         86400 * 4 +
         3600 * 5 +
         60 * 6 +
         40
     );
-    expect(response.year).toBe(2);
-    expect(response.month).toBe(3);
-    expect(response.week).toBe(1);
+    expect(response.year).toBe(1);
+    expect(response.month).toBe(2);
+    expect(response.week).toBe(3);
     expect(response.day).toBe(4);
     expect(response.hour).toBe(5);
     expect(response.minute).toBe(6);
@@ -171,13 +171,14 @@ describe('kk_date duration', () => {
 
   test('duration month', () => {
     const response = new kk_date().duration(
-      2629743 * 3 + 604800 * 3 + 86400 * 4 + 3600 * 6 + 60 * 6 + 20
+      2629743 * 1 + 604800 * 1 + 86400 * 2 + 3600 * 2 + 60 + 20
     );
-    expect(response.month).toBe(3);
-    expect(response.week).toBe(3);
-    expect(response.day).toBe(4);
-    expect(response.hour).toBe(6);
-    expect(response.minute).toBe(6);
+		expect(response.year).toBe(0);
+    expect(response.month).toBe(1);
+    expect(response.week).toBe(1);
+    expect(response.day).toBe(2);
+    expect(response.hour).toBe(2);
+    expect(response.minute).toBe(1);
     expect(response.second).toBe(20);
   });
 
@@ -202,4 +203,11 @@ describe('kk_date duration', () => {
     expect(response.minute).toBe(3);
     expect(response.second).toBe(10);
   });
+
+	test("duration invalid time", () => {
+		expect(() => new kk_date().duration("")).toThrow('Invalid time');
+		expect(() => new kk_date().duration(0)).toThrow('Invalid time');
+		expect(() => new kk_date().duration(-3)).toThrow('Invalid time');
+	});
+
 });

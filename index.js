@@ -644,22 +644,26 @@ class KkDate {
       minute: 0,
       second: 0,
     };
+
+		if (!time || typeof time !== 'number' || time < 0) { 
+			throw new Error('Invalid time');
+		}
+
     let seconds = time;
-
-    const calculateTime = (type) => {
-      response[type] = Math.floor(seconds / howManySeconds[type]);
-      seconds = seconds % howManySeconds[type];
-    };
-
-    const timeKeys = Object.keys(howManySeconds);
-
-    for (let index = 0; index < timeKeys.length; index++) {
-      if (seconds < 0 || seconds === 0) {
-        return response;
-      }
-      calculateTime(timeKeys[index]);
-    }
-    response.second = seconds;
+		response.year = Math.floor(seconds / howManySeconds.year);
+		seconds = seconds % howManySeconds.year;
+		response.month = Math.floor(seconds / howManySeconds.month);
+		seconds = seconds % howManySeconds.month;
+		response.week = Math.floor(seconds / howManySeconds.week);
+		seconds = seconds % howManySeconds.week;
+		response.day = Math.floor(seconds / howManySeconds.day);
+		seconds = seconds % howManySeconds.day;
+		response.hour = Math.floor(seconds / howManySeconds.hour);
+		seconds = seconds % howManySeconds.hour;
+		response.minute = Math.floor(seconds / howManySeconds.minute);
+		seconds = seconds % howManySeconds.minute;
+		response.second = seconds;
+  
     return response;
   }
 }
