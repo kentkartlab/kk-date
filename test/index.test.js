@@ -148,3 +148,58 @@ describe('kk_date valid / invalid', () => {
 		expect(new kk_date(`${test_date} ${test_time}`).isValid()).toBe(true);
 	});
 });
+
+describe('kk_date duration', () => {
+  test('duration year', () => {
+    const response = new kk_date().duration(
+      31556926 * 2 +
+        2629743 * 3 +
+        604800 * 1 +
+        86400 * 4 +
+        3600 * 5 +
+        60 * 6 +
+        40
+    );
+    expect(response.year).toBe(2);
+    expect(response.month).toBe(3);
+    expect(response.week).toBe(1);
+    expect(response.day).toBe(4);
+    expect(response.hour).toBe(5);
+    expect(response.minute).toBe(6);
+    expect(response.second).toBe(40);
+  });
+
+  test('duration month', () => {
+    const response = new kk_date().duration(
+      2629743 * 3 + 604800 * 3 + 86400 * 4 + 3600 * 6 + 60 * 6 + 20
+    );
+    expect(response.month).toBe(3);
+    expect(response.week).toBe(3);
+    expect(response.day).toBe(4);
+    expect(response.hour).toBe(6);
+    expect(response.minute).toBe(6);
+    expect(response.second).toBe(20);
+  });
+
+  test('duration day', () => {
+    const response = new kk_date().duration(86400 * 4 + 3600 * 2 + 60 * 3 + 10);
+    expect(response.year).toBe(0);
+    expect(response.month).toBe(0);
+    expect(response.week).toBe(0);
+    expect(response.day).toBe(4);
+    expect(response.hour).toBe(2);
+    expect(response.minute).toBe(3);
+    expect(response.second).toBe(10);
+  });
+
+  test('duration minute', () => {
+    const response = new kk_date().duration(60 * 3 + 10);
+    expect(response.year).toBe(0);
+    expect(response.month).toBe(0);
+    expect(response.week).toBe(0);
+    expect(response.day).toBe(0);
+    expect(response.hour).toBe(0);
+    expect(response.minute).toBe(3);
+    expect(response.second).toBe(10);
+  });
+});

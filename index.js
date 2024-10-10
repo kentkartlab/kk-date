@@ -47,6 +47,15 @@ const format_types_regex = {
 	ss: /^([0-5]\d)$/,
 };
 
+const howManySeconds = {
+  year: 31556926,
+  month: 2629743,
+  week: 604800,
+  day: 86400,
+  hour: 3600,
+  minute: 60,
+};
+
 /**
  * @kkDate method
  */
@@ -619,6 +628,40 @@ class KkDate {
 		isInvalid(this.date);
 		return this.date;
 	}
+
+  /**
+   * @description It divides the date string into parts and returns an object.
+   * @param {string} time - time seconds
+   * @returns {{year: number, month: number, week:number, day: number, hour: number, minute: number, second: number}}
+   */
+ duration(time) {
+    const response = {
+      year: 0,
+      month: 0,
+      week: 0,
+      day: 0,
+      hour: 0,
+      minute: 0,
+      second: 0,
+    };
+    let seconds = time;
+
+    const calculateTime = (type) => {
+      response[type] = Math.floor(seconds / howManySeconds[type]);
+      seconds = seconds % howManySeconds[type];
+    };
+
+    const timeKeys = Object.keys(howManySeconds);
+
+    for (let index = 0; index < timeKeys.length; index++) {
+      if (seconds < 0 || seconds === 0) {
+        return response;
+      }
+      calculateTime(timeKeys[index]);
+    }
+    response.second = seconds;
+    return response;
+  }
 }
 
 /**
