@@ -47,15 +47,15 @@ const format_types_regex = {
 	ss: /^([0-5]\d)$/,
 };
 
-const howManySeconds = {
-  year: 31556926,
-  month: 2629743,
-  week: 604800,
-  day: 86400,
-  hour: 3600,
-  minute: 60,
+const timeInMilliseconds = {
+  year: 365 * 24 * 60 * 60 * 1000, // 1 year (365 days)
+  month: 31 * 24 * 60 * 60 * 1000, // 1 month (31 days)
+  week: 7 * 24 * 60 * 60 * 1000, // 1 week (7 days)
+  day: 24 * 60 * 60 * 1000, // 1 day (24 hours)
+  hour: 60 * 60 * 1000, // 1 hour
+  minute: 60 * 1000, // 1 minute
+  second: 1000, // 1 second
 };
-
 /**
  * @kkDate method
  */
@@ -484,9 +484,15 @@ class KkDate {
 	 * @returns {KkDate|Error}
 	 */
 	add(amount, type) {
-		isInvalid(this.date);
-		if (typeof amount !== 'number') {
-			throw new Error('amount is not number !');
+		 isInvalid(this.date);
+
+		if (!amount || typeof amount !== 'number' && (typeof amount === 'object' && amount.$kk_date === undefined)) {
+			throw new Error('amount is wrong');
+		}
+
+		if(typeof amount === 'object' && amount.$kk_date) {
+			type = "seconds";
+			amount = amount.$kk_date.milliseconds / timeInMilliseconds.second;
 		}
 		switch (type) {
 			case 'days':
@@ -910,4 +916,59 @@ function isValid(date_string, template) {
 	return true;
 }
 
+/**
+ * @description It divides the date string into parts and returns an object.
+ * @param {string} time
+ * @param {"year" | "month" | "week" | "day" | "hour" | "minute" | "second"} type
+ * @returns {{year: number, month: number, week:number, day: number, hour: number, minute: number, second: number}}
+ * @example
+ * // Example usage:
+ * const result = duration(1234, 'minute');
+ * console.log(result);
+ * // Output: { year: 0, month: 0, week: 0, day: 0, hour: 20, minute: 34, second: 0,millisecond: 0 }
+ */
+function duration(time, type) {
+  const response = {
+    year: 0,
+    month: 0,
+    week: 0,
+    day: 0,
+    hour: 0,
+    minute: 0,
+    second: 0,
+    millisecond: 0,
+    $kk_date: { milliseconds: 0 },
+  };
+
+  if (!time || typeof time !== 'number' || time < 0) {
+    throw new Error('Invalid time');
+  }
+
+  if (!timeInMilliseconds[type]) {
+    throw new Error('Invalid type');
+  }
+
+  response.$kk_date.milliseconds = time * timeInMilliseconds[type];
+  let milliseconds = time * timeInMilliseconds[type];
+  response.year = Math.floor(milliseconds / timeInMilliseconds.year);
+  milliseconds = milliseconds % timeInMilliseconds.year;
+  response.month = Math.floor(milliseconds / timeInMilliseconds.month);
+  milliseconds = milliseconds % timeInMilliseconds.month;
+  response.week = Math.floor(milliseconds / timeInMilliseconds.week);
+  milliseconds = milliseconds % timeInMilliseconds.week;
+  response.day = Math.floor(milliseconds / timeInMilliseconds.day);
+  milliseconds = milliseconds % timeInMilliseconds.day;
+  response.hour = Math.floor(milliseconds / timeInMilliseconds.hour);
+  milliseconds = milliseconds % timeInMilliseconds.hour;
+  response.minute = Math.floor(milliseconds / timeInMilliseconds.minute);
+  milliseconds = milliseconds % timeInMilliseconds.minute;
+  response.second = Math.floor(milliseconds / timeInMilliseconds.second);
+  milliseconds = milliseconds % timeInMilliseconds.second;
+  response.millisecond = milliseconds;
+
+  return response;
+}
+
 module.exports = KkDate;
+module.exports.duration = duration;
+
