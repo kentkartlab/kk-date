@@ -48,6 +48,7 @@ describe('kk_date format', () => {
 
 	test('DD-MM-YYYY', () => {
 		expect(new kk_date(`${test_date} ${test_time}`).format('DD-MM-YYYY')).toBe('19-08-2024');
+		expect(new kk_date('19-08-2024').format('DD-MM-YYYY')).toBe('19-08-2024');
 	});
 
 	test('DD-MM-YYYY HH:mm', () => {
@@ -56,12 +57,17 @@ describe('kk_date format', () => {
 
 	test('custom format', () => {
 		expect(new kk_date(`${test_date} ${test_time}`).format_c(' ', 'YYYY', 'MM', 'DD', 'HH:mm:ss')).toBe('2024 08 19 23:50:59');
-		expect(new kk_date(`${test_date} ${test_time}`).format_c(' ', 'YYYY', 'MM', 'dddd', 'HH:mm:ss')).toBe('2024 08 monday 23:50:59');
+		expect(new kk_date(`${test_date} ${test_time}`).format_c(' ', 'YYYY', 'MM', 'dddd', 'HH:mm:ss')).toBe('2024 08 Monday 23:50:59');
 	});
 
 	test('dddd', () => {
-		expect(new kk_date(`${test_date} ${test_time}`).format('dddd')).toBe('monday');
-		expect(new kk_date(timestamp).format('dddd')).toBe('monday');
+		expect(new kk_date(`${test_date} ${test_time}`).format('dddd').toLocaleLowerCase()).toBe('monday');
+		expect(new kk_date(timestamp).format('dddd').toLocaleLowerCase()).toBe('monday');
+	});
+
+	test('config test', () => {
+		expect(new kk_date(`${test_date} ${test_time}`).config('fr-fr').format('dddd').toLocaleLowerCase()).toBe('lundi');
+		expect(new kk_date(timestamp).config('tr-tr').format('dddd').toLocaleLowerCase()).toBe('pazartesi');
 	});
 
 	test('x/X', () => {
@@ -146,5 +152,63 @@ describe('kk_date valid / invalid', () => {
 
 	test('is valid', () => {
 		expect(new kk_date(`${test_date} ${test_time}`).isValid()).toBe(true);
+	});
+});
+
+describe('kk_date duration', () => {
+	test('duration year', () => {
+		const response = kk_date.duration(1, 'year');
+		expect(response.year).toBe(1);
+		expect(response.month).toBe(0);
+		expect(response.week).toBe(0);
+		expect(response.day).toBe(0);
+		expect(response.hour).toBe(0);
+		expect(response.minute).toBe(0);
+		expect(response.second).toBe(0);
+	});
+
+	test('duration month', () => {
+		const response = kk_date.duration(65, 'day');
+		expect(response.year).toBe(0);
+		expect(response.month).toBe(2);
+		expect(response.week).toBe(0);
+		expect(response.day).toBe(3);
+		expect(response.hour).toBe(0);
+		expect(response.minute).toBe(0);
+		expect(response.second).toBe(0);
+	});
+
+	test('duration day', () => {
+		const response = kk_date.duration(200, 'minute');
+		expect(response.year).toBe(0);
+		expect(response.month).toBe(0);
+		expect(response.week).toBe(0);
+		expect(response.day).toBe(0);
+		expect(response.hour).toBe(3);
+		expect(response.minute).toBe(20);
+		expect(response.second).toBe(0);
+	});
+
+	test('duration minute', () => {
+		const response = kk_date.duration(50, 'minute');
+		expect(response.year).toBe(0);
+		expect(response.month).toBe(0);
+		expect(response.week).toBe(0);
+		expect(response.day).toBe(0);
+		expect(response.hour).toBe(0);
+		expect(response.minute).toBe(50);
+		expect(response.second).toBe(0);
+	});
+
+	test('duration invalid time', () => {
+		expect(() => kk_date.duration('')).toThrow('Invalid time');
+		expect(() => kk_date.duration(0)).toThrow('Invalid time');
+		expect(() => kk_date.duration(-3)).toThrow('Invalid time');
+	});
+
+	test('duration invalid type', () => {
+		expect(() => kk_date.duration(10, 'days')).toThrow('Invalid type');
+		expect(() => kk_date.duration(10, '')).toThrow('Invalid type');
+		expect(() => kk_date.duration(10)).toThrow('Invalid type');
 	});
 });

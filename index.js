@@ -1,4 +1,10 @@
-const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+const global_config = {
+	locales: 'en-en',
+	options: {
+		weekday: 'long',
+	},
+};
+
 const format_types = {
 	dddd: 'dddd',
 	YYYY: 'YYYY',
@@ -23,6 +29,7 @@ const format_types = {
 	mm: 'mm',
 	ss: 'ss',
 };
+
 const format_types_regex = {
 	YYYY: /^(17|18|19|20|21)\d\d$/,
 	MM: /^(0[1-9]|1[0-2])$/,
@@ -47,6 +54,15 @@ const format_types_regex = {
 	ss: /^([0-5]\d)$/,
 };
 
+const timeInMilliseconds = {
+	year: 365 * 24 * 60 * 60 * 1000, // 1 year (365 days)
+	month: 31 * 24 * 60 * 60 * 1000, // 1 month (31 days)
+	week: 7 * 24 * 60 * 60 * 1000, // 1 week (7 days)
+	day: 24 * 60 * 60 * 1000, // 1 day (24 hours)
+	hour: 60 * 60 * 1000, // 1 hour
+	minute: 60 * 1000, // 1 minute
+	second: 1000, // 1 second
+};
 /**
  * @kkDate method
  */
@@ -136,7 +152,7 @@ class KkDate {
 						}
 					} else if (isValid(date, format_types['DD.MM.YYYY'])) {
 						const [day, month, year] = date.split('.');
-						this.date = new Date(year, month, day);
+						this.date = new Date(`${year}-${month}-${day}`);
 					} else if (isValid(date, format_types['YYYY-MM-DD HH:mm:ss'])) {
 						const [datePart, timePart] = date.split(' ');
 						const [year, month, day] = datePart.split('-');
@@ -217,7 +233,7 @@ class KkDate {
 						}
 					} else if (isValid(date, format_types['DD-MM-YYYY'])) {
 						const [day, month, year] = date.split('-');
-						this.date = new Date(year, month, day);
+						this.date = new Date(`${year}-${month}-${day}`);
 					} else if (isValid(date, format_types['DD-MM-YYYY HH:mm:ss'])) {
 						const [datePart, timePart] = date.split(' ');
 						const [day, month, year] = datePart.split('-');
@@ -263,7 +279,7 @@ class KkDate {
 						const month = parseInt(date.substring(4, 6), 10) - 1; // Extract month (0-based index)
 						const day = parseInt(date.substring(6, 8), 10); // Extract day
 
-						this.date = new Date(year, month, day);
+						this.date = new Date(`${year}-${month}-${day}`);
 					}
 					if (this.date === false) {
 						this.date = new Date(`${date}`);
@@ -410,39 +426,51 @@ class KkDate {
 	 * The locales and options parameters customize the behavior of the function and let applications specify the language whose formatting conventions should be used.
 	 * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toLocaleDateString
 	 *
-	 * @param {*} locales
-	 * @param {*} options
+	 * @param {object} options
 	 * @returns {string|Error}
 	 */
-	toLocaleDateString(locales, options) {
+	toLocaleDateString(options) {
 		isInvalid(this.date);
-		return this.date.toLocaleDateString(locales, options);
+		if (!this.temp_config) {
+			this.temp_config = {
+				locales: global_config.locales || 'en-en',
+			};
+		}
+		return this.date.toLocaleDateString(this.temp_config.locales, options);
 	}
 
 	/**
 	 * The toLocaleString() method of Date instances returns a string with a language-sensitive representation of this date in the local timezone. In implementations with Intl.DateTimeFormat API support, this method simply calls Intl.DateTimeFormat.
 	 * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toLocaleString
 	 *
-	 * @param {*} locales
-	 * @param {*} options
+	 * @param {object} options
 	 * @returns {string|Error}
 	 */
-	toLocaleString(locales, options) {
+	toLocaleString(options) {
 		isInvalid(this.date);
-		return this.date.toLocaleString(locales, options);
+		if (!this.temp_config) {
+			this.temp_config = {
+				locales: global_config.locales || 'en-en',
+			};
+		}
+		return this.date.toLocaleString(this.temp_config.locales, options);
 	}
 
 	/**
 	 * The toLocaleTimeString() method of Date instances returns a string with a language-sensitive representation of the time portion of this date in the local timezone. In implementations with Intl.DateTimeFormat API support, this method simply calls Intl.DateTimeFormat.
 	 * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toLocaleTimeString
 	 *
-	 * @param {*} locales
-	 * @param {*} options
+	 * @param {object} options
 	 * @returns {string|Error}
 	 */
-	toLocaleTimeString(locales, options) {
+	toLocaleTimeString(options) {
 		isInvalid(this.date);
-		return this.date.toLocaleTimeString(locales, options);
+		if (!this.temp_config) {
+			this.temp_config = {
+				locales: global_config.locales || 'en-en',
+			};
+		}
+		return this.date.toLocaleTimeString(this.temp_config.locales, options);
 	}
 
 	/**
@@ -476,27 +504,36 @@ class KkDate {
 	 */
 	add(amount, type) {
 		isInvalid(this.date);
-		if (typeof amount !== 'number') {
-			throw new Error('amount is not number !');
+
+		if (!amount || (typeof amount !== 'number' && typeof amount === 'object' && amount.$kk_date === undefined)) {
+			throw new Error('amount is wrong');
 		}
-		switch (type) {
+
+		let defined_amount = amount;
+		let defined_type = type;
+
+		if (typeof amount === 'object' && amount.$kk_date) {
+			defined_type = 'seconds';
+			defined_amount = amount.$kk_date.milliseconds / timeInMilliseconds.second;
+		}
+		switch (defined_type) {
 			case 'days':
-				this.date.setDate(this.date.getDate() + amount);
+				this.date.setDate(this.date.getDate() + defined_amount);
 				break;
 			case 'minutes':
-				this.date.setMinutes(this.date.getMinutes() + amount);
+				this.date.setMinutes(this.date.getMinutes() + defined_amount);
 				break;
 			case 'seconds':
-				this.date.setSeconds(this.date.getSeconds() + amount);
+				this.date.setSeconds(this.date.getSeconds() + defined_amount);
 				break;
 			case 'hours':
-				this.date.setHours(this.date.getHours() + amount);
+				this.date.setHours(this.date.getHours() + defined_amount);
 				break;
 			case 'months':
-				this.date.setMonth(this.date.getMonth() + amount);
+				this.date.setMonth(this.date.getMonth() + defined_amount);
 				break;
 			case 'years': {
-				const year_amount = amount * 12;
+				const year_amount = defined_amount * 12;
 				this.date.setMonth(this.date.getMonth() + year_amount);
 				break;
 			}
@@ -542,6 +579,7 @@ class KkDate {
 	 *
 	 * @param {'second'|'minute'|'hour'|'day'|'month'|'year'} type - The unit of time type
 	 * @param {number} value
+	 * @returns {KkDate|Error}
 	 */
 	set(type, value) {
 		switch (type) {
@@ -570,16 +608,16 @@ class KkDate {
 	}
 
 	/**
+	 * date format advanced
 	 *
-	 * @param {string} separator [separator=' '] - The separator used to join the formatted date parts.
-	 * @param  {...any} template
+	 * @param  {string} template
 	 * @returns {string|Error}
 	 */
 	format_c(separator = ' ', ...template) {
 		isInvalid(this.date);
 		const result = [];
 		for (let index = 0; index < template.length; index++) {
-			result.push(formatter(this.date, template[index]));
+			result.push(formatter(this, template[index]));
 		}
 		return result.join(separator);
 	}
@@ -593,6 +631,34 @@ class KkDate {
 	format(template) {
 		isInvalid(this.date);
 		return format(this, template);
+	}
+
+	/**
+	 * @description kk-date config for in call
+	 *
+	 * @param {string} locales BCP 47 language tag
+	 * @param {object} options
+	 * @param {'short'|'long'} options.weekday
+	 * @returns {Error|KkDate}
+	 */
+	config(locales, options = null) {
+		try {
+			new Intl.Locale(locales);
+			this.temp_config = {
+				locales: locales,
+				options: {
+					weekday: 'long',
+				},
+			};
+			if (options && typeof options === 'object') {
+				if (options.weekday) {
+					this.temp_config.options.weekday = options.weekday;
+				}
+			}
+			return this;
+		} catch (error) {
+			throw new Error('locales not valid for BCP 47, config error !');
+		}
 	}
 
 	/**
@@ -618,6 +684,44 @@ class KkDate {
 	getDate() {
 		isInvalid(this.date);
 		return this.date;
+	}
+
+	/**
+	 * @description It divides the date string into parts and returns an object.
+	 * @param {string} time - time seconds
+	 * @returns {{year: number, month: number, week:number, day: number, hour: number, minute: number, second: number}}
+	 */
+	duration(time) {
+		const response = {
+			year: 0,
+			month: 0,
+			week: 0,
+			day: 0,
+			hour: 0,
+			minute: 0,
+			second: 0,
+		};
+
+		if (!time || typeof time !== 'number' || time < 0) {
+			throw new Error('Invalid time');
+		}
+
+		let seconds = time;
+		response.year = Math.floor(seconds / howManySeconds.year);
+		seconds = seconds % howManySeconds.year;
+		response.month = Math.floor(seconds / howManySeconds.month);
+		seconds = seconds % howManySeconds.month;
+		response.week = Math.floor(seconds / howManySeconds.week);
+		seconds = seconds % howManySeconds.week;
+		response.day = Math.floor(seconds / howManySeconds.day);
+		seconds = seconds % howManySeconds.day;
+		response.hour = Math.floor(seconds / howManySeconds.hour);
+		seconds = seconds % howManySeconds.hour;
+		response.minute = Math.floor(seconds / howManySeconds.minute);
+		seconds = seconds % howManySeconds.minute;
+		response.second = seconds;
+
+		return response;
 	}
 }
 
@@ -662,51 +766,51 @@ function isKkDate(value = {}) {
 function format(date, template) {
 	switch (template) {
 		case 'YYYY-MM-DD HH:mm:ss':
-			return `${formatter(date.date, 'YYYY-MM-DD')} ${formatter(date.date, 'HH:mm:ss')}`;
+			return `${formatter(date, 'YYYY-MM-DD')} ${formatter(date, 'HH:mm:ss')}`;
 		case 'YYYY-MM-DDTHH:mm:ss':
-			return `${formatter(date.date, 'YYYY-MM-DD')}T${formatter(date.date, 'HH:mm:ss')}`;
+			return `${formatter(date, 'YYYY-MM-DD')}T${formatter(date, 'HH:mm:ss')}`;
 		case 'YYYY-MM-DD HH:mm':
-			return `${formatter(date.date, 'YYYY-MM-DD')} ${formatter(date.date, 'HH:mm')}`;
+			return `${formatter(date, 'YYYY-MM-DD')} ${formatter(date, 'HH:mm')}`;
 		case 'YYYY-MM-DD HH':
-			return `${formatter(date.date, 'YYYY-MM-DD')} ${formatter(date.date, 'HH')}`;
+			return `${formatter(date, 'YYYY-MM-DD')} ${formatter(date, 'HH')}`;
 		case 'YYYY-MM-DD':
-			return formatter(date.date, template);
+			return formatter(date, template);
 		case 'YYYYMMDD':
-			return formatter(date.date, template);
+			return formatter(date, template);
 		case 'DD.MM.YYYY':
-			return formatter(date.date, template);
+			return formatter(date, template);
 		case 'YYYY.MM.DD':
-			return `${formatter(date.date, 'YYYY.MM.DD')}`;
+			return `${formatter(date, 'YYYY.MM.DD')}`;
 		case 'YYYY.MM.DD HH:mm':
-			return `${formatter(date.date, 'YYYY.MM.DD')} ${formatter(date.date, 'HH:mm')}`;
+			return `${formatter(date, 'YYYY.MM.DD')} ${formatter(date, 'HH:mm')}`;
 		case 'YYYY.MM.DD HH':
-			return `${formatter(date.date, 'YYYY.MM.DD')} ${formatter(date.date, 'HH')}`;
+			return `${formatter(date, 'YYYY.MM.DD')} ${formatter(date, 'HH')}`;
 		case 'YYYY.MM.DD HH:mm:ss':
-			return `${formatter(date.date, 'YYYY.MM.DD')} ${formatter(date.date, 'HH:mm:ss')}`;
+			return `${formatter(date, 'YYYY.MM.DD')} ${formatter(date, 'HH:mm:ss')}`;
 		case 'DD-MM-YYYY HH:mm:ss':
-			return `${formatter(date.date, 'DD-MM-YYYY')} ${formatter(date.date, 'HH:mm:ss')}`;
+			return `${formatter(date, 'DD-MM-YYYY')} ${formatter(date, 'HH:mm:ss')}`;
 		case 'DD-MM-YYYY HH:mm':
-			return `${formatter(date.date, 'DD-MM-YYYY')} ${formatter(date.date, 'HH:mm')}`;
+			return `${formatter(date, 'DD-MM-YYYY')} ${formatter(date, 'HH:mm')}`;
 		case 'DD-MM-YYYY HH':
-			return `${formatter(date.date, 'DD-MM-YYYY')} ${formatter(date.date, 'HH')}`;
+			return `${formatter(date, 'DD-MM-YYYY')} ${formatter(date, 'HH')}`;
 		case 'DD-MM-YYYY':
-			return `${formatter(date.date, 'DD-MM-YYYY')}`;
+			return `${formatter(date, 'DD-MM-YYYY')}`;
 		case 'DD.MM.YYYY HH:mm:ss':
-			return `${formatter(date.date, 'DD.MM.YYYY')} ${formatter(date.date, 'HH:mm:ss')}`;
+			return `${formatter(date, 'DD.MM.YYYY')} ${formatter(date, 'HH:mm:ss')}`;
 		case 'DD.MM.YYYY HH:mm':
-			return `${formatter(date.date, 'DD.MM.YYYY')} ${formatter(date.date, 'HH:mm')}`;
+			return `${formatter(date, 'DD.MM.YYYY')} ${formatter(date, 'HH:mm')}`;
 		case 'dddd':
-			return formatter(date.date, template);
+			return formatter(date, template);
 		case 'HH:mm:ss':
-			return `${formatter(date.date, template)}`;
+			return `${formatter(date, template)}`;
 		case 'HH:mm':
-			return `${formatter(date.date, template)}`;
+			return `${formatter(date, template)}`;
 		case 'X':
-			return formatter(date.date, template);
+			return formatter(date, template);
 		case 'x':
-			return formatter(date.date, template);
+			return formatter(date, template);
 		default:
-			return formatter(date.date, template);
+			return formatter(date, template);
 	}
 }
 
@@ -773,23 +877,29 @@ function diff(start, end, type, is_decimal = false, turn_difftime = false) {
  * @returns {string}
  */
 function formatter(orj_this, template = null) {
-	isInvalid(orj_this);
+	isInvalid(orj_this.date);
 	if (template === 'X') {
-		return parseInt(orj_this.valueOf() / 1000, 10);
+		return parseInt(orj_this.date.valueOf() / 1000, 10);
 	}
 	if (template === 'x') {
-		return parseInt(orj_this.valueOf(), 10);
+		return parseInt(orj_this.date.valueOf(), 10);
 	}
-	const year = orj_this.getFullYear();
-	const month = String(orj_this.getMonth() + 1).padStart(2, '0'); // Aylar 0-11 arası olduğu için +1 ekliyoruz
-	const day = String(orj_this.getDate()).padStart(2, '0');
-	const minutes = String(orj_this.getMinutes()).padStart(2, '0');
-	const seconds = String(orj_this.getSeconds()).padStart(2, '0');
-	const hours = String(orj_this.getHours()).padStart(2, '0');
+	const year = orj_this.date.getFullYear();
+	const month = String(orj_this.date.getMonth() + 1).padStart(2, '0'); // Aylar 0-11 arası olduğu için +1 ekliyoruz
+	const day = String(orj_this.date.getDate()).padStart(2, '0');
+	const minutes = String(orj_this.date.getMinutes()).padStart(2, '0');
+	const seconds = String(orj_this.date.getSeconds()).padStart(2, '0');
+	const hours = String(orj_this.date.getHours()).padStart(2, '0');
 
 	switch (template) {
 		case format_types.dddd:
-			return days[orj_this.getDay()];
+			if (!orj_this.temp_config) {
+				orj_this.temp_config = {};
+			}
+			return orj_this.date.toLocaleString(
+				orj_this.temp_config.locales || global_config.locales,
+				orj_this.temp_config.options || global_config.options,
+			);
 		case format_types.DD:
 			return day;
 		case format_types.MM:
@@ -822,7 +932,7 @@ function formatter(orj_this, template = null) {
 			return `${hours}`;
 		}
 		case null: {
-			const timezoneOffset = -orj_this.getTimezoneOffset();
+			const timezoneOffset = -orj_this.date.getTimezoneOffset();
 			const sign = timezoneOffset >= 0 ? '+' : '-';
 			const absOffset = Math.abs(timezoneOffset);
 			const offsetHours = padZero(Math.floor(absOffset / 60));
@@ -852,9 +962,6 @@ function isValid(date_string, template) {
 		throw new Error('Invalid template');
 	}
 	if (template === format_types.dddd) {
-		if (days.includes(date_string) === false) {
-			return false;
-		}
 		return true;
 	}
 	if (format_types_regex[template].test(date_string) === false) {
@@ -863,4 +970,89 @@ function isValid(date_string, template) {
 	return true;
 }
 
+/**
+ * @description It divides the date string into parts and returns an object.
+ * @param {string} time
+ * @param {"year" | "month" | "week" | "day" | "hour" | "minute" | "second"} type
+ * @returns {{year: number, month: number, week:number, day: number, hour: number, minute: number, second: number}}
+ * @example
+ * // Example usage:
+ * const result = duration(1234, 'minute');
+ * console.log(result);
+ * // Output: { year: 0, month: 0, week: 0, day: 0, hour: 20, minute: 34, second: 0,millisecond: 0 }
+ */
+function duration(time, type) {
+	const response = {
+		year: 0,
+		month: 0,
+		week: 0,
+		day: 0,
+		hour: 0,
+		minute: 0,
+		second: 0,
+		millisecond: 0,
+		$kk_date: { milliseconds: 0 },
+	};
+
+	if (!time || typeof time !== 'number' || time < 0) {
+		throw new Error('Invalid time');
+	}
+
+	if (!timeInMilliseconds[type]) {
+		throw new Error('Invalid type');
+	}
+
+	response.$kk_date.milliseconds = time * timeInMilliseconds[type];
+	let milliseconds = time * timeInMilliseconds[type];
+	response.year = Math.floor(milliseconds / timeInMilliseconds.year);
+	milliseconds = milliseconds % timeInMilliseconds.year;
+	response.month = Math.floor(milliseconds / timeInMilliseconds.month);
+	milliseconds = milliseconds % timeInMilliseconds.month;
+	response.week = Math.floor(milliseconds / timeInMilliseconds.week);
+	milliseconds = milliseconds % timeInMilliseconds.week;
+	response.day = Math.floor(milliseconds / timeInMilliseconds.day);
+	milliseconds = milliseconds % timeInMilliseconds.day;
+	response.hour = Math.floor(milliseconds / timeInMilliseconds.hour);
+	milliseconds = milliseconds % timeInMilliseconds.hour;
+	response.minute = Math.floor(milliseconds / timeInMilliseconds.minute);
+	milliseconds = milliseconds % timeInMilliseconds.minute;
+	response.second = Math.floor(milliseconds / timeInMilliseconds.second);
+	milliseconds = milliseconds % timeInMilliseconds.second;
+	response.millisecond = milliseconds;
+
+	return response;
+}
+
+/**
+ *
+ * @param {*} locales
+ * @param {object} options
+ * @param {'short'|'long'} options.weekday
+ * @returns {boolean}
+ */
+function config(locales, options = null) {
+	try {
+		new Intl.Locale(locales);
+		global_config.locales = locales;
+	} catch (error) {
+		throw new Error('locales not valid for BCP 47');
+	}
+	if (options) {
+		if (!Object.keys(options).length) {
+			return true;
+		}
+		if (options && typeof options === 'object') {
+			if (options.weekday) {
+				global_config.options.weekday = options.weekday;
+			}
+		}
+	}
+	return true;
+}
+
+// kk date export default
 module.exports = KkDate;
+
+// another functions export
+module.exports.config = config;
+module.exports.duration = duration;
