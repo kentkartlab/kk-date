@@ -152,7 +152,7 @@ class KkDate {
 						}
 					} else if (isValid(date, format_types['DD.MM.YYYY'])) {
 						const [day, month, year] = date.split('.');
-						this.date = new Date(year, month, day);
+						this.date = new Date(`${year}-${month}-${day}`);
 					} else if (isValid(date, format_types['YYYY-MM-DD HH:mm:ss'])) {
 						const [datePart, timePart] = date.split(' ');
 						const [year, month, day] = datePart.split('-');
@@ -233,7 +233,7 @@ class KkDate {
 						}
 					} else if (isValid(date, format_types['DD-MM-YYYY'])) {
 						const [day, month, year] = date.split('-');
-						this.date = new Date(year, month, day);
+						this.date = new Date(`${year}-${month}-${day}`);
 					} else if (isValid(date, format_types['DD-MM-YYYY HH:mm:ss'])) {
 						const [datePart, timePart] = date.split(' ');
 						const [day, month, year] = datePart.split('-');
@@ -279,7 +279,7 @@ class KkDate {
 						const month = parseInt(date.substring(4, 6), 10) - 1; // Extract month (0-based index)
 						const day = parseInt(date.substring(6, 8), 10); // Extract day
 
-						this.date = new Date(year, month, day);
+						this.date = new Date(`${year}-${month}-${day}`);
 					}
 					if (this.date === false) {
 						this.date = new Date(`${date}`);
