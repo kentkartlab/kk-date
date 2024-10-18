@@ -505,6 +505,10 @@ class KkDate {
 	add(amount, type) {
 		isInvalid(this.date);
 
+		if (typeof amount === 'number' && amount === 0) {
+			return this;
+		}
+
 		if (typeof amount !== 'number' || (typeof amount !== 'number' && typeof amount === 'object' && amount.$kk_date === undefined)) {
 			throw new Error('amount is wrong');
 		}
