@@ -45,6 +45,9 @@ describe('kk_date format', () => {
 	test('YYYYMMDD', () => {
 		expect(new kk_date(`${test_date}`).format('YYYYMMDD')).toBe('20240819');
 	});
+	test('YYYYMMDD', () => {
+		expect(new kk_date('20191226').format('YYYYMMDD')).toBe('20191226');
+	});
 
 	test('DD-MM-YYYY', () => {
 		expect(new kk_date(`${test_date} ${test_time}`).format('DD-MM-YYYY')).toBe('19-08-2024');
