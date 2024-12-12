@@ -215,3 +215,9 @@ describe('kk_date duration', () => {
 		expect(() => kk_date.duration(10)).toThrow('Invalid type');
 	});
 });
+
+test('Localization formats', () => {
+	expect(new kk_date('2024-08-19').config('de-de').format('dddd')).toBe('Montag'); // German
+	expect(new kk_date('2024-08-19').config('es-es').format('dddd')).toBe('lunes'); // Spanish
+	expect(new kk_date('2024-08-19').config('tr-tr').format('dddd')).toBe('Pazartesi'); // Turkish
+});
