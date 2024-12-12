@@ -275,9 +275,9 @@ class KkDate {
 							this.date = new Date(`${year}-${month}-${day}T${timePart}`);
 						}
 					} else if (isValid(date, format_types['YYYYMMDD'])) {
-						const year = parseInt(date.substring(0, 4), 10); // Extract year
-						const month = parseInt(date.substring(4, 6), 10); // Extract month
-						const day = parseInt(date.substring(6, 8), 10); // Extract day
+						const year = String(date.substring(0, 4), 10); // Extract year
+						const month = String(date.substring(4, 6), 10); // Extract month
+						const day = String(date.substring(6, 8), 10); // Extract day
 
 						this.date = new Date(`${year}-${month}-${day}`);
 					}
