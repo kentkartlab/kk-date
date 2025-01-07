@@ -221,3 +221,4 @@ test('Localization formats', () => {
 	expect(new kk_date('2024-08-19').config('es-es').format('dddd')).toBe('lunes'); // Spanish
 	expect(new kk_date('2024-08-19').config('tr-tr').format('dddd')).toBe('Pazartesi'); // Turkish
 });
+kk_date.cache_kill();
