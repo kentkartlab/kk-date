@@ -27,7 +27,7 @@ date: '23:50:55' expected format: YYYY-MM-DD HH:mm:ss
 
 | Package | ms   |
 | :-------- | :------------------------- |
-| kk-date | 446.264ms | WIN!
+| kk-date | 125ms | WIN!
 | moment | 933.953ms |
 | day.js | 1267ms |
 
@@ -37,7 +37,7 @@ date: '2024-09-17 23:50:55' expected format: HH:mm:ss
 
 | Package | ms   |
 | :-------- | :------------------------- |
-| kk-date | 111.182ms | WIN!
+| kk-date | 123ms | WIN!
 | day.js | 588.194ms |
 | moment | 1760ms |
 
@@ -47,7 +47,7 @@ diff 2024-01-01 - 2024-01-30
 
 | Package | ms   |
 | :-------- | :------------------------- |
-| kk-date | 127.343ms | WIN!
+| kk-date | 126ms | WIN!
 | day.js | 313.93ms |
 | moment | 1806ms |
 
