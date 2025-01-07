@@ -65,7 +65,7 @@ It's easy to use kk-date to parse, validate, manipulate, and display dates and t
 ```javascript
   kk_date.caching({ status: true, isMemoryStatsEnabled: false, defaultTtl: 1300 });
 ```
-Gain 300% more speed by enabling cache.
+Gain 300% more speed by enabling cache. default is false
 
 ##### Disable Caching;
 ```javascript
