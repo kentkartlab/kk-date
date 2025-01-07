@@ -1,4 +1,4 @@
-const nopeRedis = require('nope-redis');
+const nopeRedis = require('./nope-redis');
 nopeRedis.config({ isMemoryStatsEnabled: false, defaultTtl: 1300 });
 
 const global_config = {
@@ -82,15 +82,11 @@ class KkDate {
 		} else {
 			const date = params[0];
 			if (Number.isInteger(date)) {
-				is_can_cache = true;
-				cached = nopeRedis.getItem(`${date}`);
-				if (!cached) {
-					const stringed_date_length = `${date}`.length;
-					if (stringed_date_length <= 10) {
-						this.date = new Date(date * 1000);
-					} else if (stringed_date_length > 10) {
-						this.date = new Date(date);
-					}
+				const stringed_date_length = `${date}`.length;
+				if (stringed_date_length <= 10) {
+					this.date = new Date(date * 1000);
+				} else if (stringed_date_length > 10) {
+					this.date = new Date(date);
 				}
 			} else if (isKkDate(date)) {
 				this.date = new Date(date.date.toUTCString());
@@ -1074,11 +1070,47 @@ function config(locales, options = null) {
 	return true;
 }
 
+/**
+ * caching config
+ *
+ * @param {object} options
+ * @param {boolean} options.status
+ * @param {boolean} options.isMemoryStatsEnabled
+ * @param {number|null} options.defaultTtl
+ * @returns {boolean}
+ */
+function caching(options = { status: false, isMemoryStatsEnabled: false, defaultTtl: null }) {
+	if (typeof options.status === 'boolean') {
+		if (options.status) {
+			nopeRedis.SERVICE_START();
+		} else {
+			nopeRedis.SERVICE_KILL_SYNC();
+		}
+	}
+	if (typeof options.isMemoryStatsEnabled === 'boolean') {
+		nopeRedis.config({ isMemoryStatsEnabled: options.isMemoryStatsEnabled, defaultTtl: 1300 });
+	}
+	if (typeof options.defaultTtl === 'number') {
+		nopeRedis.config({ defaultTtl: options.defaultTtl });
+	}
+	return true;
+}
+
+/**
+ * caching config
+ *
+ * @param {boolean} status
+ */
+function caching_status() {
+	return nopeRedis.stats({ showKeys: false, showTotal: true, showSize: true });
+}
+
 // kk date export default
 module.exports = KkDate;
 
 // another functions export
 module.exports.config = config;
 module.exports.duration = duration;
-module.exports.cache_flush = nopeRedis.flushAll;
-module.exports.cache_kill = nopeRedis.SERVICE_KILL;
+module.exports.caching_flush = nopeRedis.flushAll;
+module.exports.caching = caching;
+module.exports.caching_status = caching_status;

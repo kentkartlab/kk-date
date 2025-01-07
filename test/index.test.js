@@ -1,5 +1,4 @@
 const kk_date = require('../index');
-
 const test_date = '2024-08-19';
 const test_time = '23:50:59';
 const timestamp = 1724100659;
@@ -221,4 +220,22 @@ test('Localization formats', () => {
 	expect(new kk_date('2024-08-19').config('es-es').format('dddd')).toBe('lunes'); // Spanish
 	expect(new kk_date('2024-08-19').config('tr-tr').format('dddd')).toBe('Pazartesi'); // Turkish
 });
-kk_date.cache_kill();
+
+test('caching tests', () => {
+	// cache enable test;
+	kk_date.caching({ status: true, isMemoryStatsEnabled: true });
+	const status1 = kk_date.caching_status();
+	expect(status1.status).toBe(true);
+	// enable later some tests;
+	expect(new kk_date('2024-08-19').config('de-de').format('dddd')).toBe('Montag'); // German
+	expect(new kk_date('2024-08-19').config('es-es').format('dddd')).toBe('lunes'); // Spanish
+	expect(new kk_date('2024-08-19').config('tr-tr').format('dddd')).toBe('Pazartesi'); // Turkish
+	// cache disable test;
+	kk_date.caching({ status: false });
+	const status2 = kk_date.caching_status();
+	expect(status2.status).toBe(false);
+	// disable later some tests
+	expect(new kk_date('2024-08-19').config('de-de').format('dddd')).toBe('Montag'); // German
+	expect(new kk_date('2024-08-19').config('es-es').format('dddd')).toBe('lunes'); // Spanish
+	expect(new kk_date('2024-08-19').config('tr-tr').format('dddd')).toBe('Pazartesi'); // Turkish
+});
