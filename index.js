@@ -1111,6 +1111,6 @@ module.exports = KkDate;
 // another functions export
 module.exports.config = config;
 module.exports.duration = duration;
-module.exports.caching_flush = nopeRedis.flushAll;
 module.exports.caching = caching;
 module.exports.caching_status = caching_status;
+module.exports.caching_flush = nopeRedis.flushAll;
