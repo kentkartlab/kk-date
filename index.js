@@ -550,7 +550,14 @@ class KkDate {
 				this.date.setHours(this.date.getHours() + defined_amount);
 				break;
 			case 'months':
-				this.date.setMonth(this.date.getMonth() + defined_amount);
+				const currentDate = this.date.getDate();
+				const currentMonth = this.date.getMonth();
+				// Ay eklemenin düzgün olması için tarihin 1. gününü kullanıyoruz.
+				this.date.setDate(1);
+				this.date.setMonth(currentMonth + defined_amount);
+				// 29 çeken şubat aylarında, değişkendeki günle güncel günü karşılaştırıp son günü alıyoruz.
+				const lastDay = new Date(this.date.getFullYear(), this.date.getMonth() + 1, 0).getDate();
+				this.date.setDate(Math.min(currentDate, lastDay));
 				break;
 			case 'years': {
 				const year_amount = defined_amount * 12;
