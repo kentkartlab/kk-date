@@ -26,6 +26,10 @@ const format_types = {
 	'DD-MM-YYYY': 'DD-MM-YYYY',
 	'DD-MM-YYYY HH:mm:ss': 'DD-MM-YYYY HH:mm:ss',
 	'DD-MM-YYYY HH:mm': 'DD-MM-YYYY HH:mm',
+	'DD MMMM YYYY': 'DD MMMM YYYY',
+	'DD MMMM YYYY dddd': 'DD MMMM YYYY dddd',
+	'DD MMMM dddd YYYY': 'DD MMMM dddd YYYY',
+	'MMMM YYYY': 'MMMM YYYY',
 	'HH:mm:ss': 'HH:mm:ss',
 	'HH:mm': 'HH:mm',
 	HH: 'HH',
@@ -50,6 +54,10 @@ const format_types_regex = {
 	'DD-MM-YYYY': /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-(|17|18|19|20|21)\d\d$/,
 	'DD-MM-YYYY HH:mm:ss': /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-(|17|18|19|20|21)\d\d ([01]\d|2[0-9]):([0-5]\d):([0-5]\d)$/,
 	'DD-MM-YYYY HH:mm': /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-(|17|18|19|20|21)\d\d ([01]\d|2[0-9]):([0-5]\d)$/,
+	'DD MMMM YYYY': /^(0[1-9]|[12][0-9]|3[01]) (January|February|March|April|May|June|July|August|September|October|November|December) (|17|18|19|20|21)\d\d$/,
+	'DD MMMM YYYY dddd': /^(0[1-9]|[12][0-9]|3[01]) (January|February|March|April|May|June|July|August|September|October|November|December) (|17|18|19|20|21)\d\d (Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$/,
+	'MMMM YYYY': /^(January|February|March|April|May|June|July|August|September|October|November|December) (|17|18|19|20|21)\d\d$/,
+	'DD MMMM dddd YYYY': /^(0[1-9]|[12][0-9]|3[01]) (January|February|March|April|May|June|July|August|September|October|November|December) (Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday) (|17|18|19|20|21)\d\d$/,
 	'HH:mm:ss': /^([01]\d|2[0-9]):([0-5]\d):([0-5]\d)$/,
 	'HH:mm': /^([01]\d|2[0-9]):([0-5]\d)$/,
 	HH: /^([01]\d|2[0-9])$/,
@@ -910,6 +918,10 @@ function formatter(orj_this, template = null) {
 	const minutes = String(orj_this.date.getMinutes()).padStart(2, '0');
 	const seconds = String(orj_this.date.getSeconds()).padStart(2, '0');
 	const hours = String(orj_this.date.getHours()).padStart(2, '0');
+	if (!orj_this.temp_config) {
+		orj_this.temp_config = {};
+	}
+	const locale = orj_this.temp_config.locales || global_config.locales
 
 	switch (template) {
 		case format_types.dddd:
@@ -950,6 +962,18 @@ function formatter(orj_this, template = null) {
 		}
 		case format_types.HH: {
 			return `${hours}`;
+		}
+		case format_types['DD MMMM YYYY']: {
+			return `${day} ${orj_this.date.toLocaleString(locale, { month: 'long' })} ${year}`;
+		}
+		case format_types['DD MMMM YYYY dddd']: {
+			return `${day} ${orj_this.date.toLocaleString(locale, { month: 'long' })} ${year} ${orj_this.date.toLocaleString(locale, { weekday: 'long' })}`;
+		}
+		case format_types['MMMM YYYY']: {
+			return `${orj_this.date.toLocaleString(locale, { month: 'long' })} ${year}`;
+		}
+		case format_types['DD MMMM dddd YYYY']: {
+			return `${day} ${orj_this.date.toLocaleString(locale, { month: 'long' })} ${orj_this.date.toLocaleString(locale, { weekday: 'long' })} ${year}`;
 		}
 		case null: {
 			const timezoneOffset = -orj_this.date.getTimezoneOffset();
