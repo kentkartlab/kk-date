@@ -82,6 +82,15 @@ describe('kk_date format', () => {
 	});
 });
 
+describe('kk_date add', () => {
+	test('should not jump month', () => {
+		expect(new kk_date('2025-01-31').add(1, 'months').format('YYYY-MM-DD')).toBe('2025-02-28');
+		expect(new kk_date('2023-01-31').add(1, 'months').format('YYYY-MM-DD')).toBe('2023-02-28');
+		expect(new kk_date('2024-03-31').add(1, 'months').format('YYYY-MM-DD')).toBe('2024-04-30');
+		expect(new kk_date('2024-01-15').add(1, 'months').format('YYYY-MM-DD')).toBe('2024-02-15');
+	});
+});
+
 describe('kk_date diff', () => {
 	test('diff', () => {
 		expect(new kk_date(`${test_date}`).diff('2024-09-19', 'months')).toBe(1);
