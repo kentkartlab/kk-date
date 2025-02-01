@@ -80,6 +80,27 @@ describe('kk_date format', () => {
 	test('T between the time', () => {
 		expect(new kk_date(timestamp).format('YYYY-MM-DDTHH:mm:ss')).toBe('2024-08-19T23:50:59');
 	});
+
+	test('DD MMMM YYYY dddd', () => {
+		expect(new kk_date('2024-08-19').format('DD MMMM YYYY dddd')).toBe('19 August 2024 Monday');
+		expect(new kk_date('2024-08-19').config('tr-tr').format('DD MMMM YYYY dddd')).toBe('19 Ağustos 2024 Pazartesi');
+	});
+
+	test('DD MMMM YYYY', () => {
+		expect(new kk_date('2024-08-19').format('DD MMMM YYYY')).toBe('19 August 2024');
+		expect(new kk_date('2024-08-19').config('tr-tr').format('DD MMMM YYYY')).toBe('19 Ağustos 2024');
+	});
+
+	test('MMMM YYYY', () => {
+		expect(new kk_date('2024-08-19').format('MMMM YYYY')).toBe('August 2024');
+		expect(new kk_date('2024-08-19').config('tr-tr').format('MMMM YYYY')).toBe('Ağustos 2024');
+		expect(new kk_date('2024-01-01').format('MMMM YYYY')).toBe('January 2024');
+	});
+
+	test('DD MMMM dddd YYYY', () => {
+		expect(new kk_date('2024-08-19').format('DD MMMM dddd YYYY')).toBe('19 August Monday 2024');
+		expect(new kk_date('2024-08-19').config('tr-tr').format('DD MMMM dddd YYYY')).toBe('19 Ağustos Pazartesi 2024');
+	});
 });
 
 describe('kk_date add', () => {
