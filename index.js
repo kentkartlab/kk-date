@@ -54,10 +54,13 @@ const format_types_regex = {
 	'DD-MM-YYYY': /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-(|17|18|19|20|21)\d\d$/,
 	'DD-MM-YYYY HH:mm:ss': /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-(|17|18|19|20|21)\d\d ([01]\d|2[0-9]):([0-5]\d):([0-5]\d)$/,
 	'DD-MM-YYYY HH:mm': /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-(|17|18|19|20|21)\d\d ([01]\d|2[0-9]):([0-5]\d)$/,
-	'DD MMMM YYYY': /^(0[1-9]|[12][0-9]|3[01]) (January|February|March|April|May|June|July|August|September|October|November|December) (|17|18|19|20|21)\d\d$/,
-	'DD MMMM YYYY dddd': /^(0[1-9]|[12][0-9]|3[01]) (January|February|March|April|May|June|July|August|September|October|November|December) (|17|18|19|20|21)\d\d (Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$/,
+	'DD MMMM YYYY':
+		/^(0[1-9]|[12][0-9]|3[01]) (January|February|March|April|May|June|July|August|September|October|November|December) (|17|18|19|20|21)\d\d$/,
+	'DD MMMM YYYY dddd':
+		/^(0[1-9]|[12][0-9]|3[01]) (January|February|March|April|May|June|July|August|September|October|November|December) (|17|18|19|20|21)\d\d (Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$/,
 	'MMMM YYYY': /^(January|February|March|April|May|June|July|August|September|October|November|December) (|17|18|19|20|21)\d\d$/,
-	'DD MMMM dddd YYYY': /^(0[1-9]|[12][0-9]|3[01]) (January|February|March|April|May|June|July|August|September|October|November|December) (Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday) (|17|18|19|20|21)\d\d$/,
+	'DD MMMM dddd YYYY':
+		/^(0[1-9]|[12][0-9]|3[01]) (January|February|March|April|May|June|July|August|September|October|November|December) (Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday) (|17|18|19|20|21)\d\d$/,
 	'HH:mm:ss': /^([01]\d|2[0-9]):([0-5]\d):([0-5]\d)$/,
 	'HH:mm': /^([01]\d|2[0-9]):([0-5]\d)$/,
 	HH: /^([01]\d|2[0-9])$/,
@@ -557,7 +560,7 @@ class KkDate {
 			case 'hours':
 				this.date.setHours(this.date.getHours() + defined_amount);
 				break;
-			case 'months':
+			case 'months': {
 				const currentDate = this.date.getDate();
 				const currentMonth = this.date.getMonth();
 				// Ay eklemenin düzgün olması için tarihin 1. gününü kullanıyoruz.
@@ -567,6 +570,7 @@ class KkDate {
 				const lastDay = new Date(this.date.getFullYear(), this.date.getMonth() + 1, 0).getDate();
 				this.date.setDate(Math.min(currentDate, lastDay));
 				break;
+			}
 			case 'years': {
 				const year_amount = defined_amount * 12;
 				this.date.setMonth(this.date.getMonth() + year_amount);
@@ -928,7 +932,7 @@ function formatter(orj_this, template = null) {
 	if (!orj_this.temp_config) {
 		orj_this.temp_config = {};
 	}
-	const locale = orj_this.temp_config.locales || global_config.locales
+	const locale = orj_this.temp_config.locales || global_config.locales;
 
 	switch (template) {
 		case format_types.dddd:
