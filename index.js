@@ -35,6 +35,13 @@ const format_types = {
 	HH: 'HH',
 	mm: 'mm',
 	ss: 'ss',
+	MMM: 'MMM', // Short month name (Jan, Feb, etc.)
+	MMMM: 'MMMM', // Full month name (January, February, etc.)
+	ddd: 'ddd', // Short weekday name (Mon, Tue, etc.)
+	'DD MMM YYYY': 'DD MMM YYYY', // 01 Jan 2024
+	'DD MMM': 'DD MMM', // 01 Jan
+	'MMM YYYY': 'MMM YYYY', // Jan 2024
+	'DD MMM YYYY HH:mm': 'DD MMM YYYY HH:mm', // 01 Jan 2024 13:45
 };
 
 const format_types_regex = {
@@ -66,6 +73,13 @@ const format_types_regex = {
 	HH: /^([01]\d|2[0-9])$/,
 	mm: /^([0-5]\d)$/,
 	ss: /^([0-5]\d)$/,
+	MMM: /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)$/,
+	MMMM: /^(January|February|March|April|May|June|July|August|September|October|November|December)$/,
+	ddd: /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)$/,
+	'DD MMM YYYY': /^(0[1-9]|[12][0-9]|3[01]) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (|17|18|19|20|21)\d\d$/,
+	'DD MMM': /^(0[1-9]|[12][0-9]|3[01]) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)$/,
+	'MMM YYYY': /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (|17|18|19|20|21)\d\d$/,
+	'DD MMM YYYY HH:mm': /^(0[1-9]|[12][0-9]|3[01]) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (|17|18|19|20|21)\d\d ([01]\d|2[0-9]):([0-5]\d)$/,
 };
 
 const timeInMilliseconds = {
@@ -664,7 +678,13 @@ class KkDate {
 	/**
 	 * basic formatter
 	 *
-	 * @param {'YYYY-MM-DD HH:mm:ss'|'YYYY-MM-DDTHH:mm:ss'|'YYYY-MM-DD HH:mm'|'YYYY-MM-DD HH'|'YYYY-MM-DD'|'YYYYMMDD'|'DD.MM.YYYY'|'YYYY.MM.DD HH:mm'|'YYYY.MM.DD HH'|'YYYY.MM.DD HH:mm:ss'|'DD.MM.YYYY HH:mm:ss'|'DD.MM.YYYY HH:mm'|'dddd'|'HH:mm:ss'|'HH:mm'|'X'|'x'|'DD-MM-YYYY'|'YYYY.MM.DD'|'DD-MM-YYYY HH'|'DD-MM-YYYY HH:mm'|'DD-MM-YYYY HH:mm:ss'} template - format template
+	 * @param {'YYYY-MM-DD HH:mm:ss'|'YYYY-MM-DDTHH:mm:ss'|'YYYY-MM-DD HH:mm'|'YYYY-MM-DD HH'|
+	 * 'YYYY-MM-DD'|'YYYYMMDD'|'DD.MM.YYYY'|'YYYY.MM.DD HH:mm'|'YYYY.MM.DD HH'|
+	 * 'YYYY.MM.DD HH:mm:ss'|'DD.MM.YYYY HH:mm:ss'|'DD.MM.YYYY HH:mm'|'dddd'|
+	 * 'HH:mm:ss'|'HH:mm'|'X'|'x'|'DD-MM-YYYY'|'YYYY.MM.DD'|'DD-MM-YYYY HH'|
+	 * 'DD-MM-YYYY HH:mm'|'DD-MM-YYYY HH:mm:ss'|'DD MMMM YYYY'|'DD MMMM YYYY dddd'|
+	 * 'MMMM YYYY'|'DD MMMM dddd YYYY'|'MMM'|'MMMM'|'ddd'|'DD MMM YYYY'|'DD MMM'|
+	 * 'MMM YYYY'|'DD MMM YYYY HH:mm'} template - format template
 	 * @returns {string|Error}
 	 */
 	format(template) {
@@ -985,6 +1005,27 @@ function formatter(orj_this, template = null) {
 		}
 		case format_types['DD MMMM dddd YYYY']: {
 			return `${day} ${orj_this.date.toLocaleString(locale, { month: 'long' })} ${orj_this.date.toLocaleString(locale, { weekday: 'long' })} ${year}`;
+		}
+		case format_types['MMM']: {
+			return orj_this.date.toLocaleString(locale, { month: 'short' });
+		}
+		case format_types['MMMM']: {
+			return orj_this.date.toLocaleString(locale, { month: 'long' });
+		}
+		case format_types['ddd']: {
+			return orj_this.date.toLocaleString(locale, { weekday: 'short' });
+		}
+		case format_types['DD MMM YYYY']: {
+			return `${day} ${orj_this.date.toLocaleString(locale, { month: 'short' })} ${year}`;
+		}
+		case format_types['DD MMM']: {
+			return `${day} ${orj_this.date.toLocaleString(locale, { month: 'short' })}`;
+		}
+		case format_types['MMM YYYY']: {
+			return `${orj_this.date.toLocaleString(locale, { month: 'short' })} ${year}`;
+		}
+		case format_types['DD MMM YYYY HH:mm']: {
+			return `${day} ${orj_this.date.toLocaleString(locale, { month: 'short' })} ${year} ${hours}:${minutes}`;
 		}
 		case null: {
 			const timezoneOffset = -orj_this.date.getTimezoneOffset();
