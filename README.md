@@ -1,4 +1,3 @@
-
 # kk-date
 
 kk-date is a fastest JavaScript library that parses, validations, manipulates, and displays dates and times. If you use Moment.js or Day.js already you can easily use kk-date.
@@ -144,6 +143,25 @@ new kk_date('2024-09-19 18:00:00').isBetween('2024-09-19 12:00:00', '2024-09-19 
 // true
 ```
 
+#### fromNow:
+```javascript
+new kk_date('2024-01-01').fromNow()
+// "2 months ago"
+
+new kk_date('2024-06-01').fromNow()
+// "in 3 months"
+
+// Without suffix
+new kk_date('2024-01-01').fromNow(true)
+// "2 months"
+```
+
+The fromNow method returns a string representing the relative time from now:
+- Automatically handles past and future dates
+- Supports various time units (seconds to years)
+- Optional suffix parameter to remove "ago" and "in" from output
+- Humanized output ("a few seconds", "an hour", etc.)
+
 #### Others:
 [.toDateString();](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toDateString)
 
@@ -171,7 +189,7 @@ The `kk-date` package is designed with simplicity and performance in mind, offer
 - **Optimized for Performance**: If speed and efficiency are critical for your application, `kk-date` is the perfect fit, delivering performance without sacrificing usability.
 - **Ongoing Development**: While `kk-date` is currently tailored for basic date operations, we are actively developing it to support more complex date manipulations and formats in future releases.
 
-Whether you're building a lightweight application or need a reliable solution for high-performance date handling, `kk-date` is the package you’ve been looking for.
+Whether you're building a lightweight application or need a reliable solution for high-performance date handling, `kk-date` is the package you've been looking for.
 
 #### .format() supported templates:
 

@@ -782,6 +782,57 @@ class KkDate {
 
 		return response;
 	}
+
+	/**
+	 * Returns a string representing the relative time from now
+	 * e.g., "2 hours ago", "in 3 days", "a few seconds ago"
+	 *
+	 * @param {boolean} withoutSuffix - If true, omits "ago" and "in" prefixes/suffixes
+	 * @returns {string}
+	 */
+	fromNow(withoutSuffix = false) {
+		const now = new Date();
+		const diff = now.getTime() - this.date.getTime();
+		const seconds = Math.abs(Math.floor(diff / 1000));
+		const minutes = Math.floor(seconds / 60);
+		const hours = Math.floor(minutes / 60);
+		const days = Math.floor(hours / 24);
+		const months = Math.floor(days / 30);
+		const years = Math.floor(months / 12);
+
+		let output = '';
+		const isFuture = diff < 0;
+
+		if (seconds < 45) {
+			output = 'a few seconds';
+		} else if (seconds < 90) {
+			output = 'a minute';
+		} else if (minutes < 45) {
+			output = `${minutes} minutes`;
+		} else if (minutes < 90) {
+			output = 'an hour';
+		} else if (hours < 24) {
+			output = `${hours} hours`;
+		} else if (hours < 48) {
+			output = 'a day';
+		} else if (days < 30) {
+			output = `${days} days`;
+		} else if (days < 45) {
+			output = 'a month';
+		} else if (days < 365) {
+			output = `${months} months`;
+		} else if (years === 1) {
+			output = 'a year';
+		} else {
+			output = `${years} years`;
+		}
+
+		if (!withoutSuffix) {
+			output = isFuture ? `in ${output}` : `${output} ago`;
+		}
+
+		return output;
+	}
 }
 
 /**

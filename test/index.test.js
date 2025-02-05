@@ -323,3 +323,74 @@ test('DD MMM YYYY HH:mm - Date with short month and time', () => {
 	expect(new kk_date('2024-12-31 23:59:59').format('DD MMM YYYY HH:mm')).toBe('31 Dec 2024 23:59');
 	expect(new kk_date('2024-08-19 14:30:00').config('tr-tr').format('DD MMM YYYY HH:mm')).toBe('19 Ağu 2024 14:30');
 });
+
+describe('kk_date fromNow', () => {
+	test('past times', () => {
+		const now = new Date();
+
+		// Seconds
+		const fewSecondsAgo = new Date(now - 30 * 1000);
+		expect(new kk_date(fewSecondsAgo).fromNow()).toBe('a few seconds ago');
+
+		// Minutes
+		const oneMinuteAgo = new Date(now - 60 * 1000);
+		expect(new kk_date(oneMinuteAgo).fromNow()).toBe('a minute ago');
+
+		const threeMinutesAgo = new Date(now - 3 * 60 * 1000);
+		expect(new kk_date(threeMinutesAgo).fromNow()).toBe('3 minutes ago');
+
+		// Hours
+		const oneHourAgo = new Date(now - 60 * 60 * 1000);
+		expect(new kk_date(oneHourAgo).fromNow()).toBe('an hour ago');
+
+		const threeHoursAgo = new Date(now - 3 * 60 * 60 * 1000);
+		expect(new kk_date(threeHoursAgo).fromNow()).toBe('3 hours ago');
+
+		// Days
+		const oneDayAgo = new Date(now - 24 * 60 * 60 * 1000);
+		expect(new kk_date(oneDayAgo).fromNow()).toBe('a day ago');
+
+		const threeDaysAgo = new Date(now - 3 * 24 * 60 * 60 * 1000);
+		expect(new kk_date(threeDaysAgo).fromNow()).toBe('3 days ago');
+
+		// Months
+		const oneMonthAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
+		expect(new kk_date(oneMonthAgo).fromNow()).toBe('a month ago');
+
+		const sixMonthsAgo = new Date(now - 6 * 30 * 24 * 60 * 60 * 1000);
+		expect(new kk_date(sixMonthsAgo).fromNow()).toBe('6 months ago');
+
+		// Years
+		const oneYearAgo = new Date(now - 365 * 24 * 60 * 60 * 1000);
+		expect(new kk_date(oneYearAgo).fromNow()).toBe('a year ago');
+
+		const twoYearsAgo = new Date(now - 2 * 365 * 24 * 60 * 60 * 1000);
+		expect(new kk_date(twoYearsAgo).fromNow()).toBe('2 years ago');
+	});
+
+	test('future times', () => {
+		const now = new Date();
+
+		// Minutes
+		const inThreeMinutes = new Date(now.getTime() + 3 * 60 * 1000);
+		expect(new kk_date(inThreeMinutes).fromNow()).toBe('in 3 minutes');
+
+		// Hours
+		const inThreeHours = new Date(now.getTime() + 3 * 60 * 60 * 1000);
+		expect(new kk_date(inThreeHours).fromNow()).toBe('in 3 hours');
+
+		// Days
+		const inThreeDays = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+		expect(new kk_date(inThreeDays).fromNow()).toBe('in 3 days');
+	});
+
+	test('without suffix', () => {
+		const now = new Date();
+
+		const threeMinutesAgo = new Date(now - 3 * 60 * 1000);
+		expect(new kk_date(threeMinutesAgo).fromNow(true)).toBe('3 minutes');
+
+		const inThreeMinutes = new Date(now.getTime() + 3 * 60 * 1000);
+		expect(new kk_date(inThreeMinutes).fromNow(true)).toBe('3 minutes');
+	});
+});
