@@ -91,6 +91,16 @@ const timeInMilliseconds = {
 	minute: 60 * 1000, // 1 minute
 	second: 1000, // 1 second
 };
+
+const howManySeconds = {
+	year: 31556926,
+	month: 2629743,
+	week: 604800,
+	day: 86400,
+	hour: 3600,
+	minute: 60,
+};
+
 /**
  * @kkDate method
  */

@@ -251,6 +251,53 @@ describe('kk_date duration', () => {
 	});
 });
 
+describe('kk_date instance duration method', () => {
+	test('duration with timestamp', () => {
+		const date = new kk_date();
+		const response = date.duration(65); // 65 seconds
+		expect(response.year).toBe(0);
+		expect(response.month).toBe(0);
+		expect(response.week).toBe(0);
+		expect(response.day).toBe(0);
+		expect(response.hour).toBe(0);
+		expect(response.minute).toBe(1);
+		expect(response.second).toBe(5);
+	});
+
+	test('duration with large timestamp', () => {
+		const date = new kk_date();
+		const response = date.duration(86400); // 1 day in seconds
+		expect(response.year).toBe(0);
+		expect(response.month).toBe(0);
+		expect(response.week).toBe(0);
+		expect(response.day).toBe(1);
+		expect(response.hour).toBe(0);
+		expect(response.minute).toBe(0);
+		expect(response.second).toBe(0);
+	});
+
+	test('duration with complex timestamp', () => {
+		const date = new kk_date();
+		const response = date.duration(90061); // 1 day, 1 hour, 1 minute, 1 second
+		expect(response.year).toBe(0);
+		expect(response.month).toBe(0);
+		expect(response.week).toBe(0);
+		expect(response.day).toBe(1);
+		expect(response.hour).toBe(1);
+		expect(response.minute).toBe(1);
+		expect(response.second).toBe(1);
+	});
+
+	test('duration with invalid inputs', () => {
+		const date = new kk_date();
+		expect(() => date.duration(-1)).toThrow('Invalid time');
+		expect(() => date.duration(0)).toThrow('Invalid time');
+		expect(() => date.duration(null)).toThrow('Invalid time');
+		expect(() => date.duration(undefined)).toThrow('Invalid time');
+		expect(() => date.duration('not a number')).toThrow('Invalid time');
+	});
+});
+
 test('Localization formats', () => {
 	expect(new kk_date('2024-08-19').config('de-de').format('dddd')).toBe('Montag'); // German
 	expect(new kk_date('2024-08-19').config('es-es').format('dddd')).toBe('lunes'); // Spanish
