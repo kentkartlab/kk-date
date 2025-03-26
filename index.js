@@ -409,15 +409,30 @@ class KkDate {
 	/**
 	 * isBetween
 	 *
-	 * @param {string|Date|KkDate} date - date/datetime/time
-	 * @param {string|Date|KkDate} date - date/datetime/time
+	 * @param {string|Date|KkDate} start - start date/datetime/time
+	 * @param {string|Date|KkDate} end - end date/datetime/time
+	 * @param {'seconds'|'minutes'|'hours'|'days'|'months'|'years'} [unit='milliseconds']
 	 * @returns {boolean|Error}
 	 */
-	isBetween(start, end) {
+	isBetween(start, end, unit = 'milliseconds') {
 		const starts = isKkDate(start) ? start.getTime() : new KkDate(start).getTime();
 		const ends = isKkDate(end) ? end.getTime() : new KkDate(end).getTime();
 		const date_time = this.date.getTime();
-		return date_time >= starts && date_time <= ends;
+		const unit_key = unit + 's';
+
+		if (unit === 'milliseconds') {
+			return date_time >= starts && date_time <= ends;
+		}
+
+		if (!timeInMilliseconds[unit_key]) {
+			throw new Error('Invalid unit type. Must be one of: milliseconds, seconds, minutes, hours, days, months, years');
+		}
+
+		const startUnit = Math.floor(starts / timeInMilliseconds[unit_key]);
+		const endUnit = Math.floor(ends / timeInMilliseconds[unit_key]);
+		const dateUnit = Math.floor(date_time / timeInMilliseconds[unit_key]);
+
+		return dateUnit >= startUnit && dateUnit <= endUnit;
 	}
 
 	/**
