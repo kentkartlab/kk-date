@@ -4,8 +4,7 @@ nopeRedis.config({ isMemoryStatsEnabled: false, defaultTtl: 1300 });
 
 const global_config = {
 	locale: 'en',
-	timezone: null,
-	userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+	timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 };
 
 const format_types = {
@@ -42,6 +41,7 @@ const format_types = {
 	'DD MMM': 'DD MMM', // 01 Jan
 	'MMM YYYY': 'MMM YYYY', // Jan 2024
 	'DD MMM YYYY HH:mm': 'DD MMM YYYY HH:mm', // 01 Jan 2024 13:45
+	'YYYY-MM-DDTHH:mm:ss': 'YYYY-MM-DDTHH:mm:ss',
 };
 
 const format_types_regex = {
@@ -840,15 +840,17 @@ class KkDate {
  * @returns {Date|Error}
  */
 function parseWithTimezone(kkDate, timezone = null) {
-	isInvalid(kkDate.date);
+	if (timezone === global_config.timezone) {
+		return kkDate.date;
+	}
 	const utcTime = kkDate.date.getTime();
 	const localOffset = kkDate.date.getTimezoneOffset() * 60 * 1000;
 	const targetOffset = timezoneData[timezone].standardOffset * 1000;
-	let extraAdd = 0;
-	if (timezone === kkDate?.temp_config?.timezone && global_config.timezone) {
-		extraAdd = (timezoneData[timezone].standardOffset - timezoneData[global_config.timezone].standardOffset) * 1000;
+	let extraAddDiff = 0;
+	if (kkDate.temp_config && global_config.timezone && timezone === kkDate.temp_config.timezone) {
+		extraAddDiff = timezoneData[timezone].standardOffset - timezoneData[global_config.timezone].standardOffset;
 	}
-	const tzTime = utcTime + targetOffset + localOffset + extraAdd;
+	const tzTime = utcTime + targetOffset + localOffset + extraAddDiff;
 	return new Date(tzTime);
 }
 
@@ -1033,6 +1035,10 @@ function formatter(orj_this, template = null) {
 			const result = converter(orj_this.date, ['day', 'month', 'year']);
 			return `${result.day}-${result.month}-${result.year}`;
 		}
+		case format_types['DD-MM-YYYY HH:mm']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes']);
+			return `${result.day}-${result.month}-${result.year} ${result.hours}:${result.minutes}`;
+		}
 		case format_types['DD.MM.YYYY']: {
 			const result = converter(orj_this.date, ['day', 'month', 'year']);
 			return `${result.day}.${result.month}.${result.year}`;
@@ -1044,6 +1050,14 @@ function formatter(orj_this, template = null) {
 		case format_types['YYYY-MM-DD HH:mm:ss']: {
 			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes', 'seconds']);
 			return `${result.year}-${result.month}-${result.day} ${result.hours}:${result.minutes}:${result.seconds}`;
+		}
+		case format_types['YYYY-MM-DDTHH:mm:ss']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes', 'seconds']);
+			return `${result.year}-${result.month}-${result.day}T${result.hours}:${result.minutes}:${result.seconds}`;
+		}
+		case format_types['YYYY.MM.DD HH:mm:ss']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes', 'seconds']);
+			return `${result.year}.${result.month}.${result.day} ${result.hours}:${result.minutes}:${result.seconds}`;
 		}
 		case format_types['YYYY.MM.DD']: {
 			const result = converter(orj_this.date, ['day', 'month', 'year']);
