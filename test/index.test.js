@@ -1,7 +1,11 @@
 const kk_date = require('../index');
 const test_date = '2024-08-19';
 const test_time = '23:50:59';
-const timestamp = 1724093459;
+const timestamp = 1724100659;
+
+const timezone = 'Europe/Istanbul';
+
+kk_date.config({ timezone: timezone });
 
 describe('kk_date format', () => {
 	test('HH:mm:ss', () => {

@@ -5,6 +5,7 @@ nopeRedis.config({ isMemoryStatsEnabled: false, defaultTtl: 1300 });
 const global_config = {
 	locale: 'en',
 	timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+	userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 };
 
 const format_types = {
@@ -139,8 +140,10 @@ class KkDate {
 				const stringed_date_length = `${date}`.length;
 				if (stringed_date_length <= 10) {
 					this.date = new Date(date * 1000);
+					this.date = parseWithTimezone(this, global_config.timezone, true);
 				} else if (stringed_date_length > 10) {
 					this.date = new Date(date);
+					this.date = parseWithTimezone(this, global_config.timezone, true);
 				}
 			} else if (isKkDate(date)) {
 				this.date = new Date(date.date.toUTCString());
@@ -358,9 +361,6 @@ class KkDate {
 				}
 			}
 		}
-		if (global_config.timezone) {
-			this.date = parseWithTimezone(this, global_config.timezone);
-		}
 		this.temp_config = {};
 	}
 
@@ -566,7 +566,10 @@ class KkDate {
 	 */
 	valueOf() {
 		isInvalid(this.date);
-		return this.date.valueOf();
+		return (
+			this.date.valueOf() +
+			(timezoneData[global_config.userTimezone].standardOffset * 1000 - timezoneData[global_config.timezone].standardOffset * 1000)
+		);
 	}
 
 	/**
@@ -847,10 +850,11 @@ class KkDate {
  * @description It parses the date with the timezone and returns the date.
  * @param {KkDate} kkDate
  * @param {string} timezone
+ * @param {boolean} is_init
  * @returns {Date|Error}
  */
-function parseWithTimezone(kkDate, timezone = null) {
-	if (timezone === global_config.timezone) {
+function parseWithTimezone(kkDate, timezone, is_init = false) {
+	if (timezone === global_config.timezone && !is_init) {
 		return kkDate.date;
 	}
 	const utcTime = kkDate.date.getTime();
@@ -1027,10 +1031,10 @@ function formatter(orj_this, template = null) {
 	isInvalid(orj_this.date);
 	switch (template) {
 		case 'x': {
-			return parseInt(orj_this.date.valueOf(), 10);
+			return parseInt(orj_this.valueOf(), 10);
 		}
 		case 'X': {
-			return parseInt(orj_this.date.valueOf() / 1000, 10);
+			return parseInt(orj_this.valueOf() / 1000, 10);
 		}
 		case format_types.dddd: {
 			return dateTimeFormat(orj_this, template).format(orj_this.date);
