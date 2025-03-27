@@ -566,6 +566,16 @@ class KkDate {
 	 */
 	valueOf() {
 		isInvalid(this.date);
+		this.date.valueOf();
+	}
+
+	/**
+	 * valueOfLocale() locale value of giving
+	 *
+	 * @returns {number|Error}
+	 */
+	valueOfLocale() {
+		isInvalid(this.date);
 		return (
 			this.date.valueOf() +
 			(timezoneData[global_config.userTimezone].standardOffset * 1000 - timezoneData[global_config.timezone].standardOffset * 1000)
@@ -1031,10 +1041,10 @@ function formatter(orj_this, template = null) {
 	isInvalid(orj_this.date);
 	switch (template) {
 		case 'x': {
-			return parseInt(orj_this.valueOf(), 10);
+			return parseInt(orj_this.valueOfLocale(), 10);
 		}
 		case 'X': {
-			return parseInt(orj_this.valueOf() / 1000, 10);
+			return parseInt(orj_this.valueOfLocale() / 1000, 10);
 		}
 		case format_types.dddd: {
 			return dateTimeFormat(orj_this, template).format(orj_this.date);
