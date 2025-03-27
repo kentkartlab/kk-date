@@ -28,3 +28,5 @@ console.log(
 		})
 		.format('YYYY-MM-DD HH:mm:ss'),
 );
+
+console.log('With Kuala Convert', new kkDate('2025-03-27 18:43:00').tz('Asia/Kuala_Lumpur').format('YYYY-MM-DD HH:mm:ss'));

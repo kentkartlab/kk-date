@@ -831,6 +831,16 @@ class KkDate {
 
 		return response;
 	}
+
+	/**
+	 * Convert to timezone
+	 * @param {string} timezone
+	 * @returns
+	 */
+	tz(timezone) {
+		this.date = parseWithTimezone(this, timezone);
+		return this;
+	}
 }
 
 /**
