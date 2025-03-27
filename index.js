@@ -839,15 +839,16 @@ class KkDate {
  * @param {string} timezone
  * @returns {Date|Error}
  */
-function parseWithTimezone(kkDate, timezone) {
+function parseWithTimezone(kkDate, timezone = null) {
 	isInvalid(kkDate.date);
-	// ilk olarak gelen parametreye, ardından global config'e bakacak
-	const selectedTimezone = timezone || global_config.timezone;
-
 	const utcTime = kkDate.date.getTime();
 	const localOffset = kkDate.date.getTimezoneOffset() * 60 * 1000;
 	const targetOffset = timezoneData[timezone].standardOffset * 1000;
-	const tzTime = utcTime + targetOffset + localOffset;
+	let extraAdd = 0;
+	if (timezone === kkDate?.temp_config?.timezone && global_config.timezone) {
+		extraAdd = (timezoneData[timezone].standardOffset - timezoneData[global_config.timezone].standardOffset) * 1000;
+	}
+	const tzTime = utcTime + targetOffset + localOffset + extraAdd;
 	return new Date(tzTime);
 }
 
