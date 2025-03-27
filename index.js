@@ -747,6 +747,7 @@ class KkDate {
 	 */
 	config(options) {
 		if (options.timezone) {
+			isValidTimezone(options.timezone);
 			this.temp_config.timezone = options.timezone;
 			this.date = parseWithTimezone(this, options.timezone);
 		}
@@ -851,6 +852,7 @@ class KkDate {
 	 * @returns
 	 */
 	tz(timezone) {
+		isValidTimezone(timezone);
 		this.date = parseWithTimezone(this, timezone);
 		return this;
 	}
@@ -1191,6 +1193,18 @@ function isValid(date_string, template) {
 }
 
 /**
+ * @description It checks if the timezone is valid.
+ * @param {string} timezone
+ * @returns {boolean}
+ */
+function isValidTimezone(timezone) {
+	if (!timezoneData[timezone]) {
+		throw new Error('Invalid timezone');
+	}
+	return true;
+}
+
+/**
  * @description It divides the date string into parts and returns an object.
  * @param {string} time
  * @param {"year" | "month" | "week" | "day" | "hour" | "minute" | "second"} type
@@ -1272,6 +1286,7 @@ function config(options) {
 		throw new Error('locale not valid for BCP 47');
 	}
 	if (options.timezone) {
+		isValidTimezone(options.timezone);
 		global_config.timezone = options.timezone;
 	}
 	return true;
