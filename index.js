@@ -358,7 +358,6 @@ class KkDate {
 				}
 			}
 		}
-		console.log('Config', this.temp_config);
 		this.temp_config = {};
 	}
 
