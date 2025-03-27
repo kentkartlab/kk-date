@@ -358,6 +358,9 @@ class KkDate {
 				}
 			}
 		}
+		if (global_config.timezone) {
+			this.date = parseWithTimezone(this, global_config.timezone);
+		}
 		this.temp_config = {};
 	}
 
@@ -730,6 +733,10 @@ class KkDate {
 	 * @returns {Error|KkDate}
 	 */
 	config(options) {
+		if (options.timezone) {
+			this.temp_config.timezone = options.timezone;
+			this.date = parseWithTimezone(this, options.timezone);
+		}
 		try {
 			if (options.locale) {
 				this.temp_config.locale = options.locale;
@@ -758,9 +765,6 @@ class KkDate {
 			}
 		} catch (error) {
 			throw new Error('locale not valid for BCP 47, config error !');
-		}
-		if (options.timezone) {
-			this.temp_config.timezone = options.timezone;
 		}
 		return this;
 	}
@@ -837,9 +841,8 @@ class KkDate {
  */
 function parseWithTimezone(kkDate, timezone) {
 	isInvalid(kkDate.date);
-	if (timezone === global_config.userTimezone || timezone === kkDate?.temp_config?.timezone) {
-		return kkDate.date;
-	}
+	// ilk olarak gelen parametreye, ardından global config'e bakacak
+	const selectedTimezone = timezone || global_config.timezone;
 
 	const utcTime = kkDate.date.getTime();
 	const localOffset = kkDate.date.getTimezoneOffset() * 60 * 1000;
@@ -1036,6 +1039,10 @@ function formatter(orj_this, template = null) {
 		case format_types['YYYY-MM-DD']: {
 			const result = converter(orj_this.date, ['day', 'month', 'year']);
 			return `${result.year}-${result.month}-${result.day}`;
+		}
+		case format_types['YYYY-MM-DD HH:mm:ss']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes', 'seconds']);
+			return `${result.year}-${result.month}-${result.day} ${result.hours}:${result.minutes}:${result.seconds}`;
 		}
 		case format_types['YYYY.MM.DD']: {
 			const result = converter(orj_this.date, ['day', 'month', 'year']);
