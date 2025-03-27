@@ -3,9 +3,6 @@ nopeRedis.config({ isMemoryStatsEnabled: false, defaultTtl: 1300 });
 
 const global_config = {
 	locales: 'en-en',
-	options: {
-		weekday: 'long',
-	},
 };
 
 const format_types = {
@@ -99,6 +96,25 @@ const howManySeconds = {
 	day: 86400,
 	hour: 3600,
 	minute: 60,
+};
+
+const cached_dateTimeFormat = {
+	dddd: new Intl.DateTimeFormat(global_config.locales, {
+		weekday: 'long',
+	}),
+	ddd: new Intl.DateTimeFormat(global_config.locales, {
+		weekday: 'short',
+	}),
+	MMMM: new Intl.DateTimeFormat(global_config.locales, {
+		month: 'long',
+	}),
+	MMM: new Intl.DateTimeFormat(global_config.locales, { month: 'short' }),
+	temp: {
+		dddd: {},
+		ddd: {},
+		MMMM: {},
+		MMM: {},
+	},
 };
 
 /**
@@ -335,10 +351,11 @@ class KkDate {
 			} else {
 				isInvalid(this.date);
 				if (is_can_cache) {
-					nopeRedis.setItem(`${date}`, new Date(this.date.getTime()));
+					nopeRedis.setItemAsync(`${date}`, new Date(this.date.getTime()));
 				}
 			}
 		}
+		this.temp_config = {};
 	}
 
 	/**
@@ -698,7 +715,6 @@ class KkDate {
 	 * @returns {string|Error}
 	 */
 	format(template) {
-		isInvalid(this.date);
 		return format(this, template);
 	}
 
@@ -706,28 +722,37 @@ class KkDate {
 	 * @description kk-date config for in call
 	 *
 	 * @param {string} locales BCP 47 language tag
-	 * @param {object} options
-	 * @param {'short'|'long'} options.weekday
 	 * @returns {Error|KkDate}
 	 */
-	config(locales, options = null) {
+	config(locales) {
 		try {
+			if (cached_dateTimeFormat.temp['dddd'][locales]) {
+				return this;
+			}
 			new Intl.Locale(locales);
 			this.temp_config = {
 				locales: locales,
-				options: {
-					weekday: 'long',
-				},
 			};
-			if (options && typeof options === 'object') {
-				if (options.weekday) {
-					this.temp_config.options.weekday = options.weekday;
-				}
+			if (!cached_dateTimeFormat.temp['dddd'][locales]) {
+				cached_dateTimeFormat.temp['dddd'][locales] = new Intl.DateTimeFormat(locales, {
+					weekday: 'long',
+				});
 			}
-			return this;
+			if (!cached_dateTimeFormat.temp['ddd'][locales]) {
+				cached_dateTimeFormat.temp['ddd'][locales] = new Intl.DateTimeFormat(locales, {
+					weekday: 'short',
+				});
+			}
+			if (!cached_dateTimeFormat.temp['MMMM'][locales]) {
+				cached_dateTimeFormat.temp['MMMM'][locales] = new Intl.DateTimeFormat(locales, {
+					month: 'long',
+				});
+			}
+			cached_dateTimeFormat.temp['MMM'][locales] = new Intl.DateTimeFormat(locales, { month: 'short' });
 		} catch (error) {
 			throw new Error('locales not valid for BCP 47, config error !');
 		}
+		return this;
 	}
 
 	/**
@@ -834,6 +859,8 @@ function isKkDate(value = {}) {
  */
 function format(date, template) {
 	switch (template) {
+		case 'dddd':
+			return formatter(date, template);
 		case 'YYYY-MM-DD HH:mm:ss':
 			return `${formatter(date, 'YYYY-MM-DD')} ${formatter(date, 'HH:mm:ss')}`;
 		case 'YYYY-MM-DDTHH:mm:ss':
@@ -868,8 +895,6 @@ function format(date, template) {
 			return `${formatter(date, 'DD.MM.YYYY')} ${formatter(date, 'HH:mm:ss')}`;
 		case 'DD.MM.YYYY HH:mm':
 			return `${formatter(date, 'DD.MM.YYYY')} ${formatter(date, 'HH:mm')}`;
-		case 'dddd':
-			return formatter(date, template);
 		case 'HH:mm:ss':
 			return `${formatter(date, template)}`;
 		case 'HH:mm':
@@ -939,6 +964,59 @@ function diff(start, end, type, is_decimal = false, turn_difftime = false) {
 	};
 }
 
+function dateTimeFormat(locales = null, template) {
+	if (template === format_types.dddd) {
+		if (locales) {
+			return cached_dateTimeFormat.temp[template][locales];
+		}
+		return cached_dateTimeFormat.dddd;
+	}
+	if (template === format_types.ddd) {
+		if (locales) {
+			return cached_dateTimeFormat.temp[template][locales];
+		}
+		return cached_dateTimeFormat.ddd;
+	}
+	if (template === format_types.MMMM) {
+		if (locales) {
+			return cached_dateTimeFormat.temp[template][locales];
+		}
+		return cached_dateTimeFormat.MMMM;
+	}
+	if (template === format_types.MMM) {
+		if (locales) {
+			return cached_dateTimeFormat.temp[template][locales];
+		}
+		return cached_dateTimeFormat.MMM;
+	}
+	throw new Error('unkown template for dateTimeFormat !');
+}
+
+function converter(date, to) {
+	const result = {};
+	for (let index = 0; index < to.length; index++) {
+		if (to[index] === 'year') {
+			result['year'] = date.getFullYear();
+		}
+		if (to[index] === 'month') {
+			result['month'] = String(date.getMonth() + 1).padStart(2, '0');
+		}
+		if (to[index] === 'day') {
+			result['day'] = String(date.getDate()).padStart(2, '0');
+		}
+		if (to[index] === 'hours') {
+			result['hours'] = String(date.getHours()).padStart(2, '0');
+		}
+		if (to[index] === 'minutes') {
+			result['minutes'] = String(date.getMinutes()).padStart(2, '0');
+		}
+		if (to[index] === 'seconds') {
+			result['seconds'] = String(date.getSeconds()).padStart(2, '0');
+		}
+	}
+	return result;
+}
+
 /**
  *
  * @param {Date} this.date
@@ -947,95 +1025,100 @@ function diff(start, end, type, is_decimal = false, turn_difftime = false) {
  */
 function formatter(orj_this, template = null) {
 	isInvalid(orj_this.date);
-	if (template === 'X') {
-		return parseInt(orj_this.date.valueOf() / 1000, 10);
-	}
-	if (template === 'x') {
-		return parseInt(orj_this.date.valueOf(), 10);
-	}
-	const year = orj_this.date.getFullYear();
-	const month = String(orj_this.date.getMonth() + 1).padStart(2, '0'); // Aylar 0-11 arası olduğu için +1 ekliyoruz
-	const day = String(orj_this.date.getDate()).padStart(2, '0');
-	const minutes = String(orj_this.date.getMinutes()).padStart(2, '0');
-	const seconds = String(orj_this.date.getSeconds()).padStart(2, '0');
-	const hours = String(orj_this.date.getHours()).padStart(2, '0');
-	if (!orj_this.temp_config) {
-		orj_this.temp_config = {};
-	}
-	const locale = orj_this.temp_config.locales || global_config.locales;
-
 	switch (template) {
-		case format_types.dddd:
-			if (!orj_this.temp_config) {
-				orj_this.temp_config = {};
-			}
-			return orj_this.date.toLocaleString(
-				orj_this.temp_config.locales || global_config.locales,
-				orj_this.temp_config.options || global_config.options,
-			);
-		case format_types.DD:
-			return day;
-		case format_types.MM:
-			return month;
-		case format_types['DD-MM-YYYY']:
-			return `${day}-${month}-${year}`;
-		case format_types['DD.MM.YYYY']:
-			return `${day}.${month}.${year}`;
-		case format_types['YYYY-MM-DD']:
-			return `${year}-${month}-${day}`;
-		case format_types['YYYY.MM.DD']:
-			return `${year}.${month}.${day}`;
-		case format_types['YYYYMMDD']:
-			return `${year}${month}${day}`;
-		case format_types.YYYY:
-			return `${year}`;
+		case 'x': {
+			return parseInt(orj_this.date.valueOf(), 10);
+		}
+		case 'X': {
+			return parseInt(orj_this.date.valueOf() / 1000, 10);
+		}
+		case format_types.dddd: {
+			return dateTimeFormat(orj_this.temp_config.locales, template).format(orj_this.date);
+		}
+		case format_types.DD: {
+			return converter(orj_this.date, ['day']).day;
+		}
+		case format_types.MM: {
+			return converter(orj_this.date, ['month']).month;
+		}
+		case format_types['DD-MM-YYYY']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year']);
+			return `${result.day}-${result.month}-${result.year}`;
+		}
+		case format_types['DD.MM.YYYY']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year']);
+			return `${result.day}.${result.month}.${result.year}`;
+		}
+		case format_types['YYYY-MM-DD']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year']);
+			return `${result.year}-${result.month}-${result.day}`;
+		}
+		case format_types['YYYY.MM.DD']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year']);
+			return `${result.year}.${result.month}.${result.day}`;
+		}
+		case format_types['YYYYMMDD']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year']);
+			return `${result.year}${result.month}${result.day}`;
+		}
+		case format_types.YYYY: {
+			return `${converter(orj_this.date, ['year']).year}`;
+		}
 		case format_types['HH:mm:ss']: {
-			return `${hours}:${minutes}:${seconds}`;
+			const result = converter(orj_this.date, ['hours', 'minutes', 'seconds']);
+			return `${result.hours}:${result.minutes}:${result.seconds}`;
 		}
 		case format_types['HH:mm']: {
-			return `${hours}:${minutes}`;
+			const result = converter(orj_this.date, ['hours', 'minutes']);
+			return `${result.hours}:${result.minutes}`;
 		}
 		case format_types.mm: {
-			return `${minutes}`;
+			return `${converter(orj_this.date, ['minutes']).minutes}`;
 		}
 		case format_types.ss: {
-			return `${seconds}`;
+			return `${converter(orj_this.date, ['seconds']).seconds}`;
 		}
 		case format_types.HH: {
-			return `${hours}`;
+			return `${converter(orj_this.date, ['hours']).hours}`;
 		}
 		case format_types['DD MMMM YYYY']: {
-			return `${day} ${orj_this.date.toLocaleString(locale, { month: 'long' })} ${year}`;
+			const result = converter(orj_this.date, ['day', 'year']);
+			return `${result.day} ${dateTimeFormat(orj_this.temp_config.locales, 'MMMM').format(orj_this.date)} ${result.year}`;
 		}
 		case format_types['DD MMMM YYYY dddd']: {
-			return `${day} ${orj_this.date.toLocaleString(locale, { month: 'long' })} ${year} ${orj_this.date.toLocaleString(locale, { weekday: 'long' })}`;
+			const result = converter(orj_this.date, ['day', 'year']);
+			return `${result.day} ${dateTimeFormat(orj_this.temp_config.locales, 'MMMM').format(orj_this.date)} ${result.year} ${dateTimeFormat(orj_this.temp_config.locales, 'dddd').format(orj_this.date)}`;
 		}
 		case format_types['MMMM YYYY']: {
-			return `${orj_this.date.toLocaleString(locale, { month: 'long' })} ${year}`;
+			const result = converter(orj_this.date, ['year']);
+			return `${dateTimeFormat(orj_this.temp_config.locales, 'MMMM').format(orj_this.date)} ${result.year}`;
 		}
 		case format_types['DD MMMM dddd YYYY']: {
-			return `${day} ${orj_this.date.toLocaleString(locale, { month: 'long' })} ${orj_this.date.toLocaleString(locale, { weekday: 'long' })} ${year}`;
+			const result = converter(orj_this.date, ['day', 'year']);
+			return `${result.day} ${dateTimeFormat(orj_this.temp_config.locales, 'MMMM').format(orj_this.date)} ${dateTimeFormat(orj_this.temp_config.locales, 'dddd').format(orj_this.date)} ${result.year}`;
 		}
 		case format_types['MMM']: {
-			return orj_this.date.toLocaleString(locale, { month: 'short' });
+			return dateTimeFormat(orj_this.temp_config.locales, 'MMM').format(orj_this.date);
 		}
 		case format_types['MMMM']: {
-			return orj_this.date.toLocaleString(locale, { month: 'long' });
+			return dateTimeFormat(orj_this.temp_config.locales, 'MMMM').format(orj_this.date);
 		}
 		case format_types['ddd']: {
-			return orj_this.date.toLocaleString(locale, { weekday: 'short' });
+			return dateTimeFormat(orj_this.temp_config.locales, 'ddd').format(orj_this.date);
 		}
 		case format_types['DD MMM YYYY']: {
-			return `${day} ${orj_this.date.toLocaleString(locale, { month: 'short' })} ${year}`;
+			const result = converter(orj_this.date, ['day', 'year']);
+			return `${result.day} ${dateTimeFormat(orj_this.temp_config.locales, 'MMM').format(orj_this.date)} ${result.year}`;
 		}
 		case format_types['DD MMM']: {
-			return `${day} ${orj_this.date.toLocaleString(locale, { month: 'short' })}`;
+			return `${converter(orj_this.date, ['dat']).day} ${dateTimeFormat(orj_this.temp_config.locales, 'MMM').format(orj_this.date)}`;
 		}
 		case format_types['MMM YYYY']: {
-			return `${orj_this.date.toLocaleString(locale, { month: 'short' })} ${year}`;
+			return `${dateTimeFormat(orj_this.temp_config.locales, 'MMM').format(orj_this.date)} ${converter(orj_this.date, ['year']).year}`;
 		}
 		case format_types['DD MMM YYYY HH:mm']: {
-			return `${day} ${orj_this.date.toLocaleString(locale, { month: 'short' })} ${year} ${hours}:${minutes}`;
+			const result = converter(orj_this.date, ['day', 'year', 'hours', 'minutes']);
+			return `${result.day} ${dateTimeFormat(orj_this.temp_config.locales, 'MMM').format(orj_this.date)} ${result.year} ${result.hours}:${result.minutes}`;
 		}
 		case null: {
 			const timezoneOffset = -orj_this.date.getTimezoneOffset();
@@ -1043,7 +1126,8 @@ function formatter(orj_this, template = null) {
 			const absOffset = Math.abs(timezoneOffset);
 			const offsetHours = padZero(Math.floor(absOffset / 60));
 			const offsetMinutes = padZero(absOffset % 60);
-			return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${sign}${offsetHours}:${offsetMinutes}`;
+			const result = converter(orj_this.date, ['day', 'year', 'hours', 'minutes', 'seconds']);
+			return `${result.year}-${result.month}-${result.day}T${result.hours}:${result.minutes}:${result.seconds}${sign}${offsetHours}:${offsetMinutes}`;
 		}
 		default:
 			throw new Error('template is not right');
@@ -1132,26 +1216,26 @@ function duration(time, type) {
 /**
  *
  * @param {*} locales
- * @param {object} options
- * @param {'short'|'long'} options.weekday
  * @returns {boolean}
  */
-function config(locales, options = null) {
+function config(locales) {
 	try {
 		new Intl.Locale(locales);
 		global_config.locales = locales;
+		cached_dateTimeFormat.dddd = new Intl.DateTimeFormat(global_config.locales, {
+			weekday: 'long',
+		});
+		cached_dateTimeFormat.ddd = new Intl.DateTimeFormat(global_config.locales, {
+			weekday: 'short',
+		});
+		cached_dateTimeFormat.MMMM = new Intl.DateTimeFormat(global_config.locales, {
+			month: 'long',
+		});
+		cached_dateTimeFormat.MMM = new Intl.DateTimeFormat(global_config.locales, {
+			month: 'short',
+		});
 	} catch (error) {
 		throw new Error('locales not valid for BCP 47');
-	}
-	if (options) {
-		if (!Object.keys(options).length) {
-			return true;
-		}
-		if (options && typeof options === 'object') {
-			if (options.weekday) {
-				global_config.options.weekday = options.weekday;
-			}
-		}
 	}
 	return true;
 }

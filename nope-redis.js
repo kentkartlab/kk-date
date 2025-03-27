@@ -60,12 +60,12 @@ module.exports.config = (options = { isMemoryStatsEnabled, defaultTtl }) => {
  * @param {number} ttl
  * @returns {Boolean}
  */
-module.exports.setItem = (key, value, ttl = defaultTtl) => {
+module.exports.setItemAsync = async (key, value, ttl = defaultTtl) => {
 	try {
-		if (memory.config.status === false || typeof key !== 'string' || typeof ttl !== 'number') {
+		if (memory.config.status === false || typeof ttl !== 'number') {
 			return false;
 		}
-		memory.store[`${key}`] = {
+		memory.store[key] = {
 			value: value,
 			hit: 0,
 			expires_at: Math.floor(new Date() / 1000) + Number.parseInt(ttl, 10),
@@ -107,13 +107,13 @@ module.exports.itemStats = (key) => {
  */
 module.exports.getItem = (key) => {
 	try {
-		if (memory.config.status === false || typeof key !== 'string') {
+		if (memory.config.status === false) {
 			return false;
 		}
-		if (memory.store[`${key}`] && memory.store[`${key}`].expires_at > Math.floor(new Date() / 1000)) {
-			memory.store[`${key}`].hit++;
+		if (memory.store[key]) {
+			memory.store[key].hit++;
 			memory.config.totalHits++;
-			return memory.store[`${key}`].value;
+			return memory.store[key].value;
 		}
 		return null;
 	} catch (error) {
