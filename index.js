@@ -1,8 +1,11 @@
 const nopeRedis = require('./nope-redis');
+const timezoneData = require('./timezone-data');
 nopeRedis.config({ isMemoryStatsEnabled: false, defaultTtl: 1300 });
 
 const global_config = {
-	locales: 'en-en',
+	locale: 'en',
+	timezone: null,
+	userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 };
 
 const format_types = {
@@ -99,16 +102,16 @@ const howManySeconds = {
 };
 
 const cached_dateTimeFormat = {
-	dddd: new Intl.DateTimeFormat(global_config.locales, {
+	dddd: new Intl.DateTimeFormat(global_config.locale, {
 		weekday: 'long',
 	}),
-	ddd: new Intl.DateTimeFormat(global_config.locales, {
+	ddd: new Intl.DateTimeFormat(global_config.locale, {
 		weekday: 'short',
 	}),
-	MMMM: new Intl.DateTimeFormat(global_config.locales, {
+	MMMM: new Intl.DateTimeFormat(global_config.locale, {
 		month: 'long',
 	}),
-	MMM: new Intl.DateTimeFormat(global_config.locales, { month: 'short' }),
+	MMM: new Intl.DateTimeFormat(global_config.locale, { month: 'short' }),
 	temp: {
 		dddd: {},
 		ddd: {},
@@ -355,6 +358,7 @@ class KkDate {
 				}
 			}
 		}
+		console.log('Config', this.temp_config);
 		this.temp_config = {};
 	}
 
@@ -491,7 +495,7 @@ class KkDate {
 	}
 
 	/**
-	 * The locales and options parameters customize the behavior of the function and let applications specify the language whose formatting conventions should be used.
+	 * The locale and options parameters customize the behavior of the function and let applications specify the language whose formatting conventions should be used.
 	 * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toLocaleDateString
 	 *
 	 * @param {object} options
@@ -501,10 +505,10 @@ class KkDate {
 		isInvalid(this.date);
 		if (!this.temp_config) {
 			this.temp_config = {
-				locales: global_config.locales || 'en-en',
+				locale: global_config.locale || 'en-en',
 			};
 		}
-		return this.date.toLocaleDateString(this.temp_config.locales, options);
+		return this.date.toLocaleDateString(this.temp_config.locale, options);
 	}
 
 	/**
@@ -518,10 +522,10 @@ class KkDate {
 		isInvalid(this.date);
 		if (!this.temp_config) {
 			this.temp_config = {
-				locales: global_config.locales || 'en-en',
+				locale: global_config.locale || 'en-en',
 			};
 		}
-		return this.date.toLocaleString(this.temp_config.locales, options);
+		return this.date.toLocaleString(this.temp_config.locale, options);
 	}
 
 	/**
@@ -535,10 +539,10 @@ class KkDate {
 		isInvalid(this.date);
 		if (!this.temp_config) {
 			this.temp_config = {
-				locales: global_config.locales || 'en-en',
+				locale: global_config.locale || 'en-en',
 			};
 		}
-		return this.date.toLocaleTimeString(this.temp_config.locales, options);
+		return this.date.toLocaleTimeString(this.temp_config.locale, options);
 	}
 
 	/**
@@ -645,11 +649,11 @@ class KkDate {
 	diff_range(end, type, template = 'YYYY-MM-DD') {
 		const diffed = diff(this, end, type);
 		const rangeDates = [];
-		rangeDates.push(format(this, template));
+		rangeDates.push(formatter(this, template));
 		for (let index = 1; index < diffed.diffTime + 1; index++) {
 			const date = new Date(this.date.getTime());
 			date.setSeconds(this.date.getSeconds() + diffed.type_value * index);
-			rangeDates.push(format(new KkDate(date), template));
+			rangeDates.push(formatter(new KkDate(date), template));
 		}
 		return rangeDates;
 	}
@@ -715,42 +719,49 @@ class KkDate {
 	 * @returns {string|Error}
 	 */
 	format(template) {
-		return format(this, template);
+		return formatter(this, template);
 	}
 
 	/**
 	 * @description kk-date config for in call
 	 *
-	 * @param {string} locales BCP 47 language tag
+	 * @param {object} options
+	 * @param {string} options.locale BCP 47 language tag
+	 * @param {string} options.timezone timezone
 	 * @returns {Error|KkDate}
 	 */
-	config(locales) {
+	config(options) {
 		try {
-			if (cached_dateTimeFormat.temp['dddd'][locales]) {
-				return this;
+			if (options.locale) {
+				this.temp_config.locale = options.locale;
+				if (cached_dateTimeFormat.temp['dddd'][options.locale]) {
+					return this;
+				}
+				new Intl.Locale(options.locale);
+				if (!cached_dateTimeFormat.temp['dddd'][options.locale]) {
+					cached_dateTimeFormat.temp['dddd'][options.locale] = new Intl.DateTimeFormat(options.locale, {
+						weekday: 'long',
+					});
+				}
+				if (!cached_dateTimeFormat.temp['ddd'][options.locale]) {
+					cached_dateTimeFormat.temp['ddd'][options.locale] = new Intl.DateTimeFormat(options.locale, {
+						weekday: 'short',
+					});
+				}
+				if (!cached_dateTimeFormat.temp['MMMM'][options.locale]) {
+					cached_dateTimeFormat.temp['MMMM'][options.locale] = new Intl.DateTimeFormat(options.locale, {
+						month: 'long',
+					});
+				}
+				if (!cached_dateTimeFormat.temp['MMM'][options.locale]) {
+					cached_dateTimeFormat.temp['MMM'][options.locale] = new Intl.DateTimeFormat(options.locale, { month: 'short' });
+				}
 			}
-			new Intl.Locale(locales);
-			this.temp_config = {
-				locales: locales,
-			};
-			if (!cached_dateTimeFormat.temp['dddd'][locales]) {
-				cached_dateTimeFormat.temp['dddd'][locales] = new Intl.DateTimeFormat(locales, {
-					weekday: 'long',
-				});
-			}
-			if (!cached_dateTimeFormat.temp['ddd'][locales]) {
-				cached_dateTimeFormat.temp['ddd'][locales] = new Intl.DateTimeFormat(locales, {
-					weekday: 'short',
-				});
-			}
-			if (!cached_dateTimeFormat.temp['MMMM'][locales]) {
-				cached_dateTimeFormat.temp['MMMM'][locales] = new Intl.DateTimeFormat(locales, {
-					month: 'long',
-				});
-			}
-			cached_dateTimeFormat.temp['MMM'][locales] = new Intl.DateTimeFormat(locales, { month: 'short' });
 		} catch (error) {
-			throw new Error('locales not valid for BCP 47, config error !');
+			throw new Error('locale not valid for BCP 47, config error !');
+		}
+		if (options.timezone) {
+			this.temp_config.timezone = options.timezone;
 		}
 		return this;
 	}
@@ -820,6 +831,25 @@ class KkDate {
 }
 
 /**
+ * @description It parses the date with the timezone and returns the date.
+ * @param {KkDate} kkDate
+ * @param {string} timezone
+ * @returns {Date|Error}
+ */
+function parseWithTimezone(kkDate, timezone) {
+	isInvalid(kkDate.date);
+	if (timezone === global_config.userTimezone || timezone === kkDate?.temp_config?.timezone) {
+		return kkDate.date;
+	}
+
+	const utcTime = kkDate.date.getTime();
+	const localOffset = kkDate.date.getTimezoneOffset() * 60 * 1000;
+	const targetOffset = timezoneData[timezone].standardOffset * 1000;
+	const tzTime = utcTime + targetOffset + localOffset;
+	return new Date(tzTime);
+}
+
+/**
  *
  * @param {KkDate.date|Date} date
  * @returns
@@ -849,63 +879,6 @@ function isKkDate(value = {}) {
 		return true;
 	}
 	return false;
-}
-
-/**
- *
- * @param {KkDate|Date} date
- * @param {string} template
- * @returns {string|Error}
- */
-function format(date, template) {
-	switch (template) {
-		case 'dddd':
-			return formatter(date, template);
-		case 'YYYY-MM-DD HH:mm:ss':
-			return `${formatter(date, 'YYYY-MM-DD')} ${formatter(date, 'HH:mm:ss')}`;
-		case 'YYYY-MM-DDTHH:mm:ss':
-			return `${formatter(date, 'YYYY-MM-DD')}T${formatter(date, 'HH:mm:ss')}`;
-		case 'YYYY-MM-DD HH:mm':
-			return `${formatter(date, 'YYYY-MM-DD')} ${formatter(date, 'HH:mm')}`;
-		case 'YYYY-MM-DD HH':
-			return `${formatter(date, 'YYYY-MM-DD')} ${formatter(date, 'HH')}`;
-		case 'YYYY-MM-DD':
-			return formatter(date, template);
-		case 'YYYYMMDD':
-			return formatter(date, template);
-		case 'DD.MM.YYYY':
-			return formatter(date, template);
-		case 'YYYY.MM.DD':
-			return `${formatter(date, 'YYYY.MM.DD')}`;
-		case 'YYYY.MM.DD HH:mm':
-			return `${formatter(date, 'YYYY.MM.DD')} ${formatter(date, 'HH:mm')}`;
-		case 'YYYY.MM.DD HH':
-			return `${formatter(date, 'YYYY.MM.DD')} ${formatter(date, 'HH')}`;
-		case 'YYYY.MM.DD HH:mm:ss':
-			return `${formatter(date, 'YYYY.MM.DD')} ${formatter(date, 'HH:mm:ss')}`;
-		case 'DD-MM-YYYY HH:mm:ss':
-			return `${formatter(date, 'DD-MM-YYYY')} ${formatter(date, 'HH:mm:ss')}`;
-		case 'DD-MM-YYYY HH:mm':
-			return `${formatter(date, 'DD-MM-YYYY')} ${formatter(date, 'HH:mm')}`;
-		case 'DD-MM-YYYY HH':
-			return `${formatter(date, 'DD-MM-YYYY')} ${formatter(date, 'HH')}`;
-		case 'DD-MM-YYYY':
-			return `${formatter(date, 'DD-MM-YYYY')}`;
-		case 'DD.MM.YYYY HH:mm:ss':
-			return `${formatter(date, 'DD.MM.YYYY')} ${formatter(date, 'HH:mm:ss')}`;
-		case 'DD.MM.YYYY HH:mm':
-			return `${formatter(date, 'DD.MM.YYYY')} ${formatter(date, 'HH:mm')}`;
-		case 'HH:mm:ss':
-			return `${formatter(date, template)}`;
-		case 'HH:mm':
-			return `${formatter(date, template)}`;
-		case 'X':
-			return formatter(date, template);
-		case 'x':
-			return formatter(date, template);
-		default:
-			return formatter(date, template);
-	}
 }
 
 /**
@@ -964,31 +937,43 @@ function diff(start, end, type, is_decimal = false, turn_difftime = false) {
 	};
 }
 
-function dateTimeFormat(locales = null, template) {
+/**
+ * @description It formats the date with the locale and template.
+ * @param {KkDate} orj_this
+ * @param {string} template
+ * @returns {Intl.DateTimeFormat}
+ */
+function dateTimeFormat(orj_this, template) {
+	const tempLocale = orj_this.temp_config.locale;
+
 	if (template === format_types.dddd) {
-		if (locales) {
-			return cached_dateTimeFormat.temp[template][locales];
+		if (tempLocale) {
+			return cached_dateTimeFormat.temp[template][tempLocale];
 		}
 		return cached_dateTimeFormat.dddd;
 	}
+
 	if (template === format_types.ddd) {
-		if (locales) {
-			return cached_dateTimeFormat.temp[template][locales];
+		if (tempLocale) {
+			return cached_dateTimeFormat.temp[template][tempLocale];
 		}
 		return cached_dateTimeFormat.ddd;
 	}
+
 	if (template === format_types.MMMM) {
-		if (locales) {
-			return cached_dateTimeFormat.temp[template][locales];
+		if (tempLocale) {
+			return cached_dateTimeFormat.temp[template][tempLocale];
 		}
 		return cached_dateTimeFormat.MMMM;
 	}
+
 	if (template === format_types.MMM) {
-		if (locales) {
-			return cached_dateTimeFormat.temp[template][locales];
+		if (tempLocale) {
+			return cached_dateTimeFormat.temp[template][tempLocale];
 		}
 		return cached_dateTimeFormat.MMM;
 	}
+
 	throw new Error('unkown template for dateTimeFormat !');
 }
 
@@ -1033,7 +1018,7 @@ function formatter(orj_this, template = null) {
 			return parseInt(orj_this.date.valueOf() / 1000, 10);
 		}
 		case format_types.dddd: {
-			return dateTimeFormat(orj_this.temp_config.locales, template).format(orj_this.date);
+			return dateTimeFormat(orj_this, template).format(orj_this.date);
 		}
 		case format_types.DD: {
 			return converter(orj_this.date, ['day']).day;
@@ -1083,42 +1068,42 @@ function formatter(orj_this, template = null) {
 		}
 		case format_types['DD MMMM YYYY']: {
 			const result = converter(orj_this.date, ['day', 'year']);
-			return `${result.day} ${dateTimeFormat(orj_this.temp_config.locales, 'MMMM').format(orj_this.date)} ${result.year}`;
+			return `${result.day} ${dateTimeFormat(orj_this, 'MMMM').format(orj_this.date)} ${result.year}`;
 		}
 		case format_types['DD MMMM YYYY dddd']: {
 			const result = converter(orj_this.date, ['day', 'year']);
-			return `${result.day} ${dateTimeFormat(orj_this.temp_config.locales, 'MMMM').format(orj_this.date)} ${result.year} ${dateTimeFormat(orj_this.temp_config.locales, 'dddd').format(orj_this.date)}`;
+			return `${result.day} ${dateTimeFormat(orj_this, 'MMMM').format(orj_this.date)} ${result.year} ${dateTimeFormat(orj_this, 'dddd').format(orj_this.date)}`;
 		}
 		case format_types['MMMM YYYY']: {
 			const result = converter(orj_this.date, ['year']);
-			return `${dateTimeFormat(orj_this.temp_config.locales, 'MMMM').format(orj_this.date)} ${result.year}`;
+			return `${dateTimeFormat(orj_this, 'MMMM').format(orj_this.date)} ${result.year}`;
 		}
 		case format_types['DD MMMM dddd YYYY']: {
 			const result = converter(orj_this.date, ['day', 'year']);
-			return `${result.day} ${dateTimeFormat(orj_this.temp_config.locales, 'MMMM').format(orj_this.date)} ${dateTimeFormat(orj_this.temp_config.locales, 'dddd').format(orj_this.date)} ${result.year}`;
+			return `${result.day} ${dateTimeFormat(orj_this, 'MMMM').format(orj_this.date)} ${dateTimeFormat(orj_this, 'dddd').format(orj_this.date)} ${result.year}`;
 		}
 		case format_types['MMM']: {
-			return dateTimeFormat(orj_this.temp_config.locales, 'MMM').format(orj_this.date);
+			return dateTimeFormat(orj_this, 'MMM').format(orj_this.date);
 		}
 		case format_types['MMMM']: {
-			return dateTimeFormat(orj_this.temp_config.locales, 'MMMM').format(orj_this.date);
+			return dateTimeFormat(orj_this, 'MMMM').format(orj_this.date);
 		}
 		case format_types['ddd']: {
-			return dateTimeFormat(orj_this.temp_config.locales, 'ddd').format(orj_this.date);
+			return dateTimeFormat(orj_this, 'ddd').format(orj_this.date);
 		}
 		case format_types['DD MMM YYYY']: {
 			const result = converter(orj_this.date, ['day', 'year']);
-			return `${result.day} ${dateTimeFormat(orj_this.temp_config.locales, 'MMM').format(orj_this.date)} ${result.year}`;
+			return `${result.day} ${dateTimeFormat(orj_this, 'MMM').format(orj_this.date)} ${result.year}`;
 		}
 		case format_types['DD MMM']: {
-			return `${converter(orj_this.date, ['dat']).day} ${dateTimeFormat(orj_this.temp_config.locales, 'MMM').format(orj_this.date)}`;
+			return `${converter(orj_this.date, ['day']).day} ${dateTimeFormat(orj_this, 'MMM').format(orj_this.date)}`;
 		}
 		case format_types['MMM YYYY']: {
-			return `${dateTimeFormat(orj_this.temp_config.locales, 'MMM').format(orj_this.date)} ${converter(orj_this.date, ['year']).year}`;
+			return `${dateTimeFormat(orj_this, 'MMM').format(orj_this.date)} ${converter(orj_this.date, ['year']).year}`;
 		}
 		case format_types['DD MMM YYYY HH:mm']: {
 			const result = converter(orj_this.date, ['day', 'year', 'hours', 'minutes']);
-			return `${result.day} ${dateTimeFormat(orj_this.temp_config.locales, 'MMM').format(orj_this.date)} ${result.year} ${result.hours}:${result.minutes}`;
+			return `${result.day} ${dateTimeFormat(orj_this, 'MMM').format(orj_this.date)} ${result.year} ${result.hours}:${result.minutes}`;
 		}
 		case null: {
 			const timezoneOffset = -orj_this.date.getTimezoneOffset();
@@ -1214,28 +1199,35 @@ function duration(time, type) {
 }
 
 /**
- *
- * @param {*} locales
+ * @description It configures the global config.
+ * @param {Object} options
+ * @param {string} options.locale
+ * @param {string} options.timezone
  * @returns {boolean}
  */
-function config(locales) {
+function config(options) {
 	try {
-		new Intl.Locale(locales);
-		global_config.locales = locales;
-		cached_dateTimeFormat.dddd = new Intl.DateTimeFormat(global_config.locales, {
-			weekday: 'long',
-		});
-		cached_dateTimeFormat.ddd = new Intl.DateTimeFormat(global_config.locales, {
-			weekday: 'short',
-		});
-		cached_dateTimeFormat.MMMM = new Intl.DateTimeFormat(global_config.locales, {
-			month: 'long',
-		});
-		cached_dateTimeFormat.MMM = new Intl.DateTimeFormat(global_config.locales, {
-			month: 'short',
-		});
+		if (options.locale) {
+			new Intl.Locale(options.locale);
+			global_config.locale = options.locale;
+			cached_dateTimeFormat.dddd = new Intl.DateTimeFormat(global_config.locale, {
+				weekday: 'long',
+			});
+			cached_dateTimeFormat.ddd = new Intl.DateTimeFormat(global_config.locale, {
+				weekday: 'short',
+			});
+			cached_dateTimeFormat.MMMM = new Intl.DateTimeFormat(global_config.locale, {
+				month: 'long',
+			});
+			cached_dateTimeFormat.MMM = new Intl.DateTimeFormat(global_config.locale, {
+				month: 'short',
+			});
+		}
 	} catch (error) {
-		throw new Error('locales not valid for BCP 47');
+		throw new Error('locale not valid for BCP 47');
+	}
+	if (options.timezone) {
+		global_config.timezone = options.timezone;
 	}
 	return true;
 }
