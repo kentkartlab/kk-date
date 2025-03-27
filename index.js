@@ -570,11 +570,11 @@ class KkDate {
 	}
 
 	/**
-	 * valueOfLocale() locale value of giving
+	 * valueOfLocal() locale value of giving
 	 *
 	 * @returns {number|Error}
 	 */
-	valueOfLocale() {
+	valueOfLocal() {
 		isInvalid(this.date);
 		return (
 			this.date.valueOf() +
@@ -1041,10 +1041,10 @@ function formatter(orj_this, template = null) {
 	isInvalid(orj_this.date);
 	switch (template) {
 		case 'x': {
-			return parseInt(orj_this.valueOfLocale(), 10);
+			return parseInt(orj_this.valueOfLocal(), 10);
 		}
 		case 'X': {
-			return parseInt(orj_this.valueOfLocale() / 1000, 10);
+			return parseInt(orj_this.valueOfLocal() / 1000, 10);
 		}
 		case format_types.dddd: {
 			return dateTimeFormat(orj_this, template).format(orj_this.date);
