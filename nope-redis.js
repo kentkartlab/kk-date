@@ -4,7 +4,6 @@
  * https://www.npmjs.com/package/nope-redis
  */
 let defaultTtl = 1300;
-let isMemoryStatsEnabled = false;
 let criticalError = 0;
 let KILL_SERVICE = false;
 const intervalSecond = 5;
@@ -29,15 +28,12 @@ const memory = {
  * @param {object} options
  * @returns {boolean}
  */
-module.exports.config = (options = { isMemoryStatsEnabled, defaultTtl }) => {
+module.exports.config = (options = { defaultTtl }) => {
 	try {
 		if (memory.config.status === false) {
 			return false;
 		}
 		if (typeof options === 'object') {
-			if (typeof options.isMemoryStatsEnabled === 'boolean') {
-				isMemoryStatsEnabled = options.isMemoryStatsEnabled;
-			}
 			if (typeof options.defaultTtl === 'number' && options.defaultTtl > 0) {
 				const now_ttl = Number.parseInt(options.defaultTtl, 10);
 				if (typeof now_ttl === 'number') {
@@ -60,12 +56,12 @@ module.exports.config = (options = { isMemoryStatsEnabled, defaultTtl }) => {
  * @param {number} ttl
  * @returns {Boolean}
  */
-module.exports.setItem = (key, value, ttl = defaultTtl) => {
+module.exports.setItemAsync = async (key, value, ttl = defaultTtl) => {
 	try {
-		if (memory.config.status === false || typeof key !== 'string' || typeof ttl !== 'number') {
+		if (memory.config.status === false || typeof ttl !== 'number') {
 			return false;
 		}
-		memory.store[`${key}`] = {
+		memory.store[key] = {
 			value: value,
 			hit: 0,
 			expires_at: Math.floor(new Date() / 1000) + Number.parseInt(ttl, 10),
@@ -107,13 +103,13 @@ module.exports.itemStats = (key) => {
  */
 module.exports.getItem = (key) => {
 	try {
-		if (memory.config.status === false || typeof key !== 'string') {
+		if (memory.config.status === false) {
 			return false;
 		}
-		if (memory.store[`${key}`] && memory.store[`${key}`].expires_at > Math.floor(new Date() / 1000)) {
-			memory.store[`${key}`].hit++;
+		if (memory.store[key]) {
+			memory.store[key].hit++;
 			memory.config.totalHits++;
-			return memory.store[`${key}`].value;
+			return memory.store[key].value;
 		}
 		return null;
 	} catch (error) {
@@ -178,12 +174,7 @@ module.exports.stats = (config = { showKeys: true, showTotal: true, showSize: fa
 			criticalError,
 			defaultTtl,
 			totalHits: memory.config.totalHits,
-			isMemoryStatsEnabled,
 		};
-		if (isMemoryStatsEnabled) {
-			result.nextMemoryStatsTime = memory.config.nextMemoryStatsTime;
-			result.memoryStats = memory.config.memoryStats;
-		}
 		if (config.showTotal) {
 			result.total = Object.keys(memory.store).length;
 		}
@@ -313,12 +304,6 @@ function killer() {
 	}
 	memory.config.killerIsFinished = true;
 	memory.config.lastKiller = Math.floor(new Date() / 1000);
-	if (isMemoryStatsEnabled) {
-		if (Math.floor(new Date() / 1000) >= memory.config.nextMemoryStatsTime) {
-			memory.config.nextMemoryStatsTime = Math.floor(new Date() / 1000) + 1 * 60 * 60;
-			memoryStats();
-		}
-	}
 }
 
 module.exports.SERVICE_KILL = async () => {
