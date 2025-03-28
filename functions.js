@@ -301,4 +301,5 @@ module.exports.duration = duration;
 module.exports.dateTimeFormat = dateTimeFormat;
 module.exports.format_types = format_types;
 module.exports.cached_dateTimeFormat = cached_dateTimeFormat;
+module.exports.timeInMilliseconds = timeInMilliseconds;
 module.exports.converter = converter;

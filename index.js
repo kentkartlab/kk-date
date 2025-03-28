@@ -10,6 +10,7 @@ const checkTimezone = functions.checkTimezone;
 const dateTimeFormat = functions.dateTimeFormat;
 const format_types = functions.format_types;
 const cached_dateTimeFormat = functions.cached_dateTimeFormat;
+const timeInMilliseconds = functions.timeInMilliseconds;
 const converter = functions.converter;
 
 nopeRedis.config({ defaultTtl: 1300 });
@@ -378,7 +379,7 @@ class KkDate {
 		const starts = isKkDate(start) ? start.getTime() : new KkDate(start).getTime();
 		const ends = isKkDate(end) ? end.getTime() : new KkDate(end).getTime();
 		const date_time = this.date.getTime();
-		const unit_key = unit + 's';
+		const unit_key = `${unit}s`;
 
 		if (unit === 'milliseconds') {
 			return date_time >= starts && date_time <= ends;
