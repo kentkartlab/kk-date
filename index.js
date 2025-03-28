@@ -1,6 +1,6 @@
 const nopeRedis = require('./nope-redis');
 const timezoneData = require('./timezone-data');
-nopeRedis.config({ isMemoryStatsEnabled: false, defaultTtl: 1300 });
+nopeRedis.config({ defaultTtl: 1300 });
 
 const global_config = {
 	locale: 'en',
@@ -1305,20 +1305,16 @@ function config(options) {
  *
  * @param {object} options
  * @param {boolean} options.status
- * @param {boolean} options.isMemoryStatsEnabled
  * @param {number|null} options.defaultTtl
  * @returns {boolean}
  */
-function caching(options = { status: false, isMemoryStatsEnabled: false, defaultTtl: null }) {
+function caching(options = { status: false, defaultTtl: null }) {
 	if (typeof options.status === 'boolean') {
 		if (options.status) {
 			nopeRedis.SERVICE_START();
 		} else {
 			nopeRedis.SERVICE_KILL_SYNC();
 		}
-	}
-	if (typeof options.isMemoryStatsEnabled === 'boolean') {
-		nopeRedis.config({ isMemoryStatsEnabled: options.isMemoryStatsEnabled, defaultTtl: 1300 });
 	}
 	if (typeof options.defaultTtl === 'number') {
 		nopeRedis.config({ defaultTtl: options.defaultTtl });

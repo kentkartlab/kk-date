@@ -310,7 +310,7 @@ test('Localization formats', () => {
 
 test('caching tests', () => {
 	// cache enable test;
-	kk_date.caching({ status: true, isMemoryStatsEnabled: true });
+	kk_date.caching({ status: true });
 	const status1 = kk_date.caching_status();
 	expect(status1.status).toBe(true);
 	// enable later some tests;
