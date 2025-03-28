@@ -1,47 +1,23 @@
 const nopeRedis = require('./nope-redis');
-nopeRedis.config({ isMemoryStatsEnabled: false, defaultTtl: 1300 });
+const functions = require('./functions');
+
+const parseWithTimezone = functions.parseWithTimezone;
+const getTimezoneOffset = functions.getTimezoneOffset;
+const absFloor = functions.absFloor;
+const duration = functions.duration;
+const padZero = functions.padZero;
+const checkTimezone = functions.checkTimezone;
+const dateTimeFormat = functions.dateTimeFormat;
+const format_types = functions.format_types;
+const cached_dateTimeFormat = functions.cached_dateTimeFormat;
+const converter = functions.converter;
+
+nopeRedis.config({ defaultTtl: 1300 });
 
 const global_config = {
-	locales: 'en-en',
-	options: {
-		weekday: 'long',
-	},
-};
-
-const format_types = {
-	dddd: 'dddd',
-	YYYY: 'YYYY',
-	DD: 'DD',
-	MM: 'MM',
-	'YYYY-MM-DD': 'YYYY-MM-DD',
-	'YYYY-MM-DD HH:mm:ss': 'YYYY-MM-DD HH:mm:ss',
-	'YYYY-MM-DD HH:mm': 'YYYY-MM-DD HH:mm',
-	'YYYY.MM.DD': 'YYYY.MM.DD',
-	YYYYMMDD: 'YYYYMMDD',
-	'YYYY.MM.DD HH:mm:ss': 'YYYY.MM.DD HH:mm:ss',
-	'YYYY.MM.DD HH:mm': 'YYYY.MM.DD HH:mm',
-	'DD.MM.YYYY': 'DD.MM.YYYY',
-	'DD.MM.YYYY HH:mm:ss': 'DD.MM.YYYY HH:mm:ss',
-	'DD.MM.YYYY HH:mm': 'DD.MM.YYYY HH:mm',
-	'DD-MM-YYYY': 'DD-MM-YYYY',
-	'DD-MM-YYYY HH:mm:ss': 'DD-MM-YYYY HH:mm:ss',
-	'DD-MM-YYYY HH:mm': 'DD-MM-YYYY HH:mm',
-	'DD MMMM YYYY': 'DD MMMM YYYY',
-	'DD MMMM YYYY dddd': 'DD MMMM YYYY dddd',
-	'DD MMMM dddd YYYY': 'DD MMMM dddd YYYY',
-	'MMMM YYYY': 'MMMM YYYY',
-	'HH:mm:ss': 'HH:mm:ss',
-	'HH:mm': 'HH:mm',
-	HH: 'HH',
-	mm: 'mm',
-	ss: 'ss',
-	MMM: 'MMM', // Short month name (Jan, Feb, etc.)
-	MMMM: 'MMMM', // Full month name (January, February, etc.)
-	ddd: 'ddd', // Short weekday name (Mon, Tue, etc.)
-	'DD MMM YYYY': 'DD MMM YYYY', // 01 Jan 2024
-	'DD MMM': 'DD MMM', // 01 Jan
-	'MMM YYYY': 'MMM YYYY', // Jan 2024
-	'DD MMM YYYY HH:mm': 'DD MMM YYYY HH:mm', // 01 Jan 2024 13:45
+	locale: 'en',
+	timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+	userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 };
 
 const format_types_regex = {
@@ -69,7 +45,7 @@ const format_types_regex = {
 	'DD MMMM dddd YYYY':
 		/^(0[1-9]|[12][0-9]|3[01]) (January|February|March|April|May|June|July|August|September|October|November|December) (Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday) (|17|18|19|20|21)\d\d$/,
 	'HH:mm:ss': /^([01]\d|2[0-9]):([0-5]\d):([0-5]\d)$/,
-	'HH:mm': /^([01]\d|2[0-9]):([0-5]\d)$/,
+	'HH:mm': /^([01]\d|2[0-9]):([0-5]\d)(?::[0-5]\d)?$/,
 	HH: /^([01]\d|2[0-9])$/,
 	mm: /^([0-5]\d)$/,
 	ss: /^([0-5]\d)$/,
@@ -80,25 +56,6 @@ const format_types_regex = {
 	'DD MMM': /^(0[1-9]|[12][0-9]|3[01]) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)$/,
 	'MMM YYYY': /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (|17|18|19|20|21)\d\d$/,
 	'DD MMM YYYY HH:mm': /^(0[1-9]|[12][0-9]|3[01]) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (|17|18|19|20|21)\d\d ([01]\d|2[0-9]):([0-5]\d)$/,
-};
-
-const timeInMilliseconds = {
-	year: 365 * 24 * 60 * 60 * 1000, // 1 year (365 days)
-	month: 31 * 24 * 60 * 60 * 1000, // 1 month (31 days)
-	week: 7 * 24 * 60 * 60 * 1000, // 1 week (7 days)
-	day: 24 * 60 * 60 * 1000, // 1 day (24 hours)
-	hour: 60 * 60 * 1000, // 1 hour
-	minute: 60 * 1000, // 1 minute
-	second: 1000, // 1 second
-};
-
-const howManySeconds = {
-	year: 31556926,
-	month: 2629743,
-	week: 604800,
-	day: 86400,
-	hour: 3600,
-	minute: 60,
 };
 
 /**
@@ -120,8 +77,10 @@ class KkDate {
 				const stringed_date_length = `${date}`.length;
 				if (stringed_date_length <= 10) {
 					this.date = new Date(date * 1000);
+					this.date = parseWithTimezone(this, global_config.timezone, global_config.timezone, true);
 				} else if (stringed_date_length > 10) {
 					this.date = new Date(date);
+					this.date = parseWithTimezone(this, global_config.timezone, global_config.timezone, true);
 				}
 			} else if (isKkDate(date)) {
 				this.date = new Date(date.date.toUTCString());
@@ -335,10 +294,11 @@ class KkDate {
 			} else {
 				isInvalid(this.date);
 				if (is_can_cache) {
-					nopeRedis.setItem(`${date}`, new Date(this.date.getTime()));
+					nopeRedis.setItemAsync(`${date}`, new Date(this.date.getTime()));
 				}
 			}
 		}
+		this.temp_config = {};
 	}
 
 	/**
@@ -489,7 +449,7 @@ class KkDate {
 	}
 
 	/**
-	 * The locales and options parameters customize the behavior of the function and let applications specify the language whose formatting conventions should be used.
+	 * The locale and options parameters customize the behavior of the function and let applications specify the language whose formatting conventions should be used.
 	 * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toLocaleDateString
 	 *
 	 * @param {object} options
@@ -499,10 +459,10 @@ class KkDate {
 		isInvalid(this.date);
 		if (!this.temp_config) {
 			this.temp_config = {
-				locales: global_config.locales || 'en-en',
+				locale: global_config.locale || 'en-en',
 			};
 		}
-		return this.date.toLocaleDateString(this.temp_config.locales, options);
+		return this.date.toLocaleDateString(this.temp_config.locale, options);
 	}
 
 	/**
@@ -516,10 +476,10 @@ class KkDate {
 		isInvalid(this.date);
 		if (!this.temp_config) {
 			this.temp_config = {
-				locales: global_config.locales || 'en-en',
+				locale: global_config.locale || 'en-en',
 			};
 		}
-		return this.date.toLocaleString(this.temp_config.locales, options);
+		return this.date.toLocaleString(this.temp_config.locale, options);
 	}
 
 	/**
@@ -533,10 +493,10 @@ class KkDate {
 		isInvalid(this.date);
 		if (!this.temp_config) {
 			this.temp_config = {
-				locales: global_config.locales || 'en-en',
+				locale: global_config.locale || 'en-en',
 			};
 		}
-		return this.date.toLocaleTimeString(this.temp_config.locales, options);
+		return this.date.toLocaleTimeString(this.temp_config.locale, options);
 	}
 
 	/**
@@ -558,7 +518,19 @@ class KkDate {
 	 */
 	valueOf() {
 		isInvalid(this.date);
-		return this.date.valueOf();
+		this.date.valueOf();
+	}
+
+	/**
+	 * valueOfLocal() locale value of giving
+	 *
+	 * @returns {number|Error}
+	 */
+	valueOfLocal(check_error = true) {
+		if (check_error) {
+			isInvalid(this.date);
+		}
+		return this.date.valueOf() + (getTimezoneOffset(global_config.userTimezone) * 1000 - getTimezoneOffset(global_config.timezone) * 1000);
 	}
 
 	/**
@@ -584,7 +556,7 @@ class KkDate {
 
 		if (typeof amount === 'object' && amount.$kk_date) {
 			defined_type = 'seconds';
-			defined_amount = amount.$kk_date.milliseconds / timeInMilliseconds.second;
+			defined_amount = amount.$kk_date.milliseconds / 1000;
 		}
 		switch (defined_type) {
 			case 'days':
@@ -643,11 +615,11 @@ class KkDate {
 	diff_range(end, type, template = 'YYYY-MM-DD') {
 		const diffed = diff(this, end, type);
 		const rangeDates = [];
-		rangeDates.push(format(this, template));
+		rangeDates.push(formatter(this, template));
 		for (let index = 1; index < diffed.diffTime + 1; index++) {
 			const date = new Date(this.date.getTime());
 			date.setSeconds(this.date.getSeconds() + diffed.type_value * index);
-			rangeDates.push(format(new KkDate(date), template));
+			rangeDates.push(formatter(new KkDate(date), template));
 		}
 		return rangeDates;
 	}
@@ -713,36 +685,52 @@ class KkDate {
 	 * @returns {string|Error}
 	 */
 	format(template) {
-		isInvalid(this.date);
-		return format(this, template);
+		return formatter(this, template);
 	}
 
 	/**
 	 * @description kk-date config for in call
 	 *
-	 * @param {string} locales BCP 47 language tag
 	 * @param {object} options
-	 * @param {'short'|'long'} options.weekday
+	 * @param {string} options.locale BCP 47 language tag
+	 * @param {string} options.timezone timezone
 	 * @returns {Error|KkDate}
 	 */
-	config(locales, options = null) {
+	config(options) {
+		if (options.timezone) {
+			this.temp_config.timezone = options.timezone;
+			this.date = parseWithTimezone(this, global_config.timezone, options.timezone);
+		}
 		try {
-			new Intl.Locale(locales);
-			this.temp_config = {
-				locales: locales,
-				options: {
-					weekday: 'long',
-				},
-			};
-			if (options && typeof options === 'object') {
-				if (options.weekday) {
-					this.temp_config.options.weekday = options.weekday;
+			if (options.locale) {
+				this.temp_config.locale = options.locale;
+				if (cached_dateTimeFormat.temp['dddd'][options.locale]) {
+					return this;
+				}
+				new Intl.Locale(options.locale);
+				if (!cached_dateTimeFormat.temp['dddd'][options.locale]) {
+					cached_dateTimeFormat.temp['dddd'][options.locale] = new Intl.DateTimeFormat(options.locale, {
+						weekday: 'long',
+					});
+				}
+				if (!cached_dateTimeFormat.temp['ddd'][options.locale]) {
+					cached_dateTimeFormat.temp['ddd'][options.locale] = new Intl.DateTimeFormat(options.locale, {
+						weekday: 'short',
+					});
+				}
+				if (!cached_dateTimeFormat.temp['MMMM'][options.locale]) {
+					cached_dateTimeFormat.temp['MMMM'][options.locale] = new Intl.DateTimeFormat(options.locale, {
+						month: 'long',
+					});
+				}
+				if (!cached_dateTimeFormat.temp['MMM'][options.locale]) {
+					cached_dateTimeFormat.temp['MMM'][options.locale] = new Intl.DateTimeFormat(options.locale, { month: 'short' });
 				}
 			}
-			return this;
 		} catch (error) {
-			throw new Error('locales not valid for BCP 47, config error !');
+			throw new Error('locale not valid for BCP 47, config error !');
 		}
+		return this;
 	}
 
 	/**
@@ -776,36 +764,17 @@ class KkDate {
 	 * @returns {{year: number, month: number, week:number, day: number, hour: number, minute: number, second: number}}
 	 */
 	duration(time) {
-		const response = {
-			year: 0,
-			month: 0,
-			week: 0,
-			day: 0,
-			hour: 0,
-			minute: 0,
-			second: 0,
-		};
+		return duration(time, 'second');
+	}
 
-		if (!time || typeof time !== 'number' || time < 0) {
-			throw new Error('Invalid time');
-		}
-
-		let seconds = time;
-		response.year = Math.floor(seconds / howManySeconds.year);
-		seconds = seconds % howManySeconds.year;
-		response.month = Math.floor(seconds / howManySeconds.month);
-		seconds = seconds % howManySeconds.month;
-		response.week = Math.floor(seconds / howManySeconds.week);
-		seconds = seconds % howManySeconds.week;
-		response.day = Math.floor(seconds / howManySeconds.day);
-		seconds = seconds % howManySeconds.day;
-		response.hour = Math.floor(seconds / howManySeconds.hour);
-		seconds = seconds % howManySeconds.hour;
-		response.minute = Math.floor(seconds / howManySeconds.minute);
-		seconds = seconds % howManySeconds.minute;
-		response.second = seconds;
-
-		return response;
+	/**
+	 * Convert to timezone
+	 * @param {string} timezone
+	 * @returns
+	 */
+	tz(timezone) {
+		this.date = parseWithTimezone(this, global_config.timezone, timezone);
+		return this;
 	}
 }
 
@@ -839,75 +808,6 @@ function isKkDate(value = {}) {
 		return true;
 	}
 	return false;
-}
-
-/**
- *
- * @param {KkDate|Date} date
- * @param {string} template
- * @returns {string|Error}
- */
-function format(date, template) {
-	switch (template) {
-		case 'YYYY-MM-DD HH:mm:ss':
-			return `${formatter(date, 'YYYY-MM-DD')} ${formatter(date, 'HH:mm:ss')}`;
-		case 'YYYY-MM-DDTHH:mm:ss':
-			return `${formatter(date, 'YYYY-MM-DD')}T${formatter(date, 'HH:mm:ss')}`;
-		case 'YYYY-MM-DD HH:mm':
-			return `${formatter(date, 'YYYY-MM-DD')} ${formatter(date, 'HH:mm')}`;
-		case 'YYYY-MM-DD HH':
-			return `${formatter(date, 'YYYY-MM-DD')} ${formatter(date, 'HH')}`;
-		case 'YYYY-MM-DD':
-			return formatter(date, template);
-		case 'YYYYMMDD':
-			return formatter(date, template);
-		case 'DD.MM.YYYY':
-			return formatter(date, template);
-		case 'YYYY.MM.DD':
-			return `${formatter(date, 'YYYY.MM.DD')}`;
-		case 'YYYY.MM.DD HH:mm':
-			return `${formatter(date, 'YYYY.MM.DD')} ${formatter(date, 'HH:mm')}`;
-		case 'YYYY.MM.DD HH':
-			return `${formatter(date, 'YYYY.MM.DD')} ${formatter(date, 'HH')}`;
-		case 'YYYY.MM.DD HH:mm:ss':
-			return `${formatter(date, 'YYYY.MM.DD')} ${formatter(date, 'HH:mm:ss')}`;
-		case 'DD-MM-YYYY HH:mm:ss':
-			return `${formatter(date, 'DD-MM-YYYY')} ${formatter(date, 'HH:mm:ss')}`;
-		case 'DD-MM-YYYY HH:mm':
-			return `${formatter(date, 'DD-MM-YYYY')} ${formatter(date, 'HH:mm')}`;
-		case 'DD-MM-YYYY HH':
-			return `${formatter(date, 'DD-MM-YYYY')} ${formatter(date, 'HH')}`;
-		case 'DD-MM-YYYY':
-			return `${formatter(date, 'DD-MM-YYYY')}`;
-		case 'DD.MM.YYYY HH:mm:ss':
-			return `${formatter(date, 'DD.MM.YYYY')} ${formatter(date, 'HH:mm:ss')}`;
-		case 'DD.MM.YYYY HH:mm':
-			return `${formatter(date, 'DD.MM.YYYY')} ${formatter(date, 'HH:mm')}`;
-		case 'dddd':
-			return formatter(date, template);
-		case 'HH:mm:ss':
-			return `${formatter(date, template)}`;
-		case 'HH:mm':
-			return `${formatter(date, template)}`;
-		case 'X':
-			return formatter(date, template);
-		case 'x':
-			return formatter(date, template);
-		default:
-			return formatter(date, template);
-	}
-}
-
-/**
- *
- * @param {number} number
- * @returns {number}
- */
-function absFloor(number) {
-	if (number < 0) {
-		return Math.ceil(number) || 0;
-	}
-	return Math.floor(number);
 }
 
 /**
@@ -962,95 +862,152 @@ function diff(start, end, type, is_decimal = false, turn_difftime = false) {
  */
 function formatter(orj_this, template = null) {
 	isInvalid(orj_this.date);
-	if (template === 'X') {
-		return parseInt(orj_this.date.valueOf() / 1000, 10);
-	}
-	if (template === 'x') {
-		return parseInt(orj_this.date.valueOf(), 10);
-	}
-	const year = orj_this.date.getFullYear();
-	const month = String(orj_this.date.getMonth() + 1).padStart(2, '0'); // Aylar 0-11 arası olduğu için +1 ekliyoruz
-	const day = String(orj_this.date.getDate()).padStart(2, '0');
-	const minutes = String(orj_this.date.getMinutes()).padStart(2, '0');
-	const seconds = String(orj_this.date.getSeconds()).padStart(2, '0');
-	const hours = String(orj_this.date.getHours()).padStart(2, '0');
-	if (!orj_this.temp_config) {
-		orj_this.temp_config = {};
-	}
-	const locale = orj_this.temp_config.locales || global_config.locales;
-
 	switch (template) {
-		case format_types.dddd:
-			if (!orj_this.temp_config) {
-				orj_this.temp_config = {};
-			}
-			return orj_this.date.toLocaleString(
-				orj_this.temp_config.locales || global_config.locales,
-				orj_this.temp_config.options || global_config.options,
-			);
-		case format_types.DD:
-			return day;
-		case format_types.MM:
-			return month;
-		case format_types['DD-MM-YYYY']:
-			return `${day}-${month}-${year}`;
-		case format_types['DD.MM.YYYY']:
-			return `${day}.${month}.${year}`;
-		case format_types['YYYY-MM-DD']:
-			return `${year}-${month}-${day}`;
-		case format_types['YYYY.MM.DD']:
-			return `${year}.${month}.${day}`;
-		case format_types['YYYYMMDD']:
-			return `${year}${month}${day}`;
-		case format_types.YYYY:
-			return `${year}`;
+		case 'x': {
+			return parseInt(orj_this.valueOfLocal(true), 10);
+		}
+		case 'X': {
+			return parseInt(orj_this.valueOfLocal(true) / 1000, 10);
+		}
+		case format_types.dddd: {
+			return dateTimeFormat(orj_this, template).format(orj_this.date);
+		}
+		case format_types.DD: {
+			return converter(orj_this.date, ['day']).day;
+		}
+		case format_types.MM: {
+			return converter(orj_this.date, ['month']).month;
+		}
+		case format_types['DD-MM-YYYY']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year']);
+			return `${result.day}-${result.month}-${result.year}`;
+		}
+		case format_types['DD-MM-YYYY HH:mm']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes']);
+			return `${result.day}-${result.month}-${result.year} ${result.hours}:${result.minutes}`;
+		}
+		case format_types['DD-MM-YYYY HH:mm:ss']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes', 'seconds']);
+			return `${result.day}-${result.month}-${result.year} ${result.hours}:${result.minutes}:${result.seconds}`;
+		}
+		case format_types['DD.MM.YYYY']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year']);
+			return `${result.day}.${result.month}.${result.year}`;
+		}
+		case format_types['MM/DD/YYYY']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year']);
+			return `${result.month}/${result.day}/${result.year}`;
+		}
+		case format_types['DD/MM/YYYY']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year']);
+			return `${result.day}/${result.month}/${result.year}`;
+		}
+		case format_types['DD.MM.YYYY HH:mm:ss']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes', 'seconds']);
+			return `${result.day}.${result.month}.${result.year} ${result.hours}:${result.minutes}:${result.seconds}`;
+		}
+		case format_types['DD.MM.YYYY HH:mm']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes']);
+			return `${result.day}.${result.month}.${result.year} ${result.hours}:${result.minutes}`;
+		}
+		case format_types['YYYY-MM-DD']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year']);
+			return `${result.year}-${result.month}-${result.day}`;
+		}
+		case format_types['YYYY-MM-DD HH:mm:ss']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes', 'seconds']);
+			return `${result.year}-${result.month}-${result.day} ${result.hours}:${result.minutes}:${result.seconds}`;
+		}
+		case format_types['YYYY-MM-DDTHH:mm:ss']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes', 'seconds']);
+			return `${result.year}-${result.month}-${result.day}T${result.hours}:${result.minutes}:${result.seconds}`;
+		}
+		case format_types['YYYY.MM.DD HH:mm:ss']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes', 'seconds']);
+			return `${result.year}.${result.month}.${result.day} ${result.hours}:${result.minutes}:${result.seconds}`;
+		}
+		case format_types['YYYY-MM-DD HH']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours']);
+			return `${result.year}-${result.month}-${result.day} ${result.hours}`;
+		}
+		case format_types['DD-MM-YYYY HH']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours']);
+			return `${result.day}-${result.month}-${result.year} ${result.hours}`;
+		}
+		case format_types['YYYY.MM.DD HH']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours']);
+			return `${result.year}.${result.month}.${result.day} ${result.hours}`;
+		}
+		case format_types['YYYY.MM.DD']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year']);
+			return `${result.year}.${result.month}.${result.day}`;
+		}
+		case format_types['YYYYMMDD']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year']);
+			return `${result.year}${result.month}${result.day}`;
+		}
+		case format_types.YYYY: {
+			return `${converter(orj_this.date, ['year']).year}`;
+		}
+		case format_types['HH:mm:ss.SSS']: {
+			const result = converter(orj_this.date, ['hours', 'minutes', 'seconds', 'milliseconds']);
+			return `${result.hours}:${result.minutes}:${result.seconds}.${result.milliseconds}`;
+		}
 		case format_types['HH:mm:ss']: {
-			return `${hours}:${minutes}:${seconds}`;
+			const result = converter(orj_this.date, ['hours', 'minutes', 'seconds']);
+			return `${result.hours}:${result.minutes}:${result.seconds}`;
 		}
 		case format_types['HH:mm']: {
-			return `${hours}:${minutes}`;
+			const result = converter(orj_this.date, ['hours', 'minutes']);
+			return `${result.hours}:${result.minutes}`;
 		}
 		case format_types.mm: {
-			return `${minutes}`;
+			return `${converter(orj_this.date, ['minutes']).minutes}`;
 		}
 		case format_types.ss: {
-			return `${seconds}`;
+			return `${converter(orj_this.date, ['seconds']).seconds}`;
 		}
 		case format_types.HH: {
-			return `${hours}`;
+			return `${converter(orj_this.date, ['hours']).hours}`;
 		}
 		case format_types['DD MMMM YYYY']: {
-			return `${day} ${orj_this.date.toLocaleString(locale, { month: 'long' })} ${year}`;
+			const result = converter(orj_this.date, ['day', 'year']);
+			return `${result.day} ${dateTimeFormat(orj_this, 'MMMM').format(orj_this.date)} ${result.year}`;
 		}
 		case format_types['DD MMMM YYYY dddd']: {
-			return `${day} ${orj_this.date.toLocaleString(locale, { month: 'long' })} ${year} ${orj_this.date.toLocaleString(locale, { weekday: 'long' })}`;
+			const result = converter(orj_this.date, ['day', 'year']);
+			return `${result.day} ${dateTimeFormat(orj_this, 'MMMM').format(orj_this.date)} ${result.year} ${dateTimeFormat(orj_this, 'dddd').format(orj_this.date)}`;
 		}
 		case format_types['MMMM YYYY']: {
-			return `${orj_this.date.toLocaleString(locale, { month: 'long' })} ${year}`;
+			const result = converter(orj_this.date, ['year']);
+			return `${dateTimeFormat(orj_this, 'MMMM').format(orj_this.date)} ${result.year}`;
 		}
 		case format_types['DD MMMM dddd YYYY']: {
-			return `${day} ${orj_this.date.toLocaleString(locale, { month: 'long' })} ${orj_this.date.toLocaleString(locale, { weekday: 'long' })} ${year}`;
+			const result = converter(orj_this.date, ['day', 'year']);
+			return `${result.day} ${dateTimeFormat(orj_this, 'MMMM').format(orj_this.date)} ${dateTimeFormat(orj_this, 'dddd').format(orj_this.date)} ${result.year}`;
 		}
 		case format_types['MMM']: {
-			return orj_this.date.toLocaleString(locale, { month: 'short' });
+			return dateTimeFormat(orj_this, 'MMM').format(orj_this.date);
 		}
 		case format_types['MMMM']: {
-			return orj_this.date.toLocaleString(locale, { month: 'long' });
+			return dateTimeFormat(orj_this, 'MMMM').format(orj_this.date);
 		}
 		case format_types['ddd']: {
-			return orj_this.date.toLocaleString(locale, { weekday: 'short' });
+			return dateTimeFormat(orj_this, 'ddd').format(orj_this.date);
 		}
 		case format_types['DD MMM YYYY']: {
-			return `${day} ${orj_this.date.toLocaleString(locale, { month: 'short' })} ${year}`;
+			const result = converter(orj_this.date, ['day', 'year']);
+			return `${result.day} ${dateTimeFormat(orj_this, 'MMM').format(orj_this.date)} ${result.year}`;
 		}
 		case format_types['DD MMM']: {
-			return `${day} ${orj_this.date.toLocaleString(locale, { month: 'short' })}`;
+			return `${converter(orj_this.date, ['day']).day} ${dateTimeFormat(orj_this, 'MMM').format(orj_this.date)}`;
 		}
 		case format_types['MMM YYYY']: {
-			return `${orj_this.date.toLocaleString(locale, { month: 'short' })} ${year}`;
+			return `${dateTimeFormat(orj_this, 'MMM').format(orj_this.date)} ${converter(orj_this.date, ['year']).year}`;
 		}
 		case format_types['DD MMM YYYY HH:mm']: {
-			return `${day} ${orj_this.date.toLocaleString(locale, { month: 'short' })} ${year} ${hours}:${minutes}`;
+			const result = converter(orj_this.date, ['day', 'year', 'hours', 'minutes']);
+			return `${result.day} ${dateTimeFormat(orj_this, 'MMM').format(orj_this.date)} ${result.year} ${result.hours}:${result.minutes}`;
 		}
 		case null: {
 			const timezoneOffset = -orj_this.date.getTimezoneOffset();
@@ -1058,19 +1015,13 @@ function formatter(orj_this, template = null) {
 			const absOffset = Math.abs(timezoneOffset);
 			const offsetHours = padZero(Math.floor(absOffset / 60));
 			const offsetMinutes = padZero(absOffset % 60);
-			return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${sign}${offsetHours}:${offsetMinutes}`;
+			const result = converter(orj_this.date, ['day', 'year', 'hours', 'minutes', 'seconds']);
+			return `${result.year}-${result.month}-${result.day}T${result.hours}:${result.minutes}:${result.seconds}${sign}${offsetHours}:${offsetMinutes}`;
 		}
 		default:
 			throw new Error('template is not right');
 	}
 }
-/**
- * padZero
- *
- * @param {number} num
- * @returns {string}
- */
-const padZero = (num) => String(num).padStart(2, '0');
 
 /**
  *
@@ -1079,94 +1030,50 @@ const padZero = (num) => String(num).padStart(2, '0');
  * @returns {boolean}
  */
 function isValid(date_string, template) {
-	if (!format_types[template]) {
-		throw new Error('Invalid template');
-	}
 	if (template === format_types.dddd) {
 		return true;
 	}
-	if (format_types_regex[template].test(date_string) === false) {
+	if (!format_types[template]) {
+		throw new Error('Invalid template');
+	}
+	const regex = format_types_regex[template];
+	if (!regex.test(date_string)) {
 		return false;
 	}
 	return true;
 }
 
 /**
- * @description It divides the date string into parts and returns an object.
- * @param {string} time
- * @param {"year" | "month" | "week" | "day" | "hour" | "minute" | "second"} type
- * @returns {{year: number, month: number, week:number, day: number, hour: number, minute: number, second: number}}
- * @example
- * // Example usage:
- * const result = duration(1234, 'minute');
- * console.log(result);
- * // Output: { year: 0, month: 0, week: 0, day: 0, hour: 20, minute: 34, second: 0,millisecond: 0 }
- */
-function duration(time, type) {
-	const response = {
-		year: 0,
-		month: 0,
-		week: 0,
-		day: 0,
-		hour: 0,
-		minute: 0,
-		second: 0,
-		millisecond: 0,
-		$kk_date: { milliseconds: 0 },
-	};
-
-	if (!time || typeof time !== 'number' || time < 0) {
-		throw new Error('Invalid time');
-	}
-
-	if (!timeInMilliseconds[type]) {
-		throw new Error('Invalid type');
-	}
-
-	response.$kk_date.milliseconds = time * timeInMilliseconds[type];
-	let milliseconds = time * timeInMilliseconds[type];
-	response.year = Math.floor(milliseconds / timeInMilliseconds.year);
-	milliseconds = milliseconds % timeInMilliseconds.year;
-	response.month = Math.floor(milliseconds / timeInMilliseconds.month);
-	milliseconds = milliseconds % timeInMilliseconds.month;
-	response.week = Math.floor(milliseconds / timeInMilliseconds.week);
-	milliseconds = milliseconds % timeInMilliseconds.week;
-	response.day = Math.floor(milliseconds / timeInMilliseconds.day);
-	milliseconds = milliseconds % timeInMilliseconds.day;
-	response.hour = Math.floor(milliseconds / timeInMilliseconds.hour);
-	milliseconds = milliseconds % timeInMilliseconds.hour;
-	response.minute = Math.floor(milliseconds / timeInMilliseconds.minute);
-	milliseconds = milliseconds % timeInMilliseconds.minute;
-	response.second = Math.floor(milliseconds / timeInMilliseconds.second);
-	milliseconds = milliseconds % timeInMilliseconds.second;
-	response.millisecond = milliseconds;
-
-	return response;
-}
-
-/**
- *
- * @param {*} locales
- * @param {object} options
- * @param {'short'|'long'} options.weekday
+ * @description It configures the global config.
+ * @param {Object} options
+ * @param {string} options.locale
+ * @param {string} options.timezone
  * @returns {boolean}
  */
-function config(locales, options = null) {
+function config(options) {
 	try {
-		new Intl.Locale(locales);
-		global_config.locales = locales;
+		if (options.locale) {
+			new Intl.Locale(options.locale);
+			global_config.locale = options.locale;
+			cached_dateTimeFormat.dddd = new Intl.DateTimeFormat(global_config.locale, {
+				weekday: 'long',
+			});
+			cached_dateTimeFormat.ddd = new Intl.DateTimeFormat(global_config.locale, {
+				weekday: 'short',
+			});
+			cached_dateTimeFormat.MMMM = new Intl.DateTimeFormat(global_config.locale, {
+				month: 'long',
+			});
+			cached_dateTimeFormat.MMM = new Intl.DateTimeFormat(global_config.locale, {
+				month: 'short',
+			});
+		}
 	} catch (error) {
-		throw new Error('locales not valid for BCP 47');
+		throw new Error('locale not valid for BCP 47');
 	}
-	if (options) {
-		if (!Object.keys(options).length) {
-			return true;
-		}
-		if (options && typeof options === 'object') {
-			if (options.weekday) {
-				global_config.options.weekday = options.weekday;
-			}
-		}
+	if (options.timezone && global_config.timezone !== options.timezone) {
+		checkTimezone(options.timezone);
+		global_config.timezone = options.timezone;
 	}
 	return true;
 }
@@ -1176,20 +1083,16 @@ function config(locales, options = null) {
  *
  * @param {object} options
  * @param {boolean} options.status
- * @param {boolean} options.isMemoryStatsEnabled
  * @param {number|null} options.defaultTtl
  * @returns {boolean}
  */
-function caching(options = { status: false, isMemoryStatsEnabled: false, defaultTtl: null }) {
+function caching(options = { status: false, defaultTtl: null }) {
 	if (typeof options.status === 'boolean') {
 		if (options.status) {
 			nopeRedis.SERVICE_START();
 		} else {
 			nopeRedis.SERVICE_KILL_SYNC();
 		}
-	}
-	if (typeof options.isMemoryStatsEnabled === 'boolean') {
-		nopeRedis.config({ isMemoryStatsEnabled: options.isMemoryStatsEnabled, defaultTtl: 1300 });
 	}
 	if (typeof options.defaultTtl === 'number') {
 		nopeRedis.config({ defaultTtl: options.defaultTtl });

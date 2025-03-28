@@ -3,6 +3,10 @@ const test_date = '2024-08-19';
 const test_time = '23:50:59';
 const timestamp = 1724100659;
 
+const timezone = 'Europe/Istanbul';
+
+kk_date.config({ timezone: timezone });
+
 describe('kk_date format', () => {
 	test('HH:mm:ss', () => {
 		expect(new kk_date(`${test_time}`).format('HH:mm:ss')).toBe(`${test_time}`);
@@ -68,8 +72,8 @@ describe('kk_date format', () => {
 	});
 
 	test('config test', () => {
-		expect(new kk_date(`${test_date} ${test_time}`).config('fr-fr').format('dddd').toLocaleLowerCase()).toBe('lundi');
-		expect(new kk_date(timestamp).config('tr-tr').format('dddd').toLocaleLowerCase()).toBe('pazartesi');
+		expect(new kk_date(`${test_date} ${test_time}`).config({ locale: 'fr-fr' }).format('dddd').toLocaleLowerCase()).toBe('lundi');
+		expect(new kk_date(timestamp).config({ locale: 'tr-tr' }).format('dddd').toLocaleLowerCase()).toBe('pazartesi');
 	});
 
 	test('x/X', () => {
@@ -83,23 +87,23 @@ describe('kk_date format', () => {
 
 	test('DD MMMM YYYY dddd', () => {
 		expect(new kk_date('2024-08-19').format('DD MMMM YYYY dddd')).toBe('19 August 2024 Monday');
-		expect(new kk_date('2024-08-19').config('tr-tr').format('DD MMMM YYYY dddd')).toBe('19 Ağustos 2024 Pazartesi');
+		expect(new kk_date('2024-08-19').config({ locale: 'tr-tr' }).format('DD MMMM YYYY dddd')).toBe('19 Ağustos 2024 Pazartesi');
 	});
 
 	test('DD MMMM YYYY', () => {
 		expect(new kk_date('2024-08-19').format('DD MMMM YYYY')).toBe('19 August 2024');
-		expect(new kk_date('2024-08-19').config('tr-tr').format('DD MMMM YYYY')).toBe('19 Ağustos 2024');
+		expect(new kk_date('2024-08-19').config({ locale: 'tr-tr' }).format('DD MMMM YYYY')).toBe('19 Ağustos 2024');
 	});
 
 	test('MMMM YYYY', () => {
 		expect(new kk_date('2024-08-19').format('MMMM YYYY')).toBe('August 2024');
-		expect(new kk_date('2024-08-19').config('tr-tr').format('MMMM YYYY')).toBe('Ağustos 2024');
+		expect(new kk_date('2024-08-19').config({ locale: 'tr-tr' }).format('MMMM YYYY')).toBe('Ağustos 2024');
 		expect(new kk_date('2024-01-01').format('MMMM YYYY')).toBe('January 2024');
 	});
 
 	test('DD MMMM dddd YYYY', () => {
 		expect(new kk_date('2024-08-19').format('DD MMMM dddd YYYY')).toBe('19 August Monday 2024');
-		expect(new kk_date('2024-08-19').config('tr-tr').format('DD MMMM dddd YYYY')).toBe('19 Ağustos Pazartesi 2024');
+		expect(new kk_date('2024-08-19').config({ locale: 'tr-tr' }).format('DD MMMM dddd YYYY')).toBe('19 Ağustos Pazartesi 2024');
 	});
 });
 
@@ -299,74 +303,170 @@ describe('kk_date instance duration method', () => {
 });
 
 test('Localization formats', () => {
-	expect(new kk_date('2024-08-19').config('de-de').format('dddd')).toBe('Montag'); // German
-	expect(new kk_date('2024-08-19').config('es-es').format('dddd')).toBe('lunes'); // Spanish
-	expect(new kk_date('2024-08-19').config('tr-tr').format('dddd')).toBe('Pazartesi'); // Turkish
+	expect(new kk_date('2024-08-19').config({ locale: 'de-de' }).format('dddd')).toBe('Montag'); // German
+	expect(new kk_date('2024-08-19').config({ locale: 'es-es' }).format('dddd')).toBe('lunes'); // Spanish
+	expect(new kk_date('2024-08-19').config({ locale: 'tr-tr' }).format('dddd')).toBe('Pazartesi'); // Turkish
 });
 
 test('caching tests', () => {
 	// cache enable test;
-	kk_date.caching({ status: true, isMemoryStatsEnabled: true });
+	kk_date.caching({ status: true });
 	const status1 = kk_date.caching_status();
 	expect(status1.status).toBe(true);
 	// enable later some tests;
-	expect(new kk_date('2024-08-19').config('de-de').format('dddd')).toBe('Montag'); // German
-	expect(new kk_date('2024-08-19').config('es-es').format('dddd')).toBe('lunes'); // Spanish
-	expect(new kk_date('2024-08-19').config('tr-tr').format('dddd')).toBe('Pazartesi'); // Turkish
+	expect(new kk_date('2024-08-19').config({ locale: 'de-de' }).format('dddd')).toBe('Montag'); // German
+	expect(new kk_date('2024-08-19').config({ locale: 'es-es' }).format('dddd')).toBe('lunes'); // Spanish
+	expect(new kk_date('2024-08-19').config({ locale: 'tr-tr' }).format('dddd')).toBe('Pazartesi'); // Turkish
 	// cache disable test;
 	kk_date.caching({ status: false });
 	const status2 = kk_date.caching_status();
 	expect(status2.status).toBe(false);
 	// disable later some tests
-	expect(new kk_date('2024-08-19').config('de-de').format('dddd')).toBe('Montag'); // German
-	expect(new kk_date('2024-08-19').config('es-es').format('dddd')).toBe('lunes'); // Spanish
-	expect(new kk_date('2024-08-19').config('tr-tr').format('dddd')).toBe('Pazartesi'); // Turkish
+	expect(new kk_date('2024-08-19').config({ locale: 'de-de' }).format('dddd')).toBe('Montag'); // German
+	expect(new kk_date('2024-08-19').config({ locale: 'es-es' }).format('dddd')).toBe('lunes'); // Spanish
+	expect(new kk_date('2024-08-19').config({ locale: 'tr-tr' }).format('dddd')).toBe('Pazartesi'); // Turkish
 });
 
 test('MMM - Short month name', () => {
 	expect(new kk_date('2024-01-01').format('MMM')).toBe('Jan');
 	expect(new kk_date('2024-08-19').format('MMM')).toBe('Aug');
 	expect(new kk_date('2024-12-31').format('MMM')).toBe('Dec');
-	expect(new kk_date('2024-08-19').config('tr-tr').format('MMM')).toBe('Ağu');
+	expect(new kk_date('2024-08-19').config({ locale: 'tr-tr' }).format('MMM')).toBe('Ağu');
 });
 
 test('MMMM - Full month name', () => {
 	expect(new kk_date('2024-01-01').format('MMMM')).toBe('January');
 	expect(new kk_date('2024-08-19').format('MMMM')).toBe('August');
 	expect(new kk_date('2024-12-31').format('MMMM')).toBe('December');
-	expect(new kk_date('2024-08-19').config('tr-tr').format('MMMM')).toBe('Ağustos');
+	expect(new kk_date('2024-08-19').config({ locale: 'tr-tr' }).format('MMMM')).toBe('Ağustos');
 });
 
 test('ddd - Short weekday name', () => {
 	expect(new kk_date('2024-08-19').format('ddd')).toBe('Mon');
 	expect(new kk_date('2024-08-20').format('ddd')).toBe('Tue');
-	expect(new kk_date('2024-08-19').config('tr-tr').format('ddd')).toBe('Pzt');
+	expect(new kk_date('2024-08-19').config({ locale: 'tr-tr' }).format('ddd')).toBe('Pzt');
 });
 
 test('DD MMM YYYY - Date with short month', () => {
 	expect(new kk_date('2024-08-19').format('DD MMM YYYY')).toBe('19 Aug 2024');
 	expect(new kk_date('2024-01-01').format('DD MMM YYYY')).toBe('01 Jan 2024');
 	expect(new kk_date('2024-12-31').format('DD MMM YYYY')).toBe('31 Dec 2024');
-	expect(new kk_date('2024-08-19').config('tr-tr').format('DD MMM YYYY')).toBe('19 Ağu 2024');
+	expect(new kk_date('2024-08-19').config({ locale: 'tr-tr' }).format('DD MMM YYYY')).toBe('19 Ağu 2024');
 });
 
 test('DD MMM - Date with short month, no year', () => {
 	expect(new kk_date('2024-08-19').format('DD MMM')).toBe('19 Aug');
 	expect(new kk_date('2024-01-01').format('DD MMM')).toBe('01 Jan');
 	expect(new kk_date('2024-12-31').format('DD MMM')).toBe('31 Dec');
-	expect(new kk_date('2024-08-19').config('tr-tr').format('DD MMM')).toBe('19 Ağu');
+	expect(new kk_date('2024-08-19').config({ locale: 'tr-tr' }).format('DD MMM')).toBe('19 Ağu');
 });
 
 test('MMM YYYY - Short month with year', () => {
 	expect(new kk_date('2024-08-19').format('MMM YYYY')).toBe('Aug 2024');
 	expect(new kk_date('2024-01-01').format('MMM YYYY')).toBe('Jan 2024');
 	expect(new kk_date('2024-12-31').format('MMM YYYY')).toBe('Dec 2024');
-	expect(new kk_date('2024-08-19').config('tr-tr').format('MMM YYYY')).toBe('Ağu 2024');
+	expect(new kk_date('2024-08-19').config({ locale: 'tr-tr' }).format('MMM YYYY')).toBe('Ağu 2024');
 });
 
 test('DD MMM YYYY HH:mm - Date with short month and time', () => {
 	expect(new kk_date('2024-08-19 14:30:00').format('DD MMM YYYY HH:mm')).toBe('19 Aug 2024 14:30');
 	expect(new kk_date('2024-01-01 00:00:00').format('DD MMM YYYY HH:mm')).toBe('01 Jan 2024 00:00');
 	expect(new kk_date('2024-12-31 23:59:59').format('DD MMM YYYY HH:mm')).toBe('31 Dec 2024 23:59');
-	expect(new kk_date('2024-08-19 14:30:00').config('tr-tr').format('DD MMM YYYY HH:mm')).toBe('19 Ağu 2024 14:30');
+	expect(new kk_date('2024-08-19 14:30:00').config({ locale: 'tr-tr' }).format('DD MMM YYYY HH:mm')).toBe('19 Ağu 2024 14:30');
+});
+
+describe('KkDate Timezone Tests', () => {
+	const originalTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+	afterEach(() => {
+		// Reset timezone to original after each test
+		kk_date.config({ timezone: originalTimezone });
+	});
+
+	describe('Global Timezone Configuration', () => {
+		test('should correctly set global timezone', () => {
+			kk_date.config({ timezone: 'Europe/Istanbul' });
+			const date = new kk_date(`${test_date} ${test_time}`);
+			expect(date.format('HH:mm')).toBe('23:50');
+		});
+
+		test('should handle invalid timezone gracefully', () => {
+			expect(() => {
+				kk_date.config({ timezone: 'Invalid/Timezone' });
+			}).toThrow();
+			expect(() => {
+				new kk_date(`${test_date} ${test_time}`).tz('Invalid/Timezone');
+			}).toThrow();
+		});
+
+		test('should affect all new KkDate instances', () => {
+			kk_date.config({ timezone: 'Europe/London' });
+			const date1 = new kk_date(`${test_date} ${test_time}`);
+			const date2 = new kk_date(`${test_date} ${test_time}`);
+
+			expect(date1.format('HH:mm')).toBe(date2.format('HH:mm'));
+		});
+
+		test('should maintain timezone across operations', () => {
+			kk_date.config({ timezone: 'Europe/London' });
+			const date = new kk_date(`${test_date} ${test_time}`);
+			const newDate = date.add(1, 'hours');
+
+			expect(newDate.format('HH:mm')).toBe('00:50');
+		});
+	});
+
+	describe('.tz() Method', () => {
+		test('should convert time to specified timezone', () => {
+			const date = new kk_date(`${test_date} ${test_time}`);
+			const converted = date.tz('America/New_York');
+			expect(converted.format('HH:mm')).not.toBe('23:50');
+		});
+
+		test('should handle timezone changes correctly', () => {
+			const date = new kk_date(`${test_date} ${test_time}`);
+			const tokyoHour = date.tz('Asia/Tokyo').format('HH:mm');
+			const londonHour = date.tz('Europe/London').format('HH:mm');
+			expect(tokyoHour).not.toBe(londonHour);
+		});
+
+		test('should maintain date integrity across timezone changes', () => {
+			const original = new kk_date(`${test_date} ${test_time}`);
+			const converted = original.tz('Asia/Tokyo').tz('America/Los_Angeles');
+			expect(converted.toUTCString()).toBe(original.toUTCString());
+		});
+
+		test('should handle invalid timezone', () => {
+			const date = new kk_date(`${test_date} ${test_time}`);
+			expect(() => {
+				date.tz('Invalid/Timezone');
+			}).toThrow();
+		});
+
+		test('should preserve time when converting to same timezone', () => {
+			const date = new kk_date(`${test_date} ${test_time}`);
+			const sameZone = date.tz(originalTimezone);
+
+			expect(sameZone.format('HH:mm')).toBe('23:50');
+		});
+	});
+
+	describe('Timezone and Locale Interaction', () => {
+		test('should handle timezone and locale together', () => {
+			const date = new kk_date(`${test_date} ${test_time}`);
+			date.config({ locale: 'tr-TR', timezone: 'Europe/Istanbul' });
+			expect(date.format('dddd')).toMatch(/Pazartesi/);
+		});
+
+		test('should maintain timezone when changing locale', () => {
+			const date = new kk_date(`${test_date} ${test_time}`);
+			date.tz('Asia/Tokyo');
+			date.config({ locale: 'en-US' });
+
+			const time = date.format('HH:mm');
+			date.config({ locale: 'ja-JP' });
+
+			expect(date.format('HH:mm')).toBe(time);
+		});
+	});
 });

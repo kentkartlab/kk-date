@@ -3,9 +3,15 @@
 	"organizeImports": {
 		"enabled": true
 	},
+	"files": {
+		"ignore": []
+	},
 	"linter": {
 		"enabled": true,
 		"rules": {
+			"suspicious": {
+				"noRedeclare": "error"
+			},
 			"recommended": true,
 			"performance": {
 				"noDelete": "off"
@@ -13,8 +19,13 @@
 			"complexity": {
 				"useLiteralKeys": "off"
 			},
+			"correctness": {
+				"noInvalidUseBeforeDeclaration": "error",
+				"noUndeclaredVariables": "error"
+			},
 			"style": {
-				"useNumberNamespace": "off"
+				"useNumberNamespace": "off",
+				"useDefaultParameterLast": "off"
 			}
 		}
 	},
@@ -23,6 +34,9 @@
 			"jsxQuoteStyle": "single",
 			"quoteStyle": "single",
 			"lineWidth": 150
+		},
+		"parser": {
+			"unsafeParameterDecoratorsEnabled": true
 		}
 	}
 }
