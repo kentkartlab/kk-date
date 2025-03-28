@@ -18,7 +18,7 @@ npm install kk-date
 ```
 ## Performance
 
-kk-date is significantly faster than other date libraries. Here are the performance test results (500,000 iterations):
+kk-date is significantly faster than other date libraries. Here are the performance test results (500,000 iterations and cache enabled from config):
 
 | Test No | Input                            | Output                  | kk-date (ms) | Moment (ms) | Day.js (ms) | date-fns (ms) | Speed Improvement |
 |---------|----------------------------------|------------------------|--------------|-------------|-------------|---------------|-------------------|
