@@ -203,28 +203,46 @@ new kk_date('2024-01-01').duration(1234)
 ### Supported Format Templates:
 
 ```javascript
-YYYY-MM-DDTHH:mm:ss
-YYYY-MM-DD HH:mm:ss
-YYYY-MM-DD HH:mm
-YYYY-MM-DD HH
-YYYY-MM-DD
-YYYYMMDD
-DD.MM.YYYY
-YYYY.MM.DD
-YYYY.MM.DD HH:mm
-YYYY.MM.DD HH
-YYYY.MM.DD HH:mm:ss
-DD.MM.YYYY HH:mm:ss
-DD.MM.YYYY HH:mm
-DD-MM-YYYY
-DD-MM-YYYY HH:mm
-DD-MM-YYYY HH:mm:ss
-DD-MM-YYYY HH
-dddd
-HH:mm:ss
-HH:mm
-x (Unix timestamps in milliseconds)
-X (Unix timestamps in seconds)
+x
+X
+dddd  
+DD  
+MM  
+DD-MM-YYYY  
+DD-MM-YYYY HH:mm  
+DD-MM-YYYY HH:mm:ss  
+DD.MM.YYYY  
+MM/DD/YYYY  
+DD/MM/YYYY  
+DD.MM.YYYY HH:mm:ss  
+DD.MM.YYYY HH:mm  
+YYYY-MM-DD  
+YYYY-MM-DD HH:mm:ss  
+YYYY-MM-DDTHH:mm:ss  
+YYYY.MM.DD HH:mm:ss  
+YYYY-MM-DD HH  
+DD-MM-YYYY HH  
+YYYY.MM.DD HH  
+YYYY.MM.DD  
+YYYYMMDD  
+YYYY  
+HH:mm:ss.SSS  
+HH:mm:ss  
+HH:mm  
+mm  
+ss  
+HH  
+DD MMMM YYYY  
+DD MMMM YYYY dddd  
+MMMM YYYY  
+DD MMMM dddd YYYY  
+MMM  
+MMMM  
+ddd  
+DD MMM YYYY  
+DD MMM  
+MMM YYYY  
+DD MMM YYYY HH:mm
 ```
 
 ### Supported Time Units for add():

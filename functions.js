@@ -20,6 +20,11 @@ const format_types = {
 	'YYYY-MM-DD HH:mm:ss': 'YYYY-MM-DD HH:mm:ss',
 	'YYYY-MM-DD HH:mm': 'YYYY-MM-DD HH:mm',
 	'YYYY.MM.DD': 'YYYY.MM.DD',
+	'MM/DD/YYYY': 'MM/DD/YYYY',
+	'DD/MM/YYYY': 'DD/MM/YYYY',
+	'YYYY-MM-DD HH': 'YYYY-MM-DD HH',
+	'DD-MM-YYYY HH': 'DD-MM-YYYY HH',
+	'YYYY.MM.DD HH': 'YYYY.MM.DD HH',
 	YYYYMMDD: 'YYYYMMDD',
 	'YYYY.MM.DD HH:mm:ss': 'YYYY.MM.DD HH:mm:ss',
 	'YYYY.MM.DD HH:mm': 'YYYY.MM.DD HH:mm',
@@ -34,6 +39,7 @@ const format_types = {
 	'DD MMMM dddd YYYY': 'DD MMMM dddd YYYY',
 	'MMMM YYYY': 'MMMM YYYY',
 	'HH:mm:ss': 'HH:mm:ss',
+	'HH:mm:ss.SSS': 'HH:mm:ss.SSS',
 	'HH:mm': 'HH:mm',
 	HH: 'HH',
 	mm: 'mm',
@@ -259,23 +265,28 @@ function dateTimeFormat(orj_this, template) {
 function converter(date, to) {
 	const result = {};
 	for (let index = 0; index < to.length; index++) {
-		if (to[index] === 'year') {
-			result['year'] = date.getFullYear();
-		}
-		if (to[index] === 'month') {
-			result['month'] = String(date.getMonth() + 1).padStart(2, '0');
-		}
-		if (to[index] === 'day') {
-			result['day'] = String(date.getDate()).padStart(2, '0');
-		}
-		if (to[index] === 'hours') {
-			result['hours'] = String(date.getHours()).padStart(2, '0');
-		}
-		if (to[index] === 'minutes') {
-			result['minutes'] = String(date.getMinutes()).padStart(2, '0');
-		}
-		if (to[index] === 'seconds') {
-			result['seconds'] = String(date.getSeconds()).padStart(2, '0');
+		switch (to[index]) {
+			case 'year':
+				result['year'] = date.getFullYear();
+				break;
+			case 'month':
+				result['month'] = String(date.getMonth() + 1).padStart(2, '0');
+				break;
+			case 'day':
+				result['day'] = String(date.getDate()).padStart(2, '0');
+				break;
+			case 'hours':
+				result['hours'] = String(date.getHours()).padStart(2, '0');
+				break;
+			case 'minutes':
+				result['minutes'] = String(date.getMinutes()).padStart(2, '0');
+				break;
+			case 'seconds':
+				result['seconds'] = String(date.getSeconds()).padStart(2, '0');
+				break;
+			case 'milliseconds':
+				result['milliseconds'] = String(date.getMilliseconds()).padStart(2, '0');
+				break;
 		}
 	}
 	return result;

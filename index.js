@@ -879,6 +879,14 @@ function formatter(orj_this, template = null) {
 			const result = converter(orj_this.date, ['day', 'month', 'year']);
 			return `${result.day}.${result.month}.${result.year}`;
 		}
+		case format_types['MM/DD/YYYY']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year']);
+			return `${result.month}/${result.day}/${result.year}`;
+		}
+		case format_types['DD/MM/YYYY']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year']);
+			return `${result.day}/${result.month}/${result.year}`;
+		}
 		case format_types['DD.MM.YYYY HH:mm:ss']: {
 			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes', 'seconds']);
 			return `${result.day}.${result.month}.${result.year} ${result.hours}:${result.minutes}:${result.seconds}`;
@@ -903,6 +911,18 @@ function formatter(orj_this, template = null) {
 			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes', 'seconds']);
 			return `${result.year}.${result.month}.${result.day} ${result.hours}:${result.minutes}:${result.seconds}`;
 		}
+		case format_types['YYYY-MM-DD HH']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours']);
+			return `${result.year}-${result.month}-${result.day} ${result.hours}`;
+		}
+		case format_types['DD-MM-YYYY HH']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours']);
+			return `${result.day}-${result.month}-${result.year} ${result.hours}`;
+		}
+		case format_types['YYYY.MM.DD HH']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours']);
+			return `${result.year}.${result.month}.${result.day} ${result.hours}`;
+		}
 		case format_types['YYYY.MM.DD']: {
 			const result = converter(orj_this.date, ['day', 'month', 'year']);
 			return `${result.year}.${result.month}.${result.day}`;
@@ -913,6 +933,10 @@ function formatter(orj_this, template = null) {
 		}
 		case format_types.YYYY: {
 			return `${converter(orj_this.date, ['year']).year}`;
+		}
+		case format_types['HH:mm:ss.SSS']: {
+			const result = converter(orj_this.date, ['hours', 'minutes', 'seconds', 'milliseconds']);
+			return `${result.hours}:${result.minutes}:${result.seconds}.${result.milliseconds}`;
 		}
 		case format_types['HH:mm:ss']: {
 			const result = converter(orj_this.date, ['hours', 'minutes', 'seconds']);
