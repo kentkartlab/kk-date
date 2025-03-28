@@ -814,36 +814,7 @@ class KkDate {
 	 * @returns {{year: number, month: number, week:number, day: number, hour: number, minute: number, second: number}}
 	 */
 	duration(time) {
-		const response = {
-			year: 0,
-			month: 0,
-			week: 0,
-			day: 0,
-			hour: 0,
-			minute: 0,
-			second: 0,
-		};
-
-		if (!time || typeof time !== 'number' || time < 0) {
-			throw new Error('Invalid time');
-		}
-
-		let seconds = time;
-		response.year = Math.floor(seconds / howManySeconds.year);
-		seconds = seconds % howManySeconds.year;
-		response.month = Math.floor(seconds / howManySeconds.month);
-		seconds = seconds % howManySeconds.month;
-		response.week = Math.floor(seconds / howManySeconds.week);
-		seconds = seconds % howManySeconds.week;
-		response.day = Math.floor(seconds / howManySeconds.day);
-		seconds = seconds % howManySeconds.day;
-		response.hour = Math.floor(seconds / howManySeconds.hour);
-		seconds = seconds % howManySeconds.hour;
-		response.minute = Math.floor(seconds / howManySeconds.minute);
-		seconds = seconds % howManySeconds.minute;
-		response.second = seconds;
-
-		return response;
+		return duration(time, 'second');
 	}
 
 	/**
