@@ -1069,6 +1069,14 @@ function formatter(orj_this, template = null) {
 			const result = converter(orj_this.date, ['day', 'month', 'year']);
 			return `${result.day}.${result.month}.${result.year}`;
 		}
+		case format_types['DD.MM.YYYY HH:mm:ss']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes', 'seconds']);
+			return `${result.day}.${result.month}.${result.year} ${result.hours}:${result.minutes}:${result.seconds}`;
+		}
+		case format_types['DD.MM.YYYY HH:mm']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes']);
+			return `${result.day}.${result.month}.${result.year} ${result.hours}:${result.minutes}`;
+		}
 		case format_types['YYYY-MM-DD']: {
 			const result = converter(orj_this.date, ['day', 'month', 'year']);
 			return `${result.year}-${result.month}-${result.day}`;
