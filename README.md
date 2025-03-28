@@ -7,6 +7,10 @@ kk-date is a fastest JavaScript library that parses, validations, manipulates, a
 - 🔥 Chainable
 - 🚀 Native Date
 - 🏁 Performance
+- 🚄 Cache support
+- 💬 Native Supports all languages
+- 🪂 Native Supports all timezones
+- 👌 Throws an error in case of error
 - ✅ All browsers supported
 
 

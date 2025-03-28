@@ -41,7 +41,11 @@
 		"dayjs",
 		"diff date",
 		"date range",
-		"diff range"
+		"diff range",
+		"timezone",
+		"locale",
+		"native date",
+		"fast date"
 	],
 	"bugs": {
 		"url": "https://github.com/kentkartlab/kk-date/issues"
