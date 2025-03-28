@@ -1,48 +1,23 @@
 const nopeRedis = require('./nope-redis');
-const timezoneData = require('./timezone-data');
+const functions = require('./functions');
+
+const parseWithTimezone = functions.parseWithTimezone;
+const getTimezoneOffset = functions.getTimezoneOffset;
+const absFloor = functions.absFloor;
+const duration = functions.duration;
+const padZero = functions.padZero;
+const checkTimezone = functions.checkTimezone;
+const dateTimeFormat = functions.dateTimeFormat;
+const format_types = functions.format_types;
+const cached_dateTimeFormat = functions.cached_dateTimeFormat;
+const converter = functions.converter;
+
 nopeRedis.config({ defaultTtl: 1300 });
 
 const global_config = {
 	locale: 'en',
 	timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 	userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-};
-
-const format_types = {
-	dddd: 'dddd',
-	YYYY: 'YYYY',
-	DD: 'DD',
-	MM: 'MM',
-	'YYYY-MM-DD': 'YYYY-MM-DD',
-	'YYYY-MM-DD HH:mm:ss': 'YYYY-MM-DD HH:mm:ss',
-	'YYYY-MM-DD HH:mm': 'YYYY-MM-DD HH:mm',
-	'YYYY.MM.DD': 'YYYY.MM.DD',
-	YYYYMMDD: 'YYYYMMDD',
-	'YYYY.MM.DD HH:mm:ss': 'YYYY.MM.DD HH:mm:ss',
-	'YYYY.MM.DD HH:mm': 'YYYY.MM.DD HH:mm',
-	'DD.MM.YYYY': 'DD.MM.YYYY',
-	'DD.MM.YYYY HH:mm:ss': 'DD.MM.YYYY HH:mm:ss',
-	'DD.MM.YYYY HH:mm': 'DD.MM.YYYY HH:mm',
-	'DD-MM-YYYY': 'DD-MM-YYYY',
-	'DD-MM-YYYY HH:mm:ss': 'DD-MM-YYYY HH:mm:ss',
-	'DD-MM-YYYY HH:mm': 'DD-MM-YYYY HH:mm',
-	'DD MMMM YYYY': 'DD MMMM YYYY',
-	'DD MMMM YYYY dddd': 'DD MMMM YYYY dddd',
-	'DD MMMM dddd YYYY': 'DD MMMM dddd YYYY',
-	'MMMM YYYY': 'MMMM YYYY',
-	'HH:mm:ss': 'HH:mm:ss',
-	'HH:mm': 'HH:mm',
-	HH: 'HH',
-	mm: 'mm',
-	ss: 'ss',
-	MMM: 'MMM', // Short month name (Jan, Feb, etc.)
-	MMMM: 'MMMM', // Full month name (January, February, etc.)
-	ddd: 'ddd', // Short weekday name (Mon, Tue, etc.)
-	'DD MMM YYYY': 'DD MMM YYYY', // 01 Jan 2024
-	'DD MMM': 'DD MMM', // 01 Jan
-	'MMM YYYY': 'MMM YYYY', // Jan 2024
-	'DD MMM YYYY HH:mm': 'DD MMM YYYY HH:mm', // 01 Jan 2024 13:45
-	'YYYY-MM-DDTHH:mm:ss': 'YYYY-MM-DDTHH:mm:ss',
 };
 
 const format_types_regex = {
@@ -70,7 +45,7 @@ const format_types_regex = {
 	'DD MMMM dddd YYYY':
 		/^(0[1-9]|[12][0-9]|3[01]) (January|February|March|April|May|June|July|August|September|October|November|December) (Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday) (|17|18|19|20|21)\d\d$/,
 	'HH:mm:ss': /^([01]\d|2[0-9]):([0-5]\d):([0-5]\d)$/,
-	'HH:mm': /^([01]\d|2[0-9]):([0-5]\d)$/,
+	'HH:mm': /^([01]\d|2[0-9]):([0-5]\d)(?::[0-5]\d)?$/,
 	HH: /^([01]\d|2[0-9])$/,
 	mm: /^([0-5]\d)$/,
 	ss: /^([0-5]\d)$/,
@@ -81,44 +56,6 @@ const format_types_regex = {
 	'DD MMM': /^(0[1-9]|[12][0-9]|3[01]) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)$/,
 	'MMM YYYY': /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (|17|18|19|20|21)\d\d$/,
 	'DD MMM YYYY HH:mm': /^(0[1-9]|[12][0-9]|3[01]) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (|17|18|19|20|21)\d\d ([01]\d|2[0-9]):([0-5]\d)$/,
-};
-
-const timeInMilliseconds = {
-	year: 365 * 24 * 60 * 60 * 1000, // 1 year (365 days)
-	month: 31 * 24 * 60 * 60 * 1000, // 1 month (31 days)
-	week: 7 * 24 * 60 * 60 * 1000, // 1 week (7 days)
-	day: 24 * 60 * 60 * 1000, // 1 day (24 hours)
-	hour: 60 * 60 * 1000, // 1 hour
-	minute: 60 * 1000, // 1 minute
-	second: 1000, // 1 second
-};
-
-const howManySeconds = {
-	year: 31556926,
-	month: 2629743,
-	week: 604800,
-	day: 86400,
-	hour: 3600,
-	minute: 60,
-};
-
-const cached_dateTimeFormat = {
-	dddd: new Intl.DateTimeFormat(global_config.locale, {
-		weekday: 'long',
-	}),
-	ddd: new Intl.DateTimeFormat(global_config.locale, {
-		weekday: 'short',
-	}),
-	MMMM: new Intl.DateTimeFormat(global_config.locale, {
-		month: 'long',
-	}),
-	MMM: new Intl.DateTimeFormat(global_config.locale, { month: 'short' }),
-	temp: {
-		dddd: {},
-		ddd: {},
-		MMMM: {},
-		MMM: {},
-	},
 };
 
 /**
@@ -140,10 +77,10 @@ class KkDate {
 				const stringed_date_length = `${date}`.length;
 				if (stringed_date_length <= 10) {
 					this.date = new Date(date * 1000);
-					this.date = parseWithTimezone(this, global_config.timezone, true);
+					this.date = parseWithTimezone(this, global_config.timezone, global_config.timezone, true);
 				} else if (stringed_date_length > 10) {
 					this.date = new Date(date);
-					this.date = parseWithTimezone(this, global_config.timezone, true);
+					this.date = parseWithTimezone(this, global_config.timezone, global_config.timezone, true);
 				}
 			} else if (isKkDate(date)) {
 				this.date = new Date(date.date.toUTCString());
@@ -574,12 +511,11 @@ class KkDate {
 	 *
 	 * @returns {number|Error}
 	 */
-	valueOfLocal() {
-		isInvalid(this.date);
-		return (
-			this.date.valueOf() +
-			(timezoneData[global_config.userTimezone].standardOffset * 1000 - timezoneData[global_config.timezone].standardOffset * 1000)
-		);
+	valueOfLocal(check_error = true) {
+		if (check_error) {
+			isInvalid(this.date);
+		}
+		return this.date.valueOf() + (getTimezoneOffset(global_config.userTimezone) * 1000 - getTimezoneOffset(global_config.timezone) * 1000);
 	}
 
 	/**
@@ -605,7 +541,7 @@ class KkDate {
 
 		if (typeof amount === 'object' && amount.$kk_date) {
 			defined_type = 'seconds';
-			defined_amount = amount.$kk_date.milliseconds / timeInMilliseconds.second;
+			defined_amount = amount.$kk_date.milliseconds / 1000;
 		}
 		switch (defined_type) {
 			case 'days':
@@ -747,9 +683,8 @@ class KkDate {
 	 */
 	config(options) {
 		if (options.timezone) {
-			isValidTimezone(options.timezone);
 			this.temp_config.timezone = options.timezone;
-			this.date = parseWithTimezone(this, options.timezone);
+			this.date = parseWithTimezone(this, global_config.timezone, options.timezone);
 		}
 		try {
 			if (options.locale) {
@@ -823,32 +758,9 @@ class KkDate {
 	 * @returns
 	 */
 	tz(timezone) {
-		isValidTimezone(timezone);
-		this.date = parseWithTimezone(this, timezone);
+		this.date = parseWithTimezone(this, global_config.timezone, timezone);
 		return this;
 	}
-}
-
-/**
- * @description It parses the date with the timezone and returns the date.
- * @param {KkDate} kkDate
- * @param {string} timezone
- * @param {boolean} is_init
- * @returns {Date|Error}
- */
-function parseWithTimezone(kkDate, timezone, is_init = false) {
-	if (timezone === global_config.timezone && !is_init) {
-		return kkDate.date;
-	}
-	const utcTime = kkDate.date.getTime();
-	const localOffset = kkDate.date.getTimezoneOffset() * 60 * 1000;
-	const targetOffset = timezoneData[timezone].standardOffset * 1000;
-	let extraAddDiff = 0;
-	if (kkDate.temp_config && global_config.timezone && timezone === kkDate.temp_config.timezone) {
-		extraAddDiff = timezoneData[timezone].standardOffset - timezoneData[global_config.timezone].standardOffset;
-	}
-	const tzTime = utcTime + targetOffset + localOffset + extraAddDiff;
-	return new Date(tzTime);
 }
 
 /**
@@ -881,18 +793,6 @@ function isKkDate(value = {}) {
 		return true;
 	}
 	return false;
-}
-
-/**
- *
- * @param {number} number
- * @returns {number}
- */
-function absFloor(number) {
-	if (number < 0) {
-		return Math.ceil(number) || 0;
-	}
-	return Math.floor(number);
 }
 
 /**
@@ -940,71 +840,6 @@ function diff(start, end, type, is_decimal = false, turn_difftime = false) {
 }
 
 /**
- * @description It formats the date with the locale and template.
- * @param {KkDate} orj_this
- * @param {string} template
- * @returns {Intl.DateTimeFormat}
- */
-function dateTimeFormat(orj_this, template) {
-	const tempLocale = orj_this.temp_config.locale;
-
-	if (template === format_types.dddd) {
-		if (tempLocale) {
-			return cached_dateTimeFormat.temp[template][tempLocale];
-		}
-		return cached_dateTimeFormat.dddd;
-	}
-
-	if (template === format_types.ddd) {
-		if (tempLocale) {
-			return cached_dateTimeFormat.temp[template][tempLocale];
-		}
-		return cached_dateTimeFormat.ddd;
-	}
-
-	if (template === format_types.MMMM) {
-		if (tempLocale) {
-			return cached_dateTimeFormat.temp[template][tempLocale];
-		}
-		return cached_dateTimeFormat.MMMM;
-	}
-
-	if (template === format_types.MMM) {
-		if (tempLocale) {
-			return cached_dateTimeFormat.temp[template][tempLocale];
-		}
-		return cached_dateTimeFormat.MMM;
-	}
-
-	throw new Error('unkown template for dateTimeFormat !');
-}
-
-function converter(date, to) {
-	const result = {};
-	for (let index = 0; index < to.length; index++) {
-		if (to[index] === 'year') {
-			result['year'] = date.getFullYear();
-		}
-		if (to[index] === 'month') {
-			result['month'] = String(date.getMonth() + 1).padStart(2, '0');
-		}
-		if (to[index] === 'day') {
-			result['day'] = String(date.getDate()).padStart(2, '0');
-		}
-		if (to[index] === 'hours') {
-			result['hours'] = String(date.getHours()).padStart(2, '0');
-		}
-		if (to[index] === 'minutes') {
-			result['minutes'] = String(date.getMinutes()).padStart(2, '0');
-		}
-		if (to[index] === 'seconds') {
-			result['seconds'] = String(date.getSeconds()).padStart(2, '0');
-		}
-	}
-	return result;
-}
-
-/**
  *
  * @param {Date} this.date
  * @param {string} template
@@ -1014,10 +849,10 @@ function formatter(orj_this, template = null) {
 	isInvalid(orj_this.date);
 	switch (template) {
 		case 'x': {
-			return parseInt(orj_this.valueOfLocal(), 10);
+			return parseInt(orj_this.valueOfLocal(true), 10);
 		}
 		case 'X': {
-			return parseInt(orj_this.valueOfLocal() / 1000, 10);
+			return parseInt(orj_this.valueOfLocal(true) / 1000, 10);
 		}
 		case format_types.dddd: {
 			return dateTimeFormat(orj_this, template).format(orj_this.date);
@@ -1035,6 +870,10 @@ function formatter(orj_this, template = null) {
 		case format_types['DD-MM-YYYY HH:mm']: {
 			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes']);
 			return `${result.day}-${result.month}-${result.year} ${result.hours}:${result.minutes}`;
+		}
+		case format_types['DD-MM-YYYY HH:mm:ss']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes', 'seconds']);
+			return `${result.day}-${result.month}-${result.year} ${result.hours}:${result.minutes}:${result.seconds}`;
 		}
 		case format_types['DD.MM.YYYY']: {
 			const result = converter(orj_this.date, ['day', 'month', 'year']);
@@ -1144,13 +983,6 @@ function formatter(orj_this, template = null) {
 			throw new Error('template is not right');
 	}
 }
-/**
- * padZero
- *
- * @param {number} num
- * @returns {string}
- */
-const padZero = (num) => String(num).padStart(2, '0');
 
 /**
  *
@@ -1159,81 +991,17 @@ const padZero = (num) => String(num).padStart(2, '0');
  * @returns {boolean}
  */
 function isValid(date_string, template) {
-	if (!format_types[template]) {
-		throw new Error('Invalid template');
-	}
 	if (template === format_types.dddd) {
 		return true;
 	}
-	if (format_types_regex[template].test(date_string) === false) {
+	if (!format_types[template]) {
+		throw new Error('Invalid template');
+	}
+	const regex = format_types_regex[template];
+	if (!regex.test(date_string)) {
 		return false;
 	}
 	return true;
-}
-
-/**
- * @description It checks if the timezone is valid.
- * @param {string} timezone
- * @returns {boolean}
- */
-function isValidTimezone(timezone) {
-	if (!timezoneData[timezone]) {
-		throw new Error('Invalid timezone');
-	}
-	return true;
-}
-
-/**
- * @description It divides the date string into parts and returns an object.
- * @param {string} time
- * @param {"year" | "month" | "week" | "day" | "hour" | "minute" | "second"} type
- * @returns {{year: number, month: number, week:number, day: number, hour: number, minute: number, second: number}}
- * @example
- * // Example usage:
- * const result = duration(1234, 'minute');
- * console.log(result);
- * // Output: { year: 0, month: 0, week: 0, day: 0, hour: 20, minute: 34, second: 0,millisecond: 0 }
- */
-function duration(time, type) {
-	const response = {
-		year: 0,
-		month: 0,
-		week: 0,
-		day: 0,
-		hour: 0,
-		minute: 0,
-		second: 0,
-		millisecond: 0,
-		$kk_date: { milliseconds: 0 },
-	};
-
-	if (!time || typeof time !== 'number' || time < 0) {
-		throw new Error('Invalid time');
-	}
-
-	if (!timeInMilliseconds[type]) {
-		throw new Error('Invalid type');
-	}
-
-	response.$kk_date.milliseconds = time * timeInMilliseconds[type];
-	let milliseconds = time * timeInMilliseconds[type];
-	response.year = Math.floor(milliseconds / timeInMilliseconds.year);
-	milliseconds = milliseconds % timeInMilliseconds.year;
-	response.month = Math.floor(milliseconds / timeInMilliseconds.month);
-	milliseconds = milliseconds % timeInMilliseconds.month;
-	response.week = Math.floor(milliseconds / timeInMilliseconds.week);
-	milliseconds = milliseconds % timeInMilliseconds.week;
-	response.day = Math.floor(milliseconds / timeInMilliseconds.day);
-	milliseconds = milliseconds % timeInMilliseconds.day;
-	response.hour = Math.floor(milliseconds / timeInMilliseconds.hour);
-	milliseconds = milliseconds % timeInMilliseconds.hour;
-	response.minute = Math.floor(milliseconds / timeInMilliseconds.minute);
-	milliseconds = milliseconds % timeInMilliseconds.minute;
-	response.second = Math.floor(milliseconds / timeInMilliseconds.second);
-	milliseconds = milliseconds % timeInMilliseconds.second;
-	response.millisecond = milliseconds;
-
-	return response;
 }
 
 /**
@@ -1264,8 +1032,8 @@ function config(options) {
 	} catch (error) {
 		throw new Error('locale not valid for BCP 47');
 	}
-	if (options.timezone) {
-		isValidTimezone(options.timezone);
+	if (options.timezone && global_config.timezone !== options.timezone) {
+		checkTimezone(options.timezone);
 		global_config.timezone = options.timezone;
 	}
 	return true;
