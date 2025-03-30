@@ -167,10 +167,10 @@ describe('kk_date startOf / endOf', () => {
 		expect(new kk_date(testDateTime).endOf('hour').format('YYYY-MM-DD HH:mm:ss')).toBe('2024-08-19 14:59:59');
 	});
 	test('endOf minute', () => {
-		expect(new kk_date(testDateTime).endOf('day').format('YYYY-MM-DD HH:mm:ss')).toBe('2024-08-19 23:59:59');
+		expect(new kk_date(testDateTime).endOf('minute').format('YYYY-MM-DD HH:mm:ss')).toBe('2024-08-19 14:35:59');
 	});
 	test('endOf second', () => {
-		expect(new kk_date(testDateTime).endOf('second').format('YYYY-MM-DD HH:mm:ss')).toBe('2024-08-19 14:35:45');
+		expect(new kk_date(testDateTime).endOf('second').format('HH:mm:ss.SSS')).toBe('14:35:45.999');
 	});
 
 	test('startOf/endOf chaining', () => {
