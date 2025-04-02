@@ -105,7 +105,7 @@ class KkDate {
 							const newYear = dateObj.getFullYear();
 							let date_string = `${newYear}-${newMonth}-${newDay}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
 							if (seconds) {
-								date_string += seconds.toString().padStart(2, '0');
+								date_string += `:${seconds.toString().padStart(2, '0')}`;
 							}
 							this.date = new Date(date_string);
 						} else {
