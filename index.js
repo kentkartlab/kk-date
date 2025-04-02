@@ -874,7 +874,6 @@ class KkDate {
 				const month = this.date.getMonth();
 				this.date.setDate(new Date(year, month + 1, 0).getDate());
 				this.date.setHours(23, 59, 59, 999);
-				console.log(this.date);
 				break;
 			}
 			case 'week': {
