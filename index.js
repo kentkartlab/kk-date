@@ -21,6 +21,21 @@ const global_config = {
 	userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 };
 
+const monthNames = {
+	January: '01',
+	February: '02',
+	March: '03',
+	April: '04',
+	May: '05',
+	June: '06',
+	July: '07',
+	August: '08',
+	September: '09',
+	October: '10',
+	November: '11',
+	December: '12',
+};
+
 const format_types_regex = {
 	YYYY: /^(17|18|19|20|21)\d\d$/,
 	MM: /^(0[1-9]|1[0-2])$/,
@@ -57,6 +72,12 @@ const format_types_regex = {
 	'DD MMM': /^(0[1-9]|[12][0-9]|3[01]) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)$/,
 	'MMM YYYY': /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (|17|18|19|20|21)\d\d$/,
 	'DD MMM YYYY HH:mm': /^(0[1-9]|[12][0-9]|3[01]) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (|17|18|19|20|21)\d\d ([01]\d|2[0-9]):([0-5]\d)$/,
+	'YYYY-MM': /^(17|18|19|20|21)\d\d-(0[1-9]|1[0-2])$/,
+	'DD MMMM dddd':
+		/^(0[1-9]|[12][0-9]|3[01]) (January|February|March|April|May|June|July|August|September|October|November|December) (Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$/,
+	'YYYY-DD-MM': /^(17|18|19|20|21)\d\d-(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])$/,
+	'D MMMM YYYY':
+		/^(0?[1-9]|[12][0-9]|3[01]) (January|February|March|April|May|June|July|August|September|October|November|December) (|17|18|19|20|21)\d\d$/,
 };
 
 /**
@@ -283,6 +304,26 @@ class KkDate {
 							const day = String(date.substring(6, 8), 10); // Extract day
 
 							this.date = new Date(`${year}-${month}-${day}`);
+						} else if (isValid(date, format_types['YYYY-MM'])) {
+							const [year, month] = date.split('-');
+							this.date = new Date(`${year}-${month}-01`);
+						} else if (isValid(date, format_types['DD MMMM dddd'])) {
+							const currentYear = new Date().getFullYear();
+							const parts = date.split(' '); // e.g., ['01', 'January', 'Monday']
+							const day = parts[0];
+							const monthName = parts[1];
+							const month = monthNames[monthName];
+							this.date = new Date(`${currentYear}-${month}-${day}`);
+						} else if (isValid(date, format_types['YYYY-DD-MM'])) {
+							const [year, day, month] = date.split('-');
+							this.date = new Date(`${year}-${month}-${day}`);
+						} else if (isValid(date, format_types['D MMMM YYYY'])) {
+							const parts = date.split(' '); // e.g., ['1', 'January', '2024'] or ['01', 'January', '2024']
+							const day = parts[0];
+							const monthName = parts[1];
+							const year = parts[2];
+							const month = monthNames[monthName];
+							this.date = new Date(`${year}-${month}-${day.padStart(2, '0')}`); // Ensure day is padded for Date constructor
 						}
 						if (this.date === false) {
 							this.date = new Date(`${date}`);
@@ -833,6 +874,7 @@ class KkDate {
 				const month = this.date.getMonth();
 				this.date.setDate(new Date(year, month + 1, 0).getDate());
 				this.date.setHours(23, 59, 59, 999);
+				console.log(this.date);
 				break;
 			}
 			case 'week': {
@@ -1090,6 +1132,22 @@ function formatter(orj_this, template = null) {
 		case format_types['DD MMM YYYY HH:mm']: {
 			const result = converter(orj_this.date, ['day', 'year', 'hours', 'minutes']);
 			return `${result.day} ${dateTimeFormat(orj_this, 'MMM').format(orj_this.date)} ${result.year} ${result.hours}:${result.minutes}`;
+		}
+		case format_types['YYYY-MM']: {
+			const result = converter(orj_this.date, ['month', 'year']);
+			return `${result.year}-${result.month}`;
+		}
+		case format_types['DD MMMM dddd']: {
+			return `${converter(orj_this.date, ['day']).day} ${dateTimeFormat(orj_this, 'MMMM').format(orj_this.date)} ${dateTimeFormat(orj_this, 'dddd').format(orj_this.date)}`;
+		}
+		case format_types['YYYY-DD-MM']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year']);
+			return `${result.year}-${result.day}-${result.month}`;
+		}
+		case format_types['D MMMM YYYY']: {
+			const day = converter(orj_this.date, ['day'], { pad: false }).day;
+			const year = converter(orj_this.date, ['year']).year;
+			return `${day} ${dateTimeFormat(orj_this, 'MMMM').format(orj_this.date)} ${year}`;
 		}
 		case null: {
 			const timezoneOffset = -orj_this.date.getTimezoneOffset();

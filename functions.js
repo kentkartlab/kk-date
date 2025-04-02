@@ -52,6 +52,10 @@ const format_types = {
 	'MMM YYYY': 'MMM YYYY', // Jan 2024
 	'DD MMM YYYY HH:mm': 'DD MMM YYYY HH:mm', // 01 Jan 2024 13:45
 	'YYYY-MM-DDTHH:mm:ss': 'YYYY-MM-DDTHH:mm:ss',
+	'YYYY-MM': 'YYYY-MM',
+	'DD MMMM dddd': 'DD MMMM dddd',
+	'YYYY-DD-MM': 'YYYY-DD-MM',
+	'D MMMM YYYY': 'D MMMM YYYY',
 };
 
 const cached_dateTimeFormat = {
@@ -260,32 +264,35 @@ function dateTimeFormat(orj_this, template) {
  *
  * @param {Date} date
  * @param {Array} to
+ * @param {object} [options={pad: true}]
  * @returns {Object}
  */
-function converter(date, to) {
+function converter(date, to, options = { pad: true }) {
 	const result = {};
+	const shouldPad = options.pad !== false; // Default to true if options.pad is not explicitly false
+
 	for (let index = 0; index < to.length; index++) {
 		switch (to[index]) {
 			case 'year':
 				result['year'] = date.getFullYear();
 				break;
 			case 'month':
-				result['month'] = String(date.getMonth() + 1).padStart(2, '0');
+				result['month'] = shouldPad ? String(date.getMonth() + 1).padStart(2, '0') : date.getMonth() + 1;
 				break;
 			case 'day':
-				result['day'] = String(date.getDate()).padStart(2, '0');
+				result['day'] = shouldPad ? String(date.getDate()).padStart(2, '0') : date.getDate();
 				break;
 			case 'hours':
-				result['hours'] = String(date.getHours()).padStart(2, '0');
+				result['hours'] = shouldPad ? String(date.getHours()).padStart(2, '0') : date.getHours();
 				break;
 			case 'minutes':
-				result['minutes'] = String(date.getMinutes()).padStart(2, '0');
+				result['minutes'] = shouldPad ? String(date.getMinutes()).padStart(2, '0') : date.getMinutes();
 				break;
 			case 'seconds':
-				result['seconds'] = String(date.getSeconds()).padStart(2, '0');
+				result['seconds'] = shouldPad ? String(date.getSeconds()).padStart(2, '0') : date.getSeconds();
 				break;
 			case 'milliseconds':
-				result['milliseconds'] = String(date.getMilliseconds()).padStart(2, '0');
+				result['milliseconds'] = shouldPad ? String(date.getMilliseconds()).padStart(3, '0') : date.getMilliseconds(); // Pad milliseconds to 3 digits
 				break;
 		}
 	}
