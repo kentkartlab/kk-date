@@ -49,5 +49,9 @@
 	"bugs": {
 		"url": "https://github.com/kentkartlab/kk-date/issues"
 	},
-	"homepage": "https://github.com/kentkartlab/kk-date#readme"
+	"homepage": "https://github.com/kentkartlab/kk-date#readme",
+	"devDependencies": {
+		"dayjs": "^1.11.13",
+		"moment": "^2.30.1"
+	}
 }
