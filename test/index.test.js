@@ -8,6 +8,25 @@ const timezone = 'Europe/Istanbul';
 
 kk_date.config({ timezone: timezone });
 
+describe('kk_date validation', () => {
+	test('not valid', () => {
+		expect(() => {
+			new kk_date('2025-01-31', 'HH:mm:ss');
+		}).toThrow();
+		expect(() => {
+			new kk_date('2025-01-31', 'HH:mm');
+		}).toThrow();
+		expect(() => {
+			new kk_date('2025-01-31', 'YYYY/MM/DD');
+		}).toThrow();
+	});
+	test('valid', () => {
+		expect(new kk_date(`${test_date}`, 'YYYY-MM-DD').format('YYYY-MM-DD')).toBe(`${test_date}`);
+		expect(new kk_date(`${test_time}`, 'HH:mm:ss').format('HH:mm:ss')).toBe(test_time);
+		expect(new kk_date(`${test_date} ${test_time}`, 'YYYY-MM-DD HH:mm:ss').format('YYYY-MM-DD HH:mm:ss')).toBe(`${test_date} ${test_time}`);
+	});
+});
+
 describe('kk_date format', () => {
 	test('HH:mm:ss', () => {
 		expect(new kk_date(`${test_time}`).format('HH:mm:ss')).toBe(`${test_time}`);
