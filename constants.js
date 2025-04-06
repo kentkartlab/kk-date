@@ -1,4 +1,4 @@
-const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
+const cache_ttl = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 const timeInMilliseconds = {
 	year: 365 * 24 * 60 * 60 * 1000, // 1 year (365 days)
@@ -253,7 +253,7 @@ const global_config = {
 	rtf: {},
 };
 
-module.exports.CACHE_TTL = CACHE_TTL;
+module.exports.cache_ttl = cache_ttl;
 module.exports.timeInMilliseconds = timeInMilliseconds;
 module.exports.format_types = format_types;
 module.exports.month_numbers = month_numbers;

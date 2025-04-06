@@ -2,7 +2,7 @@ const {
 	iso6391_languages,
 	default_en_day_number,
 	day_numbers,
-	CACHE_TTL,
+	cache_ttl,
 	month_numbers,
 	timeInMilliseconds,
 	format_types,
@@ -65,7 +65,7 @@ function getTimezoneOffset(timezone) {
 
 		if (timezone_cache.has(timezone)) {
 			const { offset, timestamp } = timezone_cache.get(timezone);
-			if (now - timestamp < CACHE_TTL) {
+			if (now - timestamp < cache_ttl) {
 				return offset; // Cache is avaible return from cache
 			}
 		}
