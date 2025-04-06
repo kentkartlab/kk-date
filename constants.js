@@ -243,6 +243,12 @@ const cached_dateTimeFormat = {
 	},
 };
 
+const global_config = {
+	locale: 'en',
+	timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+	userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+};
+
 module.exports.CACHE_TTL = CACHE_TTL;
 module.exports.timeInMilliseconds = timeInMilliseconds;
 module.exports.format_types = format_types;
@@ -253,3 +259,4 @@ module.exports.default_en_day_number = default_en_day_number;
 module.exports.format_types_regex = format_types_regex;
 module.exports.timezone_cache = timezone_cache;
 module.exports.cached_dateTimeFormat = cached_dateTimeFormat;
+module.exports.global_config = global_config;

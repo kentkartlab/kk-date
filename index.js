@@ -10,15 +10,9 @@ const {
 	converter,
 	isValidMonth,
 } = require('./functions');
-const { cached_dateTimeFormat, format_types, timeInMilliseconds, format_types_regex } = require('./constants');
+const { cached_dateTimeFormat, format_types, timeInMilliseconds, format_types_regex, global_config } = require('./constants');
 
 nopeRedis.config({ defaultTtl: 1300 });
-
-const global_config = {
-	locale: 'en',
-	timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-	userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-};
 
 /**
  * @class KkDate
