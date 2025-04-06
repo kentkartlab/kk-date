@@ -247,6 +247,7 @@ const global_config = {
 	locale: 'en',
 	timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 	userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+	rtf: {},
 };
 
 module.exports.CACHE_TTL = CACHE_TTL;
