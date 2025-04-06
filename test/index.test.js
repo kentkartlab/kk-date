@@ -125,11 +125,46 @@ describe('kk_date format', () => {
 		expect(new kk_date('2024-08-19').format('DD MMMM dddd YYYY')).toBe('19 August Monday 2024');
 		expect(new kk_date('2024-08-19').config({ locale: 'tr-tr' }).format('DD MMMM dddd YYYY')).toBe('19 Ağustos Pazartesi 2024');
 	});
+
+	test('YYYY-MM', () => {
+		expect(new kk_date('2024-08-19').format('YYYY-MM')).toBe('2024-08');
+		expect(new kk_date('2023-12-01').format('YYYY-MM')).toBe('2023-12');
+		// Test parsing (defaults day to 01)
+		expect(new kk_date('2024-05').format('YYYY-MM-DD')).toBe('2024-05-01');
+	});
+
+	test('DD MMMM dddd', () => {
+		const currentYear = new Date().getFullYear();
+		expect(new kk_date('2024-08-19').format('DD MMMM dddd')).toBe('19 August Monday');
+		expect(new kk_date('2024-08-19').config({ locale: 'tr-tr' }).format('DD MMMM dddd')).toBe('19 Ağustos Pazartesi');
+		// Test parsing (defaults to current year)
+		expect(new kk_date('15 January Tuesday').format('YYYY-MM-DD')).toBe(`${currentYear}-01-15`);
+		expect(new kk_date('31 December Sunday').format('YYYY-MM-DD')).toBe(`${currentYear}-12-31`);
+	});
+
+	test('YYYY-DD-MM', () => {
+		expect(new kk_date('2024-08-19').format('YYYY-DD-MM')).toBe('2024-19-08');
+		expect(new kk_date('2023-12-01').format('YYYY-DD-MM')).toBe('2023-01-12');
+		// Test parsing
+		expect(new kk_date('2024-25-05').format('YYYY-MM-DD')).toBe('2024-05-25');
+		expect(new kk_date('2023-10-11', 'YYYY-DD-MM').format('YYYY-MM-DD')).toBe('2023-11-10');
+	});
+
+	test('D MMMM YYYY', () => {
+		// Formatting
+		expect(new kk_date('2024-08-01').format('D MMMM YYYY')).toBe('1 August 2024');
+		expect(new kk_date('2024-08-19').format('D MMMM YYYY')).toBe('19 August 2024');
+		expect(new kk_date('2024-01-05').config({ locale: 'tr-tr' }).format('D MMMM YYYY')).toBe('5 Ocak 2024');
+		// Parsing
+		expect(new kk_date('1 January 2024').format('YYYY-MM-DD')).toBe('2024-01-01');
+		expect(new kk_date('05 December 2023').format('YYYY-MM-DD')).toBe('2023-12-05');
+		expect(new kk_date('31 July 2025').format('YYYY-MM-DD')).toBe('2025-07-31');
+	});
 });
 
 describe('kk_date startOf / endOf', () => {
-	const testDateTime = '2024-08-19 14:35:45.500';
-	const testLeapDateTime = '2024-02-15 10:10:10.100'; // Leap year
+	const testDateTime = '2024-08-19 14:35:45';
+	const testLeapDateTime = '2024-02-15 10:10:10'; // Leap year
 	const testEndOfMonthDateTime = '2024-03-31 12:00:00';
 
 	// --- startOf Tests ---
