@@ -19,6 +19,7 @@ const global_config = {
 	locale: 'en',
 	timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 	userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+	rtf: {},
 };
 
 const monthNames = {
@@ -390,7 +391,9 @@ class KkDate {
 				}
 			}
 		}
-		this.temp_config = {};
+		this.temp_config = {
+			rtf: {},
+		};
 	}
 
 	/**
@@ -552,6 +555,7 @@ class KkDate {
 		if (!this.temp_config) {
 			this.temp_config = {
 				locale: global_config.locale || 'en-en',
+				rtf: {},
 			};
 		}
 		return this.date.toLocaleDateString(this.temp_config.locale, options);
@@ -569,6 +573,7 @@ class KkDate {
 		if (!this.temp_config) {
 			this.temp_config = {
 				locale: global_config.locale || 'en-en',
+				rtf: {},
 			};
 		}
 		return this.date.toLocaleString(this.temp_config.locale, options);
@@ -586,6 +591,7 @@ class KkDate {
 		if (!this.temp_config) {
 			this.temp_config = {
 				locale: global_config.locale || 'en-en',
+				rtf: {},
 			};
 		}
 		return this.date.toLocaleTimeString(this.temp_config.locale, options);
@@ -791,11 +797,13 @@ class KkDate {
 	config(options) {
 		if (options.timezone) {
 			this.temp_config.timezone = options.timezone;
+			this.temp_config.rtf = {};
 			this.date = parseWithTimezone(this, global_config.timezone, options.timezone);
 		}
 		try {
 			if (options.locale) {
 				this.temp_config.locale = options.locale;
+				this.temp_config.rtf[options.locale] = new Intl.RelativeTimeFormat(options.locale, { numeric: 'auto' });
 				if (cached_dateTimeFormat.temp['dddd'][options.locale]) {
 					return this;
 				}
@@ -948,6 +956,66 @@ class KkDate {
 				throw new Error(`Invalid unit for endOf: ${unit}`);
 		}
 		return this;
+	}
+
+	/**
+	 * @description Returns the relative time from now.
+	 * @returns {string|Error} - "5 minutes ago"
+	 */
+	fromNow() {
+		isInvalid(this.date);
+
+		const now = Date.now();
+		const diffMs = this.date.getTime() - now;
+		const diffSeconds = Math.round(diffMs / 1000);
+		const diffMinutes = Math.round(diffSeconds / 60);
+		const diffHours = Math.round(diffMinutes / 60);
+		const diffDays = Math.round(diffHours / 24);
+		const diffMonths = Math.round(diffDays / 30.44); // approx. 30.44 days in a month
+		const diffYears = Math.round(diffDays / 365.25); // include leap years approx.
+
+		const locale = this.temp_config?.locale || global_config.locale || 'en';
+
+		let rtf = this.temp_config.rtf[locale] || global_config.rtf[locale];
+
+		if (!rtf) {
+			try {
+				rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+				this.temp_config.rtf[locale] = rtf;
+			} catch (error) {
+				throw new Error(`Failed to create Intl.RelativeTimeFormat for locale "${locale}": ${error}.`);
+			}
+		}
+
+		let value;
+		let unit;
+
+		// Determine the best unit to display
+		if (Math.abs(diffSeconds) < 45) {
+			value = diffSeconds;
+			unit = 'second';
+		} else if (Math.abs(diffMinutes) < 45) {
+			value = diffMinutes;
+			unit = 'minute';
+		} else if (Math.abs(diffHours) < 22) {
+			value = diffHours;
+			unit = 'hour';
+		} else if (Math.abs(diffDays) < 26) {
+			value = diffDays;
+			unit = 'day';
+		} else if (Math.abs(diffMonths) < 11) {
+			value = diffMonths;
+			unit = 'month';
+		} else {
+			value = diffYears;
+			unit = 'year';
+		}
+
+		try {
+			return rtf.format(value, unit);
+		} catch (error) {
+			throw new Error(`couldn't format relative time: ${error}`);
+		}
 	}
 }
 
@@ -1256,9 +1324,15 @@ function config(options) {
 			cached_dateTimeFormat.MMM = new Intl.DateTimeFormat(global_config.locale, {
 				month: 'short',
 			});
+			try {
+				global_config.rtf[global_config.locale] = new Intl.RelativeTimeFormat(global_config.locale, { numeric: 'auto' });
+			} catch (error) {
+				console.error(global_config.locale, error);
+				throw new Error('locale not valid for BCP 47 / relative time formatting');
+			}
 		}
 	} catch (error) {
-		throw new Error('locale not valid for BCP 47');
+		throw new Error('locale not valid for BCP 47 / config');
 	}
 	if (options.timezone && global_config.timezone !== options.timezone) {
 		checkTimezone(options.timezone);
