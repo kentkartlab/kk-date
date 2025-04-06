@@ -302,6 +302,12 @@ class KkDate {
 								const year = parts[2];
 								const month = isValidMonth(parts[1]);
 								this.date = new Date(`${year}-${month}-${day.padStart(2, '0')}`); // Ensure day is padded for Date constructor
+							} else if (isValid(date, format_types['YYYY MMM DD']) || isValid(date, format_types['YYYY MMMM DD'])) {
+								const parts = date.split(' ');
+								const year = parts[0];
+								const month = isValidMonth(parts[1]);
+								const day = parts[2];
+								this.date = new Date(`${year}-${month}-${day.padStart(2, '0')}`); // Ensure day is padded for Date constructor
 							}
 							if (this.date === false) {
 								this.date = new Date(`${date}`);
