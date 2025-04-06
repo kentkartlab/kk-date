@@ -147,7 +147,7 @@ describe('kk_date format', () => {
 		expect(new kk_date('2023-12-01').format('YYYY-DD-MM')).toBe('2023-01-12');
 		// Test parsing
 		expect(new kk_date('2024-25-05').format('YYYY-MM-DD')).toBe('2024-05-25');
-		expect(new kk_date('2023-10-11').format('YYYY-MM-DD')).toBe('2023-11-10');
+		expect(new kk_date('2023-10-11', 'YYYY-DD-MM').format('YYYY-MM-DD')).toBe('2023-11-10');
 	});
 
 	test('D MMMM YYYY', () => {
