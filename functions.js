@@ -1,81 +1,57 @@
-const timezoneCache = new Map(); // cache object
-const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
+const {
+	iso6391_languages,
+	default_en_day_number,
+	day_numbers,
+	CACHE_TTL,
+	month_numbers,
+	timeInMilliseconds,
+	format_types,
+	cached_dateTimeFormat,
+	timezone_cache,
+} = require('./constants');
 
-const timeInMilliseconds = {
-	year: 365 * 24 * 60 * 60 * 1000, // 1 year (365 days)
-	month: 31 * 24 * 60 * 60 * 1000, // 1 month (31 days)
-	week: 7 * 24 * 60 * 60 * 1000, // 1 week (7 days)
-	day: 24 * 60 * 60 * 1000, // 1 day (24 hours)
-	hour: 60 * 60 * 1000, // 1 hour
-	minute: 60 * 1000, // 1 minute
-	second: 1000, // 1 second
-};
+const months = {};
+const days = {};
 
-const format_types = {
-	dddd: 'dddd',
-	YYYY: 'YYYY',
-	DD: 'DD',
-	MM: 'MM',
-	'YYYY-MM-DD': 'YYYY-MM-DD',
-	'YYYY-MM-DD HH:mm:ss': 'YYYY-MM-DD HH:mm:ss',
-	'YYYY-MM-DD HH:mm': 'YYYY-MM-DD HH:mm',
-	'YYYY.MM.DD': 'YYYY.MM.DD',
-	'MM/DD/YYYY': 'MM/DD/YYYY',
-	'DD/MM/YYYY': 'DD/MM/YYYY',
-	'YYYY-MM-DD HH': 'YYYY-MM-DD HH',
-	'DD-MM-YYYY HH': 'DD-MM-YYYY HH',
-	'YYYY.MM.DD HH': 'YYYY.MM.DD HH',
-	YYYYMMDD: 'YYYYMMDD',
-	'YYYY.MM.DD HH:mm:ss': 'YYYY.MM.DD HH:mm:ss',
-	'YYYY.MM.DD HH:mm': 'YYYY.MM.DD HH:mm',
-	'DD.MM.YYYY': 'DD.MM.YYYY',
-	'DD.MM.YYYY HH:mm:ss': 'DD.MM.YYYY HH:mm:ss',
-	'DD.MM.YYYY HH:mm': 'DD.MM.YYYY HH:mm',
-	'DD-MM-YYYY': 'DD-MM-YYYY',
-	'DD-MM-YYYY HH:mm:ss': 'DD-MM-YYYY HH:mm:ss',
-	'DD-MM-YYYY HH:mm': 'DD-MM-YYYY HH:mm',
-	'DD MMMM YYYY': 'DD MMMM YYYY',
-	'DD MMMM YYYY dddd': 'DD MMMM YYYY dddd',
-	'DD MMMM dddd YYYY': 'DD MMMM dddd YYYY',
-	'MMMM YYYY': 'MMMM YYYY',
-	'HH:mm:ss': 'HH:mm:ss',
-	'HH:mm:ss.SSS': 'HH:mm:ss.SSS',
-	'HH:mm': 'HH:mm',
-	HH: 'HH',
-	mm: 'mm',
-	ss: 'ss',
-	MMM: 'MMM', // Short month name (Jan, Feb, etc.)
-	MMMM: 'MMMM', // Full month name (January, February, etc.)
-	ddd: 'ddd', // Short weekday name (Mon, Tue, etc.)
-	'DD MMM YYYY': 'DD MMM YYYY', // 01 Jan 2024
-	'DD MMM': 'DD MMM', // 01 Jan
-	'MMM YYYY': 'MMM YYYY', // Jan 2024
-	'DD MMM YYYY HH:mm': 'DD MMM YYYY HH:mm', // 01 Jan 2024 13:45
-	'YYYY-MM-DDTHH:mm:ss': 'YYYY-MM-DDTHH:mm:ss',
-	'YYYY-MM': 'YYYY-MM',
-	'DD MMMM dddd': 'DD MMMM dddd',
-	'YYYY-DD-MM': 'YYYY-DD-MM',
-	'D MMMM YYYY': 'D MMMM YYYY',
-};
+for (const key in iso6391_languages) {
+	const month_long = new Intl.DateTimeFormat(key, { month: 'long' });
+	const month_short = new Intl.DateTimeFormat(key, { month: 'short' });
+	const day_long = new Intl.DateTimeFormat(key, { weekday: 'long' });
+	const day_short = new Intl.DateTimeFormat(key, { weekday: 'short' });
+	for (let i = 1; i < 13; i++) {
+		const date = new Date(2021, i, '0');
+		months[month_long.format(date).toLowerCase()] = i;
+		months[month_short.format(date).toLowerCase()] = i;
+	}
+	for (let i = 1; i < 8; i++) {
+		const date = new Date(2021, 1, i);
+		const number = parseInt(default_en_day_number.format(date), 10);
+		days[day_long.format(date).toLowerCase()] = number;
+		days[day_short.format(date).toLowerCase()] = number;
+	}
+}
 
-const cached_dateTimeFormat = {
-	dddd: new Intl.DateTimeFormat('en', {
-		weekday: 'long',
-	}),
-	ddd: new Intl.DateTimeFormat('en', {
-		weekday: 'short',
-	}),
-	MMMM: new Intl.DateTimeFormat('en', {
-		month: 'long',
-	}),
-	MMM: new Intl.DateTimeFormat('en', { month: 'short' }),
-	temp: {
-		dddd: {},
-		ddd: {},
-		MMMM: {},
-		MMM: {},
-	},
-};
+/**
+ * if valid will be turn english month name
+ *
+ * @param {string} monthName
+ * @returns {string|Boolean}
+ */
+function isValidMonth(monthName) {
+	const monthNameLower = monthName.toLowerCase();
+	return months[monthNameLower] ? month_numbers[months[monthNameLower]] : false;
+}
+
+/**
+ * if valid will be turn english day name
+ *
+ * @param {string} dayname
+ * @returns {string|Boolean}
+ */
+function isValidDayName(dayname) {
+	const dayNameLower = dayname.toLowerCase();
+	return days[dayNameLower] ? day_numbers[days[dayNameLower]] : false;
+}
 
 /**
  * get timezone offset
@@ -87,8 +63,8 @@ function getTimezoneOffset(timezone) {
 	try {
 		const now = Date.now();
 
-		if (timezoneCache.has(timezone)) {
-			const { offset, timestamp } = timezoneCache.get(timezone);
+		if (timezone_cache.has(timezone)) {
+			const { offset, timestamp } = timezone_cache.get(timezone);
 			if (now - timestamp < CACHE_TTL) {
 				return offset; // Cache is avaible return from cache
 			}
@@ -101,7 +77,7 @@ function getTimezoneOffset(timezone) {
 		const totalOffset = offsetHours * 3600 + offsetMinutes * 60;
 
 		// save to cache
-		timezoneCache.set(timezone, { offset: totalOffset, timestamp: now });
+		timezone_cache.set(timezone, { offset: totalOffset, timestamp: now });
 		return totalOffset;
 	} catch (error) {
 		throw Error('check timezone');
@@ -306,7 +282,6 @@ module.exports.padZero = padZero;
 module.exports.absFloor = absFloor;
 module.exports.duration = duration;
 module.exports.dateTimeFormat = dateTimeFormat;
-module.exports.format_types = format_types;
-module.exports.cached_dateTimeFormat = cached_dateTimeFormat;
-module.exports.timeInMilliseconds = timeInMilliseconds;
 module.exports.converter = converter;
+module.exports.isValidMonth = isValidMonth;
+module.exports.isValidDayName = isValidDayName;

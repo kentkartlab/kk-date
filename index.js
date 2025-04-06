@@ -1,17 +1,16 @@
 const nopeRedis = require('./nope-redis');
-const functions = require('./functions');
-
-const parseWithTimezone = functions.parseWithTimezone;
-const getTimezoneOffset = functions.getTimezoneOffset;
-const absFloor = functions.absFloor;
-const duration = functions.duration;
-const padZero = functions.padZero;
-const checkTimezone = functions.checkTimezone;
-const dateTimeFormat = functions.dateTimeFormat;
-const format_types = functions.format_types;
-const cached_dateTimeFormat = functions.cached_dateTimeFormat;
-const timeInMilliseconds = functions.timeInMilliseconds;
-const converter = functions.converter;
+const {
+	parseWithTimezone,
+	getTimezoneOffset,
+	absFloor,
+	duration,
+	padZero,
+	checkTimezone,
+	dateTimeFormat,
+	converter,
+	isValidMonth,
+} = require('./functions');
+const { cached_dateTimeFormat, format_types, timeInMilliseconds, format_types_regex } = require('./constants');
 
 nopeRedis.config({ defaultTtl: 1300 });
 
@@ -19,67 +18,6 @@ const global_config = {
 	locale: 'en',
 	timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 	userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-};
-
-const monthNames = {
-	January: '01',
-	February: '02',
-	March: '03',
-	April: '04',
-	May: '05',
-	June: '06',
-	July: '07',
-	August: '08',
-	September: '09',
-	October: '10',
-	November: '11',
-	December: '12',
-};
-
-const format_types_regex = {
-	YYYY: /^(17|18|19|20|21)\d\d$/,
-	MM: /^(0[1-9]|1[0-2])$/,
-	DD: /^(0[1-9]|[12][0-9]|3[01])$/,
-	'YYYY-MM-DD': /^(|17|18|19|20|21)\d\d-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$/,
-	YYYYMMDD: /^(|17|18|19|20|21)\d\d(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])$/,
-	'YYYY-MM-DD HH:mm:ss': /^(|17|18|19|20|21)\d\d-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01]) ([01]\d|2[0-9]):([0-5]\d):([0-5]\d)$/,
-	'YYYY-MM-DD HH:mm': /^(|17|18|19|20|21)\d\d-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01]) ([01]\d|2[0-9]):([0-5]\d)$/,
-	'YYYY.MM.DD': /^(|17|18|19|20|21)\d\d\.(0[1-9]|1[0-2])\.(0[1-9]|[12][0-9]|3[01])$/,
-	'YYYY.MM.DD HH:mm:ss': /^(|17|18|19|20|21)\d\d\.(0[1-9]|1[0-2])\.(0[1-9]|[12][0-9]|3[01]) ([01]\d|2[0-9]):([0-5]\d):([0-5]\d)$/,
-	'YYYY.MM.DD HH:mm': /^(|17|18|19|20|21)\d\d\.(0[1-9]|1[0-2])\.(0[1-9]|[12][0-9]|3[01]) ([01]\d|2[0-9]):([0-5]\d)$/,
-	'DD.MM.YYYY': /^(0[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[0-2])\.(|17|18|19|20|21)\d\d$/,
-	'DD.MM.YYYY HH:mm:ss': /^(0[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[0-2])\.(|17|18|19|20|21)\d\d ([01]\d|2[0-9]):([0-5]\d):([0-5]\d)$/,
-	'DD.MM.YYYY HH:mm': /^(0[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[0-2])\.(|17|18|19|20|21)\d\d ([01]\d|2[0-9]):([0-5]\d)$/,
-	'DD-MM-YYYY': /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-(|17|18|19|20|21)\d\d$/,
-	'DD-MM-YYYY HH:mm:ss': /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-(|17|18|19|20|21)\d\d ([01]\d|2[0-9]):([0-5]\d):([0-5]\d)$/,
-	'DD-MM-YYYY HH:mm': /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-(|17|18|19|20|21)\d\d ([01]\d|2[0-9]):([0-5]\d)$/,
-	'DD MMMM YYYY': /^(0[1-9]|[12][0-9]|3[01]) \p{L}+ (17|18|19|20|21)\d\d$/u,
-	'DD MMMM YYYY dddd': /^(0[1-9]|[12][0-9]|3[01]) \p{L}+ (17|18|19|20|21)\d\d \p{L}+$/u,
-	'MMMM YYYY': /^\p{L}+ (17|18|19|20|21)\d\d$/u,
-	'DD MMMM dddd YYYY': /^(0[1-9]|[12][0-9]|3[01]) \p{L}+ \p{L}+ (17|18|19|20|21)\d\d$/u,
-	'HH:mm:ss': /^([01]\d|2[0-9]):([0-5]\d):([0-5]\d)$/,
-	'HH:mm': /^([01]\d|2[0-9]):([0-5]\d)(?::[0-5]\d)?$/,
-	HH: /^([01]\d|2[0-9])$/,
-	mm: /^([0-5]\d)$/,
-	ss: /^([0-5]\d)$/,
-	MMM: /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)$/,
-	MMMM: /^\p{L}+$/u,
-	ddd: /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)$/,
-	'DD MMM YYYY': /^(0[1-9]|[12][0-9]|3[01]) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (|17|18|19|20|21)\d\d$/,
-	'DD MMM': /^(0[1-9]|[12][0-9]|3[01]) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)$/,
-	'MMM YYYY': /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (|17|18|19|20|21)\d\d$/,
-	'DD MMM YYYY HH:mm': /^(0[1-9]|[12][0-9]|3[01]) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (|17|18|19|20|21)\d\d ([01]\d|2[0-9]):([0-5]\d)$/,
-	'YYYY-MM': /^(17|18|19|20|21)\d\d-(0[1-9]|1[0-2])$/,
-	'DD MMMM dddd': /^(0[1-9]|[12][0-9]|3[01]) \p{L}+ \p{L}+$/u,
-	'YYYY-DD-MM': /^(17|18|19|20|21)\d\d-(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])$/,
-	'D MMMM YYYY':
-		/^(0?[1-9]|[12][0-9]|3[01]) (January|February|March|April|May|June|July|August|September|October|November|December) (|17|18|19|20|21)\d\d$/,
-	'MM/DD/YYYY': /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/(17|18|19|20|21)\d\d$/,
-	'DD/MM/YYYY': /^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[0-2])\/(17|18|19|20|21)\d\d$/,
-	'YYYY-MM-DD HH': /^(17|18|19|20|21)\d\d-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01]) ([01]\d|2[0-3])$/,
-	'DD-MM-YYYY HH': /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-(17|18|19|20|21)\d\d ([01]\d|2[0-3])$/,
-	'YYYY.MM.DD HH': /^(17|18|19|20|21)\d\d\.(0[1-9]|1[0-2])\.(0[1-9]|[12][0-9]|3[01]) ([01]\d|2[0-3])$/,
-	'YYYY-MM-DDTHH:mm:ss': /^(17|18|19|20|21)\d\d-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01]\d|2[0-3]):([0-5]\d):([0-5]\d)$/,
 };
 
 /**
@@ -356,8 +294,7 @@ class KkDate {
 								const currentYear = new Date().getFullYear();
 								const parts = date.split(' '); // e.g., ['01', 'January', 'Monday']
 								const day = parts[0];
-								const monthName = parts[1];
-								const month = monthNames[monthName];
+								const month = isValidMonth(parts[1]);
 								this.date = new Date(`${currentYear}-${month}-${day}`);
 							} else if (isValid(date, format_types['YYYY-MM-DD'])) {
 								const [year, month, day] = date.split('-');
@@ -368,9 +305,8 @@ class KkDate {
 							} else if (isValid(date, format_types['D MMMM YYYY'])) {
 								const parts = date.split(' '); // e.g., ['1', 'January', '2024'] or ['01', 'January', '2024']
 								const day = parts[0];
-								const monthName = parts[1];
 								const year = parts[2];
-								const month = monthNames[monthName];
+								const month = isValidMonth(parts[1]);
 								this.date = new Date(`${year}-${month}-${day.padStart(2, '0')}`); // Ensure day is padded for Date constructor
 							}
 							if (this.date === false) {

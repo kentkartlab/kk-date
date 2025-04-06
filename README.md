@@ -275,33 +275,6 @@ All native JavaScript Date methods are supported:
 
 Whether you're building a lightweight application or need a reliable solution for high-performance date handling, `kk-date` is the package you've been looking for.
 
-#### .format() supported templates:
-
-```console
-YYYY-MM-DDTHH:mm:ss
-YYYY-MM-DD HH:mm:ss
-YYYY-MM-DD HH:mm
-YYYY-MM-DD HH
-YYYY-MM-DD
-YYYYMMDD
-DD.MM.YYYY
-YYYY.MM.DD
-YYYY.MM.DD HH:mm
-YYYY.MM.DD HH
-YYYY.MM.DD HH:mm:ss
-DD.MM.YYYY HH:mm:ss
-DD.MM.YYYY HH:mm
-DD-MM-YYYY
-DD-MM-YYYY HH:mm
-DD-MM-YYYY HH:mm:ss
-DD-MM-YYYY HH
-dddd
-HH:mm:ss
-HH:mm
-x (Unix timestamps in milliseconds),
-X (Unix timestamps in seconds)
-```
-
 #### .add() supported types:
 
 ```console
