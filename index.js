@@ -78,6 +78,12 @@ const format_types_regex = {
 	'YYYY-DD-MM': /^(17|18|19|20|21)\d\d-(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])$/,
 	'D MMMM YYYY':
 		/^(0?[1-9]|[12][0-9]|3[01]) (January|February|March|April|May|June|July|August|September|October|November|December) (|17|18|19|20|21)\d\d$/,
+	'MM/DD/YYYY': /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/(17|18|19|20|21)\d\d$/,
+	'DD/MM/YYYY': /^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[0-2])\/(17|18|19|20|21)\d\d$/,
+	'YYYY-MM-DD HH': /^(17|18|19|20|21)\d\d-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01]) ([01]\d|2[0-3])$/,
+	'DD-MM-YYYY HH': /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-(17|18|19|20|21)\d\d ([01]\d|2[0-3])$/,
+	'YYYY.MM.DD HH': /^(17|18|19|20|21)\d\d\.(0[1-9]|1[0-2])\.(0[1-9]|[12][0-9]|3[01]) ([01]\d|2[0-3])$/,
+	'YYYY-MM-DDTHH:mm:ss': /^(17|18|19|20|21)\d\d-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01]\d|2[0-3]):([0-5]\d):([0-5]\d)$/,
 };
 
 /**
@@ -94,6 +100,14 @@ class KkDate {
 		if (params.length === 0) {
 			this.date = new Date();
 		} else {
+			if (params[1]) {
+				if (!format_types_regex[params[1]]) {
+					throw new Error(`Unsupported Format! ${params[1]} !`);
+				}
+				if (!format_types_regex[params[1]].test(params[0])) {
+					throw new Error(`Invalid format ! ${format_types[params[1]]} !`);
+				}
+			}
 			const date = params[0];
 			if (Number.isInteger(date)) {
 				const stringed_date_length = `${date}`.length;
@@ -126,7 +140,7 @@ class KkDate {
 							const newYear = dateObj.getFullYear();
 							let date_string = `${newYear}-${newMonth}-${newDay}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
 							if (seconds) {
-								date_string += seconds.toString().padStart(2, '0');
+								date_string += `:${seconds.toString().padStart(2, '0')}`;
 							}
 							this.date = new Date(date_string);
 						} else {
