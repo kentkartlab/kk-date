@@ -80,6 +80,7 @@ function getTimezoneOffset(timezone) {
 		timezone_cache.set(timezone, { offset: totalOffset, timestamp: now });
 		return totalOffset;
 	} catch (error) {
+		console.error(error);
 		throw Error('check timezone');
 	}
 }
@@ -117,6 +118,7 @@ function checkTimezone(timezone) {
 	try {
 		new Intl.DateTimeFormat('en-US', { timeZone: timezone });
 	} catch (error) {
+		console.error(error);
 		throw Error('Invalid/Timezone');
 	}
 	return true;

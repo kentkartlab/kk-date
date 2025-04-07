@@ -803,6 +803,7 @@ class KkDate {
 				}
 			}
 		} catch (error) {
+			console.error(error);
 			throw new Error('locale not valid for BCP 47, config error !');
 		}
 		return this;
@@ -818,6 +819,7 @@ class KkDate {
 		try {
 			isInvalid(this.date);
 		} catch (error) {
+			console.error(error);
 			return false;
 		}
 		return true;
@@ -1008,6 +1010,7 @@ function isInvalid(date) {
 			throw new Error('Invalid Date');
 		}
 	} catch (error) {
+		console.error(error);
 		throw new Error('Invalid Date');
 	}
 	return true;
@@ -1315,6 +1318,7 @@ function config(options) {
 			}
 		}
 	} catch (error) {
+		console.error(error);
 		throw new Error('locale not valid for BCP 47 / config');
 	}
 	if (options.timezone && global_config.timezone !== options.timezone) {
