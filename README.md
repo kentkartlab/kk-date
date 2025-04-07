@@ -7,7 +7,7 @@ kk-date is a fastest JavaScript library that parses, validations, manipulates, a
 - 🔥 Chainable
 - 🚀 Native Date
 - 🏁 Performance
-- 🚄 Cache support
+- 🚄 Cache support (built-in)
 - 💬 Native Supports all languages
 - 🪂 Native Supports all timezones
 - 👌 Throws an error in case of error
@@ -19,6 +19,9 @@ kk-date is a fastest JavaScript library that parses, validations, manipulates, a
 - **Optimized for Performance**: If speed and efficiency are critical for your application, `kk-date` is the perfect fit, delivering performance without sacrificing usability.
 - **Ongoing Development**: While `kk-date` is currently tailored for basic date operations, we are actively developing it to support more complex date manipulations and formats in future releases.
 
+Average Speed Improvement: 63.36% faster than other libraries (Cache disabled)
+Average Speed Improvement: 89.05% faster than other libraries (Cache activated)
+
 Whether you're building a lightweight application or need a reliable solution for high-performance date handling, `kk-date` is the package you've been looking for.
 
 ## Install 
@@ -27,43 +30,6 @@ Whether you're building a lightweight application or need a reliable solution fo
 ```bash 
 npm install kk-date
 ```
-## Performance
-
-kk-date is significantly faster than other date libraries. Here are the performance test results (500,000 iterations and cache enabled from config):
-
-| Test No | Input                            | Output                  | kk-date (ms) | Moment (ms) | Day.js (ms) | date-fns (ms) | Speed Improvement |
-|---------|----------------------------------|------------------------|--------------|-------------|-------------|---------------|-------------------|
-| Test 0  | `new Date()`                     | `2025-03-28 10:47:38`  | 395.620      | 368.116     | 894.900     | 1021.159     | 48.04%           |
-| Test 1  | `23:50:55`                       | `2025-03-28 23:50:55`  | 119.236      | 1286.596    | 125.791     | 1121.534     | 85.88%           |
-| Test 2  | `23:50`                          | `23:50`                | 78.916       | 778.707     | 120.369     | 485.554      | 82.90%           |
-| Test 3  | `23:50:55`                       | `2025.03.28 23:50:55`  | 132.901      | 1283.166    | 126.052     | 1103.839     | 84.13%           |
-| Test 4  | `2024-09-17 23:50:55`           | `23:50:55`             | 98.226       | 2143.325    | 730.120     | 552.624      | 91.40%           |
-| Test 5  | `2024-09-17 23:50:55`           | `2024-09-17`           | 89.902       | 2116.001    | 770.808     | 582.038      | 92.22%           |
-| Test 6  | `2024-09-17 23:50:55`           | `2024-09-17 23:50:55`  | 123.923      | 2258.874    | 923.769     | 1024.718     | 91.16%           |
-| Test 7  | `2024-09-17 23:50:55`           | `17.09.2024 23:50:55`  | 128.437      | 2333.586    | 942.768     | 1022.942     | 91.04%           |
-| Test 8  | `2024-09-17 23:50:55`           | `2024.09.17 23:50:55`  | 125.126      | 2287.784    | 944.433     | 1016.649     | 91.17%           |
-| Test 9  | `23:50:55` isValid               | `true`                 | 34.362       | 855.607     | 114.741     | 133.274      | 90.66%           |
-| Test 10 | `1723996677`                    | `18.08.2024 18:57:57`  | 155.302      | 430.004     | 795.976     | 991.946      | 78.99%           |
-| Test 11 | `19843077000`                   | `18.08.1970 18:57:57`  | 275.896      | 494.029     | 1105.185    | 1039.693     | 68.64%           |
-| Test 12 | `19843077000`                   | `18.08.1970 18:57:57`  | 312.204      | 494.640     | 1131.399    | 1041.889     | 64.89%           |
-| Test 13 | `diff (days) 2024-01-01, 2024-01-30` | `29`           | 83.740       | 2292.784    | 479.569     | 711.931      | 92.79%           |
-| Test 14 | `isBefore 2024-01-01, 2024-01-30` | `true`         | 68.580       | 2080.274    | 558.856     | 153.871      | 92.63%           |
-| Test 15 | `isBetween 2024-01-01, 2024-01-30` | `true`         | 100.250      | 3222.926    | 1177.115    | 271.328      | 93.56%           |
-| Test 16 | `isAfter 2024-01-01, 2024-01-30` | `true`         | 67.701       | 2067.655    | 571.015     | 193.695      | 92.83%           |
-| Test 17 | `isSame 2024-01-01`             | `true`         | 67.816       | 2030.457    | 707.266     | 154.579      | 92.97%           |
-| Test 18 | `7 Nisan 2025`                   | `07.04.2025 00:00:00`  | 145.123      | unsupported | unsupported | unsupported | N/A             |
-| Test 19 | `26:50:24`                       | `2025-03-28 02:50:24`  | 128.456      | 1345.678    | 145.789     | unsupported  | 85.67%           |
-| Test 20 | `07.04.2025 15:30:45`           | `2025-04-07 15:30:45`  | 156.789      | 2456.789    | 967.456     | 1034.567     | 90.12%           |
-| Test 21 | `07-Apr-2025`                    | `2025-04-07 00:00:00`  | 134.567      | 2234.567    | 878.901     | 945.678      | 89.45%           |
-| Test 22 | `April 7, 2025`                  | `2025-04-07 00:00:00`  | 145.678      | 2345.678    | 912.345     | 978.901      | 90.12%           |
-| Test 23 | `7 Nisan Pazartesi, 2025`       | `2025-04-07 00:00:00`  | 167.890      | unsupported | unsupported | unsupported | N/A             |
-| Test 24 | `2025-04-07T15:30:45+02:00`     | `2025-04-07 15:30:45`  | 178.901      | 2567.890    | 978.901     | 1045.678     | 90.12%           |
-| Test 25 | `Mon, Apr 7 2025 15:30:45`      | `2025-04-07 15:30:45`  | 189.012      | 2678.901    | 989.012     | 1056.789     | 90.23%           |
-| Test 26 | `31 दिसंबर Sunday`              | `2024-12-31 00:00:00`  | 198.123      | unsupported | unsupported | unsupported | N/A             |
-| Test 27 | `25th april 2025`                | `2025-04-25 00:00:00`  | 167.890      | 2456.789    | 945.678     | unsupported  | 90.45%           |
-| Test 28 | `25 апрель 2025`                 | `2025-04-25 00:00:00`  | 178.901      | unsupported | unsupported | unsupported | N/A             |
-
-Average Speed Improvement: 85.88% faster than other libraries
 
 ## API
 It's easy to use kk-date to parse, validate, manipulate, and display dates and times.
@@ -420,3 +386,76 @@ days
 months
 years
 ```
+
+## Performance
+
+kk-date is significantly faster than other date libraries. Here are the performance test results (100,000 iterations and cache disabled):
+
+| Test No | Input                            | Test                                | kk-date (ms) | Moment (ms)   | Day.js (ms)   | Speed Improvement |
+|---------|----------------------------------|-------------------------------------|--------------|---------------|---------------|-------------------|
+| Test 0  | `new Date()`                     | Test 0: Conv. YYYY-MM-DD HH:mm:ss  | 40.911       | 83.405        | 172.908       | 68.08%           |
+| Test 1  | `23:50:55`                       | Test 1: Conv. YYYY-MM-DD HH:mm:ss  | 70.695       | 246.388       | unsupported   | 71.31%           |
+| Test 2  | `23:50`                          | Test 2: HH:mm                       | 56.632       | 148.467       | unsupported   | 61.86%           |
+| Test 3  | `23:50:55`                       | Test 3: Conv. YYYY.MM.DD HH:mm:ss  | 57.242       | 242.548       | unsupported   | 76.40%           |
+| Test 4  | `2024-09-17 23:50:55`           | Test 4: Conv. HH:mm:ss             | 115.634      | 410.603       | 150.550       | 58.79%           |
+| Test 5  | `2024-09-17 23:50:55`           | Test 5: Conv. YYYY-MM-DD           | 99.838       | 406.091       | 147.972       | 63.96%           |
+| Test 6  | `2024-09-17 23:50:55`           | Test 6: Conv. YYYY-MM-DD HH:mm:ss  | 106.713      | 445.424       | 192.036       | 66.52%           |
+| Test 7  | `2024-09-17 23:50:55`           | Test 7: Conv. DD.MM.YYYY HH:mm:ss  | 108.853      | 443.083       | 189.553       | 65.59%           |
+| Test 8  | `2024-09-17 23:50:55`           | Test 8: Conv. YYYY.MM.DD HH:mm:ss  | 105.644      | 437.514       | 189.436       | 66.30%           |
+| Test 9  | `23:50:55`                       | Test 9: isValid                     | 36.273       | 167.665       | 21.565        | 61.66%           |
+| Test 10 | `1723996677`                    | Test 10: 1723996677                | 40.318       | 87.270        | 160.296       | 67.43%           |
+| Test 11 | `19843077000`                   | Test 11: 19843077000               | 54.189       | 99.046        | 220.117       | 66.04%           |
+| Test 12 | `19843077000`                   | Test 12: 19843077000               | 54.061       | 98.737        | 221.504       | 66.24%           |
+| Test 13 | `2024-01-01, 2024-01-30`       | Test 13: diff (days)               | 220.089      | 453.381       | 98.016        | 20.17%           |
+| Test 14 | `2024-01-01, 2024-01-30`       | Test 14: isBefore                  | 211.467      | 397.626       | 109.471       | 16.60%           |
+| Test 15 | `2024-01-01, 2024-01-30`       | Test 15: isBetween                 | 320.828      | 612.430       | 227.452       | 23.60%           |
+| Test 16 | `2024-01-01, 2024-01-30`       | Test 16: isAfter                   | 210.050      | 392.652       | 109.189       | 16.29%           |
+| Test 17 | `2024-01-01`                    | Test 17: isSame                    | 207.476      | 394.303       | 135.907       | 21.74%           |
+| Test 18 | `7 Nisan 2025`                  | Test 18: Turkish Date Format       | 124.890      | unsupported   | unsupported   | 100%            |
+| Test 19 | `26:50:24`                      | Test 19: Time Only Format          | 68.346       | unsupported   | unsupported   | 100%            |
+| Test 20 | `07.04.2025 15:30:45`          | Test 20: Mixed Separator Format    | 107.377      | 404.128       | 179.378       | 63.20%           |
+| Test 21 | `07-Apr-2025`                   | Test 21: Short Month Format        | 158.575      | 506.149       | 192.765       | 54.62%           |
+| Test 22 | `April 7, 2025`                 | Test 22: Full Month Name Format    | 153.728      | 510.554       | 194.307       | 56.38%           |
+| Test 23 | `7 Nisan Pazartesi, 2025`      | Test 23: Turkish Full Date Format  | 173.122      | unsupported   | unsupported   | 100%            |
+| Test 24 | `2025-04-07T15:30:45+02:00`    | Test 24: Timezone Format           | 161.486      | 513.607       | 301.796       | 60.39%           |
+| Test 25 | `Mon, Apr 7 2025 15:30:45`     | Test 25: Mixed Date Time Format    | 161.027      | 1057.945      | 189.820       | 74.19%           |
+| Test 26 | `31 दिसंबर Sunday`             | Test 26: Hindi Date Format         | 184.544      | unsupported   | unsupported   | 100%            |
+| Test 27 | `25th april 2025`               | Test 27: Ordinal Date Format       | 162.376      | 543.175       | unsupported   | 70.11%           |
+| Test 28 | `25 апрель 2025`                | Test 28: Russian Date Format       | 140.046      | unsupported   | unsupported   | 100%            |
+
+
+kk-date is significantly faster than other date libraries. Here are the performance test results (100,000 iterations and cache activated):
+
+| Test No | Input                            | Test                                | kk-date (ms) | Moment (ms)   | Day.js (ms)   | Speed Improvement |
+|---------|----------------------------------|-------------------------------------|--------------|---------------|---------------|-------------------|
+| Test 0  | `new Date()`                     | Test 0: Conv. YYYY-MM-DD HH:mm:ss  | 41.662       | 82.060        | 179.969       | 68.20%           |
+| Test 1  | `23:50:55`                       | Test 1: Conv. YYYY-MM-DD HH:mm:ss  | 40.252       | 254.128       | unsupported   | 84.16%           |
+| Test 2  | `23:50`                          | Test 2: HH:mm                       | 37.174       | 157.242       | unsupported   | 76.36%           |
+| Test 3  | `23:50:55`                       | Test 3: Conv. YYYY.MM.DD HH:mm:ss  | 26.065       | 252.318       | unsupported   | 89.67%           |
+| Test 4  | `2024-09-17 23:50:55`           | Test 4: Conv. HH:mm:ss             | 36.952       | 426.029       | 153.743       | 87.25%           |
+| Test 5  | `2024-09-17 23:50:55`           | Test 5: Conv. YYYY-MM-DD           | 18.518       | 421.792       | 146.688       | 93.49%           |
+| Test 6  | `2024-09-17 23:50:55`           | Test 6: Conv. YYYY-MM-DD HH:mm:ss  | 22.675       | 442.775       | 194.525       | 92.88%           |
+| Test 7  | `2024-09-17 23:50:55`           | Test 7: Conv. DD.MM.YYYY HH:mm:ss  | 24.798       | 442.822       | 184.213       | 92.09%           |
+| Test 8  | `2024-09-17 23:50:55`           | Test 8: Conv. YYYY.MM.DD HH:mm:ss  | 22.039       | 439.848       | 189.442       | 93.00%           |
+| Test 9  | `23:50:55`                       | Test 9: isValid                     | 7.248        | 168.031       | 22.690        | 92.40%           |
+| Test 10 | `1723996677`                    | Test 10: 1723996677                | 47.440       | 89.993        | 161.926       | 62.34%           |
+| Test 11 | `19843077000`                   | Test 11: 19843077000               | 54.437       | 99.007        | 225.522       | 66.45%           |
+| Test 12 | `19843077000`                   | Test 12: 19843077000               | 55.000       | 99.767        | 221.378       | 65.75%           |
+| Test 13 | `2024-01-01, 2024-01-30`       | Test 13: diff (days)               | 38.882       | 449.379       | 102.178       | 85.90%           |
+| Test 14 | `2024-01-01, 2024-01-30`       | Test 14: isBefore                  | 15.014       | 391.726       | 110.909       | 94.03%           |
+| Test 15 | `2024-01-01, 2024-01-30`       | Test 15: isBetween                 | 20.930       | 605.225       | 227.715       | 94.97%           |
+| Test 16 | `2024-01-01, 2024-01-30`       | Test 16: isAfter                   | 14.039       | 395.206       | 113.069       | 94.48%           |
+| Test 17 | `2024-01-01`                    | Test 17: isSame                    | 14.491       | 395.093       | 139.329       | 94.58%           |
+| Test 18 | `7 Nisan 2025`                  | Test 18: Turkish Date Format       | 40.390       | unsupported   | unsupported   | 100%            |
+| Test 19 | `26:50:24`                      | Test 19: Time Only Format          | 41.942       | unsupported   | unsupported   | 100%            |
+| Test 20 | `07.04.2025 15:30:45`          | Test 20: Mixed Separator Format    | 23.572       | 418.040       | 186.847       | 92.21%           |
+| Test 21 | `07-Apr-2025`                   | Test 21: Short Month Format        | 45.503       | 547.027       | 198.469       | 87.79%           |
+| Test 22 | `April 7, 2025`                 | Test 22: Full Month Name Format    | 25.965       | 543.438       | 197.612       | 92.99%           |
+| Test 23 | `7 Nisan Pazartesi, 2025`      | Test 23: Turkish Full Date Format  | 44.334       | unsupported   | unsupported   | 100%            |
+| Test 24 | `2025-04-07T15:30:45+02:00`    | Test 24: Timezone Format           | 28.377       | 520.586       | 305.216       | 93.13%           |
+| Test 25 | `Mon, Apr 7 2025 15:30:45`     | Test 25: Mixed Date Time Format    | 23.364       | 1072.659      | 190.546       | 96.30%           |
+| Test 26 | `31 दिसंबर Sunday`             | Test 26: Hindi Date Format         | 46.174       | unsupported   | unsupported   | 100%            |
+| Test 27 | `25th april 2025`               | Test 27: Ordinal Date Format       | 44.867       | 555.759       | unsupported   | 91.93%           |
+| Test 28 | `25 апрель 2025`                | Test 28: Russian Date Format       | 23.975       | unsupported   | unsupported   | 100%            |
+
+Average Speed Improvement: 89.05% faster than other libraries
