@@ -802,8 +802,8 @@ class KkDate {
 					cached_dateTimeFormat.temp['MMM'][options.locale] = new Intl.DateTimeFormat(options.locale, { month: 'short' });
 				}
 			}
+			// biome-ignore lint/correctness/noUnusedVariables: <explanation>
 		} catch (error) {
-			console.error(error);
 			throw new Error('locale not valid for BCP 47, config error !');
 		}
 		return this;
@@ -818,8 +818,8 @@ class KkDate {
 	isValid() {
 		try {
 			isInvalid(this.date);
+			// biome-ignore lint/correctness/noUnusedVariables: <explanation>
 		} catch (error) {
-			console.error(error);
 			return false;
 		}
 		return true;
@@ -1009,8 +1009,8 @@ function isInvalid(date) {
 		if (Number.isNaN(date.valueOf())) {
 			throw new Error('Invalid Date');
 		}
+		// biome-ignore lint/correctness/noUnusedVariables: <explanation>
 	} catch (error) {
-		console.error(error);
 		throw new Error('Invalid Date');
 	}
 	return true;
@@ -1312,13 +1312,13 @@ function config(options) {
 			});
 			try {
 				global_config.rtf[global_config.locale] = new Intl.RelativeTimeFormat(global_config.locale, { numeric: 'auto' });
+				// biome-ignore lint/correctness/noUnusedVariables: <explanation>
 			} catch (error) {
-				console.error(global_config.locale, error);
 				throw new Error('locale not valid for BCP 47 / relative time formatting');
 			}
 		}
+		// biome-ignore lint/correctness/noUnusedVariables: <explanation>
 	} catch (error) {
-		console.error(error);
 		throw new Error('locale not valid for BCP 47 / config');
 	}
 	if (options.timezone && global_config.timezone !== options.timezone) {
