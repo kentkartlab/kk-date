@@ -35,6 +35,8 @@ describe('kk_date format', () => {
 		expect(new kk_date('24:00:00').format('HH:mm:ss')).toBe('00:00:00');
 		expect(new kk_date('25:00:00').format('HH:mm:ss')).toBe('01:00:00');
 		expect(new kk_date('26:00:00').format('HH:mm:ss')).toBe('02:00:00');
+		expect(new kk_date('22:53:00').format('HH:mm:ss')).toBe('22:53:00');
+		expect(new kk_date('22:53').format('HH:mm:ss')).toBe('22:53:00');
 	});
 
 	test('YYYY-MM-DD', () => {

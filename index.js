@@ -91,22 +91,18 @@ class KkDate {
 							isValid(date, format_types['hh:mm:ss.SSS'])
 						) {
 							const [hours, minutes, seconds] = date.split(':').map(Number);
+							const finalSeconds = Number.isNaN(seconds) || !seconds ? 0 : seconds;
 							if (hours >= 24) {
 								const extraDays = Math.floor(hours / 24);
-
-								const dateObj = new Date();
-								dateObj.setDate(dateObj.getDate() + extraDays);
-
-								const newDay = String(dateObj.getDate()).padStart(2, '0');
-								const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
-								const newYear = dateObj.getFullYear();
-								let date_string = `${newYear}-${newMonth}-${newDay}T${(hours % 24).toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-								if (seconds) {
-									date_string += `:${seconds.toString().padStart(2, '0')}`;
-								}
-								this.date = new Date(date_string);
+								const remainingHours = hours % 24;
+								const currentDate = new Date();
+								currentDate.setDate(currentDate.getDate() + extraDays);
+								currentDate.setHours(remainingHours, minutes, finalSeconds, 0);
+								this.date = currentDate;
 							} else {
-								this.date = new Date(`${new Date().toISOString().split('T')[0]} ${date}`);
+								const currentDate = new Date();
+								currentDate.setHours(hours, minutes, finalSeconds, 0);
+								this.date = currentDate;
 							}
 						} else {
 							this.date = false;
@@ -284,6 +280,13 @@ class KkDate {
 									this.date = new Date(`${year}-${month}-${day}T${timePart}`);
 								}
 								this.detected_format = format_types['DD-MM-YYYY HH:mm'];
+							} else if (isValid(date, format_types['DD MMMM YYYY'])) {
+								const parts = date.split(' ');
+								const day = parseInt(parts[0], 10).toString();
+								const month = isValidMonth(parts[1]);
+								const year = parts[2];
+								this.date = new Date(`${year}-${month}-${day.padStart(2, '0')}`); // Ensure day is padded for Date constructor
+								this.detected_format = format_types['DD MMMM YYYY'];
 							} else if (isValid(date, format_types['YYYYMMDD'])) {
 								const year = String(date.substring(0, 4), 10); // Extract year
 								const month = String(date.substring(4, 6), 10); // Extract month
@@ -344,13 +347,6 @@ class KkDate {
 								const year = parts[3];
 								this.date = new Date(`${year}-${month}-${day.padStart(2, '0')}`); // Ensure day is padded for Date constructor
 								this.detected_format = format_types['dddd, DD MMMM YYYY'];
-							} else if (isValid(date, format_types['DD MMMM YYYY'])) {
-								const parts = date.split(' ');
-								const day = parseInt(parts[0], 10).toString();
-								const month = isValidMonth(parts[1]);
-								const year = parts[2];
-								this.date = new Date(`${year}-${month}-${day.padStart(2, '0')}`); // Ensure day is padded for Date constructor
-								this.detected_format = format_types['DD MMMM YYYY'];
 							}
 							if (this.date === false) {
 								this.date = new Date(`${date}`);
