@@ -793,14 +793,14 @@ describe('Comprehensive Time Tests', () => {
 
 		test('should handle leap year days', () => {
 			const testCases = [
-				{ year: 2024, month: 2, day: 29, expected: true },
-				{ year: 2025, month: 2, day: 29, expected: false },
-				{ year: 2100, month: 2, day: 29, expected: false },
-				{ year: 2000, month: 2, day: 29, expected: true },
+				{ year: 2024, month: 2, day: 29, expected: '2024-02-29 00:00:00' },
+				{ year: 2025, month: 2, day: 29, expected: '2025-03-01 00:00:00' },
+				{ year: 2100, month: 2, day: 29, expected: '2100-03-01 00:00:00' },
+				{ year: 2000, month: 2, day: 29, expected: '2000-02-29 00:00:00' },
 			];
 
 			for (const { year, month, day, expected } of testCases) {
-				expect(new kk_date(`${year}-${month}-${day}`).isValid()).toBe(expected);
+				expect(new kk_date(`${year}-${month}-${day}`).format('YYYY-MM-DD HH:mm:ss')).toBe(expected);
 			}
 		});
 	});
