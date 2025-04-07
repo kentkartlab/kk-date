@@ -19,8 +19,8 @@ kk-date is a fastest JavaScript library that parses, validations, manipulates, a
 - **Optimized for Performance**: If speed and efficiency are critical for your application, `kk-date` is the perfect fit, delivering performance without sacrificing usability.
 - **Ongoing Development**: While `kk-date` is currently tailored for basic date operations, we are actively developing it to support more complex date manipulations and formats in future releases.
 
-Average Speed Improvement: 63.36% faster than other libraries (Cache disabled)
-Average Speed Improvement: 89.05% faster than other libraries (Cache activated)
+- Average Speed Improvement: 63.36% faster than other libraries (Cache disabled)
+- Average Speed Improvement: 89.05% faster than other libraries (Cache activated)
 
 Whether you're building a lightweight application or need a reliable solution for high-performance date handling, `kk-date` is the package you've been looking for.
 
