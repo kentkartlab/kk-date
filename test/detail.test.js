@@ -35,6 +35,8 @@ describe('kk_date format', () => {
 		expect(new kk_date('24:00:00').format('HH:mm:ss')).toBe('00:00:00');
 		expect(new kk_date('25:00:00').format('HH:mm:ss')).toBe('01:00:00');
 		expect(new kk_date('26:00:00').format('HH:mm:ss')).toBe('02:00:00');
+		expect(new kk_date('22:53:00').format('HH:mm:ss')).toBe('22:53:00');
+		expect(new kk_date('22:53').format('HH:mm:ss')).toBe('22:53:00');
 	});
 
 	test('YYYY-MM-DD', () => {
@@ -140,6 +142,15 @@ describe('kk_date format', () => {
 		// Test parsing (defaults to current year)
 		expect(new kk_date('15 January Tuesday').format('YYYY-MM-DD')).toBe(`${currentYear}-01-15`);
 		expect(new kk_date('31 December Sunday').format('YYYY-MM-DD')).toBe(`${currentYear}-12-31`);
+	});
+
+	test('DD MMMM dddd (different lang.)', () => {
+		const currentYear = new Date().getFullYear();
+		// Test parsing (defaults to current year)
+		expect(new kk_date('15 ديسمبر Tuesday').format('YYYY-MM-DD')).toBe(`${currentYear}-12-15`);
+		expect(new kk_date('31 दिसंबर Sunday').format('YYYY-MM-DD')).toBe(`${currentYear}-12-31`);
+		expect(new kk_date('31 十二月 Sunday').format('YYYY-MM-DD')).toBe(`${currentYear}-12-31`);
+		expect(new kk_date('15 ديسمبر Tuesday').config({ locale: 'tr-tr' }).format('DD MMMM YYYY dddd')).toBe(`15 Aralık ${currentYear} Pazartesi`);
 	});
 
 	test('YYYY-DD-MM', () => {
@@ -728,5 +739,236 @@ describe('KkDate fromNow Tests', () => {
 		expect(() => kk_date.config({ locale: 'absolutly-invalid-locale' })).toThrow();
 		expect(date.fromNow()).toMatch(/seconds ago/);
 		kk_date.config({ locale: 'en-US' });
+	});
+});
+
+describe('Comprehensive Time Tests', () => {
+	describe('Hour Tests', () => {
+		test('should handle all hours of the day', () => {
+			const hours = Array.from({ length: 24 }, (_, i) => i);
+			for (const hour of hours) {
+				const paddedHour = hour.toString().padStart(2, '0');
+				const date = new kk_date(`2024-01-01 ${paddedHour}:00:00`);
+				expect(date.format('HH')).toBe(paddedHour);
+			}
+		});
+
+		test('should handle hour transitions', () => {
+			const testCases = [
+				{ input: '23:59:59', add: 1, expected: '00:59:59' },
+				{ input: '00:00:00', add: -1, expected: '23:00:00' },
+				{ input: '12:00:00', add: 12, expected: '00:00:00' },
+				{ input: '00:00:00', add: 24, expected: '00:00:00' },
+			];
+
+			for (const { input, add, expected } of testCases) {
+				expect(new kk_date(`2024-01-01 ${input}`).add(add, 'hours').format('HH:mm:ss')).toBe(expected);
+			}
+		});
+	});
+
+	describe('Day Tests', () => {
+		test('should handle all days of the month', () => {
+			const days = Array.from({ length: 31 }, (_, i) => i + 1);
+			for (const day of days) {
+				const paddedDay = day.toString().padStart(2, '0');
+				const date = new kk_date(`2024-01-${paddedDay}`);
+				expect(date.format('DD')).toBe(paddedDay);
+			}
+		});
+
+		test('should handle month transitions', () => {
+			const testCases = [
+				{ input: '2024-01-31', add: 1, expected: '2024-02-01' },
+				{ input: '2024-02-29', add: 1, expected: '2024-03-01' },
+				{ input: '2024-12-31', add: 1, expected: '2025-01-01' },
+				{ input: '2024-01-01', add: -1, expected: '2023-12-31' },
+			];
+
+			for (const { input, add, expected } of testCases) {
+				const date = new kk_date(input);
+				expect(date.add(add, 'days').format('YYYY-MM-DD')).toBe(expected);
+			}
+		});
+
+		test('should handle leap year days', () => {
+			const testCases = [
+				{ year: 2024, month: 2, day: 29, expected: '2024-02-29 00:00:00' },
+				{ year: 2025, month: 2, day: 29, expected: '2025-03-01 00:00:00' },
+				{ year: 2100, month: 2, day: 29, expected: '2100-03-01 00:00:00' },
+				{ year: 2000, month: 2, day: 29, expected: '2000-02-29 00:00:00' },
+			];
+
+			for (const { year, month, day, expected } of testCases) {
+				expect(new kk_date(`${year}-${month}-${day}`).format('YYYY-MM-DD HH:mm:ss')).toBe(expected);
+			}
+		});
+	});
+
+	describe('Month Tests', () => {
+		test('should handle all months of the year', () => {
+			const months = Array.from({ length: 12 }, (_, i) => i + 1);
+			for (const month of months) {
+				const paddedMonth = month.toString().padStart(2, '0');
+				const date = new kk_date(`2024-${paddedMonth}-01`);
+				expect(date.format('MM')).toBe(paddedMonth);
+			}
+		});
+
+		test('should handle month transitions', () => {
+			const testCases = [
+				{ input: '2024-01-31', add: 1, expected: '2024-02-29' },
+				{ input: '2024-02-29', add: 1, expected: '2024-03-29' },
+				{ input: '2024-12-31', add: 1, expected: '2025-01-31' },
+				{ input: '2024-01-31', add: -1, expected: '2023-12-31' },
+			];
+
+			for (const { input, add, expected } of testCases) {
+				const date = new kk_date(input);
+				expect(date.add(add, 'months').format('YYYY-MM-DD')).toBe(expected);
+			}
+		});
+
+		test('should handle month names in different locales', () => {
+			const months = [
+				{ month: 1, en: 'January', tr: 'Ocak', de: 'Januar' },
+				{ month: 6, en: 'June', tr: 'Haziran', de: 'Juni' },
+				{ month: 12, en: 'December', tr: 'Aralık', de: 'Dezember' },
+			];
+
+			for (const { month, en, tr, de } of months) {
+				const date = new kk_date(`2024-${month}-01`);
+				expect(date.format('MMMM')).toBe(en);
+				expect(date.config({ locale: 'tr-TR' }).format('MMMM')).toBe(tr);
+				expect(date.config({ locale: 'de-DE' }).format('MMMM')).toBe(de);
+			}
+		});
+	});
+
+	describe('Year Tests', () => {
+		test('should handle year transitions', () => {
+			const testCases = [
+				{ input: '2024-12-31', add: 1, expected: '2025-12-31' },
+				{ input: '2024-01-01', add: -1, expected: '2023-01-01' },
+				{ input: '2024-02-29', add: 4, expected: '2028-02-29' },
+				{ input: '2024-02-29', add: 1, expected: '2025-03-01' },
+			];
+
+			for (const { input, add, expected } of testCases) {
+				expect(new kk_date(input).add(add, 'years').format('YYYY-MM-DD')).toBe(expected);
+			}
+		});
+
+		test('should handle century transitions', () => {
+			const testCases = [
+				{ input: '1999-12-31', add: 1, expected: '2000-12-31' },
+				{ input: '2000-01-01', add: -1, expected: '1999-01-01' },
+				{ input: '2099-12-31', add: 1, expected: '2100-12-31' },
+			];
+
+			for (const { input, add, expected } of testCases) {
+				const date = new kk_date(input);
+				expect(date.add(add, 'years').format('YYYY-MM-DD')).toBe(expected);
+			}
+		});
+	});
+
+	describe('Combined Time Tests', () => {
+		test('should handle complex time operations', () => {
+			const testCases = [
+				{
+					input: '2024-01-31 23:59:59',
+					operations: [
+						{ type: 'add', value: 1, unit: 'seconds' },
+						{ type: 'add', value: 1, unit: 'minutes' },
+						{ type: 'add', value: 1, unit: 'hours' },
+					],
+					expected: '2024-02-01 01:01:00',
+				},
+				{
+					input: '2024-12-31 23:59:59',
+					operations: [
+						{ type: 'add', value: 1, unit: 'seconds' },
+						{ type: 'add', value: 1, unit: 'minutes' },
+						{ type: 'add', value: 1, unit: 'hours' },
+					],
+					expected: '2025-01-01 01:01:00',
+				},
+			];
+
+			for (const { input, operations, expected } of testCases) {
+				let date = new kk_date(input);
+				for (const { type, value, unit } of operations) {
+					date = type === 'add' ? date.add(value, unit) : date.add(-value, unit);
+				}
+				expect(date.format('YYYY-MM-DD HH:mm:ss')).toBe(expected);
+			}
+		});
+
+		test('should handle timezone with complex operations', () => {
+			const testCases = [
+				{
+					input: '2024-01-01 23:59:59',
+					timezone: 'America/New_York',
+					operations: [
+						{ type: 'add', value: 1, unit: 'seconds' },
+						{ type: 'add', value: 1, unit: 'minutes' },
+					],
+					expected: '2024-01-02 00:01:00',
+				},
+				{
+					input: '2024-12-31 23:59:59',
+					timezone: 'Asia/Tokyo',
+					operations: [
+						{ type: 'add', value: 1, unit: 'seconds' },
+						{ type: 'add', value: 1, unit: 'minutes' },
+					],
+					expected: '2025-01-01 00:01:00',
+				},
+			];
+
+			for (const { input, timezone, operations, expected } of testCases) {
+				// change timezone
+				kk_date.config({ timezone: timezone });
+				let date = new kk_date(input);
+				for (const { type, value, unit } of operations) {
+					date = type === 'add' ? date.add(value, unit) : date.add(-value, unit);
+				}
+				expect(date.format('YYYY-MM-DD HH:mm:ss')).toBe(expected);
+			}
+			// set global default
+			kk_date.config({ timezone: timezone });
+		});
+
+		test('should handle timezone *conversions* with complex operations', () => {
+			const testCases = [
+				{
+					input: '2024-01-01 23:59:59',
+					timezone: 'America/New_York',
+					operations: [
+						{ type: 'add', value: 1, unit: 'seconds' },
+						{ type: 'add', value: 1, unit: 'minutes' },
+					],
+					expected: '2024-01-01 17:01:00',
+				},
+				{
+					input: '2024-12-31 23:59:59',
+					timezone: 'Asia/Tokyo',
+					operations: [
+						{ type: 'add', value: 1, unit: 'seconds' },
+						{ type: 'add', value: 1, unit: 'minutes' },
+					],
+					expected: '2025-01-01 06:01:00',
+				},
+			];
+
+			for (const { input, timezone, operations, expected } of testCases) {
+				let date = new kk_date(input).tz(timezone);
+				for (const { type, value, unit } of operations) {
+					date = type === 'add' ? date.add(value, unit) : date.add(-value, unit);
+				}
+				expect(date.format('YYYY-MM-DD HH:mm:ss')).toBe(expected);
+			}
+		});
 	});
 });
