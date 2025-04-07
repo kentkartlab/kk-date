@@ -905,7 +905,7 @@ describe('Comprehensive Time Tests', () => {
 			}
 		});
 
-		test('should handle timezone conversions with complex operations', () => {
+		test('should handle timezone with complex operations', () => {
 			const testCases = [
 				{
 					input: '2024-01-01 23:59:59',
@@ -924,6 +924,41 @@ describe('Comprehensive Time Tests', () => {
 						{ type: 'add', value: 1, unit: 'minutes' },
 					],
 					expected: '2025-01-01 00:01:00',
+				},
+			];
+
+			for (const { input, timezone, operations, expected } of testCases) {
+				// change timezone
+				kk_date.config({ timezone: timezone });
+				let date = new kk_date(input);
+				for (const { type, value, unit } of operations) {
+					date = type === 'add' ? date.add(value, unit) : date.add(-value, unit);
+				}
+				expect(date.format('YYYY-MM-DD HH:mm:ss')).toBe(expected);
+			}
+			// set global default
+			kk_date.config({ timezone: timezone });
+		});
+
+		test('should handle timezone *conversions* with complex operations', () => {
+			const testCases = [
+				{
+					input: '2024-01-01 23:59:59',
+					timezone: 'America/New_York',
+					operations: [
+						{ type: 'add', value: 1, unit: 'seconds' },
+						{ type: 'add', value: 1, unit: 'minutes' },
+					],
+					expected: '2024-01-01 17:01:00',
+				},
+				{
+					input: '2024-12-31 23:59:59',
+					timezone: 'Asia/Tokyo',
+					operations: [
+						{ type: 'add', value: 1, unit: 'seconds' },
+						{ type: 'add', value: 1, unit: 'minutes' },
+					],
+					expected: '2025-01-01 06:01:00',
 				},
 			];
 
