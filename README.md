@@ -19,6 +19,20 @@ kk-date is a fastest JavaScript library that parses, validations, manipulates, a
 - **Optimized for Performance**: If speed and efficiency are critical for your application, `kk-date` is the perfect fit, delivering performance without sacrificing usability.
 - **Ongoing Development**: While `kk-date` is currently tailored for basic date operations, we are actively developing it to support more complex date manipulations and formats in future releases.
 
+## Built-in Cache Support
+
+In large-scale data processing and high-frequency date computations, performance becomes critical. Repeated operations on identical date inputs—such as formatting, parsing, timezone conversions, or relative calculations—can quickly become a bottleneck when executed millions of times.
+
+To address this, kk-date implements a built-in caching mechanism that automatically stores and reuses the results of previously computed date operations. This eliminates redundant calculations, significantly reducing CPU cycles and memory allocations during repeated access patterns.
+
+### Technical Advantages:
+- **Memoization**: Frequently used date strings or objects are memoized, enabling constant-time retrieval on repeated calls.
+- **Immutable data structure compatibility**: Because kk-date is immutable, caching is safe and predictable—no side effects or unexpected mutations.
+- **Garbage-free design**: The cache avoids unnecessary object creation, leading to fewer GC pauses and smoother performance in event loops.
+- **Time-critical environments**: Ideal for systems handling time-series data, real-time analytics, scheduling engines, or log processing pipelines, where date operations are repeated across millions of records.
+
+By integrating cache at the core, kk-date achieves consistent speed advantages over traditional libraries like Moment.js and even more lightweight alternatives like Day.js, especially under high-load scenarios.
+
 Average Speed Improvement: 63.36% faster than other libraries (Cache disabled)
 
 Average Speed Improvement: 89.05% faster than other libraries (Cache activated)
