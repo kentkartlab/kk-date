@@ -20,14 +20,14 @@ for (const key in iso6391_languages) {
 	const day_short = new Intl.DateTimeFormat(key, { weekday: 'short' });
 	for (let i = 1; i < 13; i++) {
 		const date = new Date(2021, i, '0');
-		months[month_long.format(date)] = i;
-		months[month_short.format(date)] = i;
+		months[month_long.format(date).toLowerCase()] = i;
+		months[month_short.format(date).toLowerCase()] = i;
 	}
 	for (let i = 1; i < 8; i++) {
 		const date = new Date(2021, 1, i);
 		const number = parseInt(default_en_day_number.format(date), 10);
-		days[day_long.format(date)] = number;
-		days[day_short.format(date)] = number;
+		days[day_long.format(date).toLowerCase()] = number;
+		days[day_short.format(date).toLowerCase()] = number;
 	}
 }
 
@@ -38,7 +38,8 @@ for (const key in iso6391_languages) {
  * @returns {string|Boolean}
  */
 function isValidMonth(monthName) {
-	return months[monthName] ? month_numbers[months[monthName]] : false;
+	const monthNameLower = monthName.toLowerCase();
+	return months[monthNameLower] ? month_numbers[months[monthNameLower]] : false;
 }
 
 /**
@@ -48,7 +49,8 @@ function isValidMonth(monthName) {
  * @returns {string|Boolean}
  */
 function isValidDayName(dayname) {
-	return days[dayname] ? day_numbers[days[dayname]] : false;
+	const dayNameLower = dayname.toLowerCase();
+	return days[dayNameLower] ? day_numbers[days[dayNameLower]] : false;
 }
 
 /**

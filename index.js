@@ -77,7 +77,7 @@ class KkDate {
 				} else if (isKkDate(date)) {
 					this.date = new Date(date.date.toUTCString());
 				} else if (date instanceof Date) {
-					this.date = new Date(date.toUTCString());
+					this.date = new Date(date.getTime());
 				} else {
 					is_can_cache = true;
 					cached = nopeRedis.getItem(`${date}`);
