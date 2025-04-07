@@ -90,7 +90,7 @@ class KkDate {
 							isValid(date, format_types['hh:mm:ss']) ||
 							isValid(date, format_types['hh:mm:ss.SSS'])
 						) {
-							const [hours, minutes, seconds] = date.split(':').map(Number);
+							const [hours, minutes, seconds] = date.split(':').map((n) => parseInt(n, 10));
 							const finalSeconds = Number.isNaN(seconds) || !seconds ? 0 : seconds;
 							if (hours >= 24) {
 								const extraDays = Math.floor(hours / 24);
@@ -104,6 +104,7 @@ class KkDate {
 								currentDate.setHours(hours, minutes, finalSeconds, 0);
 								this.date = currentDate;
 							}
+							this.detected_format = format_types['HH:mm:ss'];
 						} else {
 							this.date = false;
 							if (isValid(date, format_types['DD.MM.YYYY HH:mm:ss'])) {
