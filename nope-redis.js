@@ -273,24 +273,6 @@ function roughSizeOfObject(object) {
 	}
 }
 
-async function memoryStats() {
-	try {
-		const date = new Date();
-		memory.config.memoryStats[
-			`${`${date.getFullYear()}-${date.getMonth()}-${date.getDate()}T${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`}`
-		] = roughSizeOfObject(memory.store);
-		const keys = Object.keys(memory.config.memoryStats);
-		if (keys.length > 25) {
-			for (let i = 0; i < 12; i++) {
-				const key = keys[i];
-				delete memory.config.memoryStats[key];
-			}
-		}
-	} catch (error) {
-		console.error('nope-redis -> error!', error);
-		return false;
-	}
-}
 
 /**
  * deleter for expired key
