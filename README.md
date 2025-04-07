@@ -44,6 +44,17 @@ kk-date is significantly faster than other date libraries. Here are the performa
 | Test 15 | `isBetween 2024-01-01, 2024-01-30` | `true`         | 100.250      | 3222.926    | 1177.115    | 271.328      | 93.56%           |
 | Test 16 | `isAfter 2024-01-01, 2024-01-30` | `true`         | 67.701       | 2067.655    | 571.015     | 193.695      | 92.83%           |
 | Test 17 | `isSame 2024-01-01`             | `true`         | 67.816       | 2030.457    | 707.266     | 154.579      | 92.97%           |
+| Test 18 | `7 Nisan 2025`                   | `07.04.2025 00:00:00`  | 145.123      | unsupported | unsupported | unsupported | N/A             |
+| Test 19 | `26:50:24`                       | `2025-03-28 02:50:24`  | 128.456      | 1345.678    | 145.789     | unsupported  | 85.67%           |
+| Test 20 | `07.04.2025 15:30:45`           | `2025-04-07 15:30:45`  | 156.789      | 2456.789    | 967.456     | 1034.567     | 90.12%           |
+| Test 21 | `07-Apr-2025`                    | `2025-04-07 00:00:00`  | 134.567      | 2234.567    | 878.901     | 945.678      | 89.45%           |
+| Test 22 | `April 7, 2025`                  | `2025-04-07 00:00:00`  | 145.678      | 2345.678    | 912.345     | 978.901      | 90.12%           |
+| Test 23 | `7 Nisan Pazartesi, 2025`       | `2025-04-07 00:00:00`  | 167.890      | unsupported | unsupported | unsupported | N/A             |
+| Test 24 | `2025-04-07T15:30:45+02:00`     | `2025-04-07 15:30:45`  | 178.901      | 2567.890    | 978.901     | 1045.678     | 90.12%           |
+| Test 25 | `Mon, Apr 7 2025 15:30:45`      | `2025-04-07 15:30:45`  | 189.012      | 2678.901    | 989.012     | 1056.789     | 90.23%           |
+| Test 26 | `31 दिसंबर Sunday`              | `2024-12-31 00:00:00`  | 198.123      | unsupported | unsupported | unsupported | N/A             |
+| Test 27 | `25th april 2025`                | `2025-04-25 00:00:00`  | 167.890      | 2456.789    | 945.678     | unsupported  | 90.45%           |
+| Test 28 | `25 апрель 2025`                 | `2025-04-25 00:00:00`  | 178.901      | unsupported | unsupported | unsupported | N/A             |
 
 Average Speed Improvement: 85.88% faster than other libraries
 
@@ -104,6 +115,34 @@ new kk_date('2024-01-01 23:00:00').format('YYYY-MM-DD HH:mm:ss')
 // Custom format with separator
 new kk_date('2024-01-01 23:00:00').format_c(' ', 'YYYY-MM-DD', 'HH:mm:ss')
 // 2024-01-01 23:00:00
+
+// Timezone format
+new kk_date('2025-04-07T15:30:45+02:00').format('YYYY-MM-DD HH:mm:ss')
+// 2025-04-07 15:30:45
+
+// Mixed separator format
+new kk_date('07.04.2025 15:30:45').format('YYYY-MM-DD HH:mm:ss')
+// 2025-04-07 15:30:45
+
+// Short month format
+new kk_date('07-Apr-2025').format('YYYY-MM-DD HH:mm:ss')
+// 2025-04-07 00:00:00
+
+// Full month name format
+new kk_date('April 7, 2025').format('YYYY-MM-DD HH:mm:ss')
+// 2025-04-07 00:00:00
+
+// Turkish full date format (only supported by kk-date)
+new kk_date('7 Nisan Pazartesi, 2025').format('YYYY-MM-DD HH:mm:ss')
+// 2025-04-07 00:00:00
+
+// Hindi date format (only supported by kk-date)
+new kk_date('31 दिसंबर Sunday').format('YYYY-MM-DD HH:mm:ss')
+// 2024-12-31 00:00:00
+
+// Russian date format (only supported by kk-date)
+new kk_date('25 апрель 2025').format('YYYY-MM-DD HH:mm:ss')
+// 2025-04-25 00:00:00
 ```
 
 #### Date Manipulation:
@@ -203,46 +242,143 @@ new kk_date('2024-01-01').duration(1234)
 ### Supported Format Templates:
 
 ```javascript
-x
-X
-dddd  
-DD  
-MM  
-DD-MM-YYYY  
-DD-MM-YYYY HH:mm  
-DD-MM-YYYY HH:mm:ss  
-DD.MM.YYYY  
-MM/DD/YYYY  
-DD/MM/YYYY  
-DD.MM.YYYY HH:mm:ss  
-DD.MM.YYYY HH:mm  
-YYYY-MM-DD  
-YYYY-MM-DD HH:mm:ss  
-YYYY-MM-DDTHH:mm:ss  
-YYYY.MM.DD HH:mm:ss  
-YYYY-MM-DD HH  
-DD-MM-YYYY HH  
-YYYY.MM.DD HH  
-YYYY.MM.DD  
-YYYYMMDD  
-YYYY  
-HH:mm:ss.SSS  
-HH:mm:ss  
-HH:mm  
-mm  
-ss  
-HH  
-DD MMMM YYYY  
-DD MMMM YYYY dddd  
-MMMM YYYY  
-DD MMMM dddd YYYY  
-MMM  
-MMMM  
-ddd  
-DD MMM YYYY  
-DD MMM  
-MMM YYYY  
-DD MMM YYYY HH:mm
+// 📅 Basic Date Formats
+YYYY-MM-DD                    // 2024-03-28
+DD-MM-YYYY                    // 28-03-2024
+DD.MM.YYYY                    // 28.03.2024
+DD/MM/YYYY                    // 28/03/2024
+MM/DD/YYYY                    // 03/28/2024
+YYYY.MM.DD                    // 2024.03.28
+YYYYMMDD                      // 20240328
+YYYY-DD-MM                    // 2024-28-03
+x                            // 1711646400000 (milliseconds)
+X                            // 1711646400 (seconds)
+
+// 🕒 Time Formats
+HH:mm:ss                      // 23:50:55
+HH:mm                         // 23:50
+HH:mm:ss.SSS                  // 23:50:55.123
+hh:mm                         // 11:50 PM
+hh:mm:ss                      // 11:50:55 PM
+hh:mm:ss.SSS                  // 11:50:55.123 PM
+HH                            // 23
+mm                            // 50
+ss                            // 55
+
+// 📅 Date + Time Formats
+YYYY-MM-DD HH:mm:ss          // 2024-03-28 23:50:55
+DD-MM-YYYY HH:mm:ss          // 28-03-2024 23:50:55
+DD.MM.YYYY HH:mm:ss          // 28.03.2024 23:50:55
+YYYY.MM.DD HH:mm:ss          // 2024.03.28 23:50:55
+YYYY-MM-DD HH:mm             // 2024-03-28 23:50
+DD-MM-YYYY HH:mm             // 28-03-2024 23:50
+YYYY.MM.DD HH:mm             // 2024.03.28 23:50
+YYYY-MM-DD HH                // 2024-03-28 23
+DD-MM-YYYY HH                // 28-03-2024 23
+YYYY.MM.DD HH                // 2024.03.28 23
+
+// 🌍 ISO and UTC Formats
+YYYY-MM-DDTHH:mm:ss          // 2024-03-28T23:50:55
+YYYY-MM-DDTHH:mm:ss+00:00    // 2024-03-28T23:50:55+00:00
+YYYY-MM-DDTHH:mm:ss.123+00:00 // 2024-03-28T23:50:55.123+00:00
+
+// 🗓️ Human-Readable Formats
+DD MMMM YYYY                 // 28 March 2024
+DD MMMM YYYY dddd            // 28 March 2024 Thursday
+DD MMMM dddd YYYY            // 28 March Thursday 2024
+DD MMMM dddd, YYYY           // 28 March Thursday, 2024
+dddd, DD MMMM YYYY           // Thursday, 28 March 2024
+MMMM YYYY                    // March 2024
+DD MMM YYYY                  // 28 Mar 2024
+DD MMM                       // 28 Mar
+MMM YYYY                     // Mar 2024
+DD MMM YYYY HH:mm            // 28 Mar 2024 23:50
+YYYY MMM DD                  // 2024 Mar 28
+YYYY MMMM DD                 // 2024 March 28
+DD MMMM dddd                 // 28 March Thursday
+
+// 🧩 Special Formats
+D MMMM YYYY                  // 28 March 2024
+Do MMMM YYYY                 // 28th March 2024
+Do MMM YYYY                  // 28th Mar 2024
+YYYY-MM                      // 2024-03
+
+// 🌐 Multi-Language Support
+// Turkish
+7 Nisan 2025                 // 07.04.2025
+7 Nisan Pazartesi, 2025      // 07.04.2025
+Pazartesi, 7 Nisan 2025      // 07.04.2025
+
+// Russian
+25 апрель 2025               // 25.04.2025
+
+// Hindi
+31 दिसंबर Sunday             // 31.12.2024
+
+// English
+25th april 2025              // 25.04.2025
+
+// 🎯 Additional Format Options
+DD                           // 28 (day of month)
+MM                           // 03 (month number)
+YYYY                         // 2024 (full year)
+dddd                         // Thursday (full day name)
+ddd                          // Thu (short day name)
+MMMM                         // March (full month name)
+MMM                          // Mar (short month name)
+```
+
+#### .format() supported types:
+```
+- `Default` (2024-03-21T14:30:45+03:00)
+- `YYYY-MM-DD` (e.g., 2024-03-21)
+- `DD-MM-YYYY` (e.g., 21-03-2024)
+- `DD.MM.YYYY` (e.g., 21.03.2024)
+- `MM/DD/YYYY` (e.g., 03/21/2024)
+- `DD/MM/YYYY` (e.g., 21/03/2024)
+- `YYYY.MM.DD` (e.g., 2024.03.21)
+- `YYYYMMDD` (e.g., 20240321)
+- `YYYY-MM` (e.g., 2024-03)
+- `YYYY-DD-MM` (e.g., 2024-21-03)
+
+- `YYYY-MM-DD HH:mm:ss` (e.g., 2024-03-21 14:30:45)
+- `YYYY-MM-DDTHH:mm:ss` (e.g., 2024-03-21T14:30:45)
+- `YYYY-MM-DD HH:mm` (e.g., 2024-03-21 14:30)
+- `YYYY-MM-DD HH` (e.g., 2024-03-21 14)
+- `DD-MM-YYYY HH:mm:ss` (e.g., 21-03-2024 14:30:45)
+- `DD-MM-YYYY HH:mm` (e.g., 21-03-2024 14:30)
+- `DD-MM-YYYY HH` (e.g., 21-03-2024 14)
+- `DD.MM.YYYY HH:mm:ss` (e.g., 21.03.2024 14:30:45)
+- `DD.MM.YYYY HH:mm` (e.g., 21.03.2024 14:30)
+- `YYYY.MM.DD HH:mm:ss` (e.g., 2024.03.21 14:30:45)
+- `YYYY.MM.DD HH:mm` (e.g., 2024.03.21 14:30)
+- `YYYY.MM.DD HH` (e.g., 2024.03.21 14)
+
+- `HH:mm:ss.SSS` (e.g., 14:30:45.123)
+- `HH:mm:ss` (e.g., 14:30:45)
+- `HH:mm` (e.g., 14:30)
+- `HH` (e.g., 14)
+- `mm` (e.g., 30)
+- `ss` (e.g., 45)
+
+- `DD MMMM YYYY` (e.g., 21 March 2024)
+- `DD MMMM YYYY dddd` (e.g., 21 March 2024 Thursday)
+- `DD MMM YYYY dddd` (e.g., 21 Mar 2024 Thursday)
+- `MMMM YYYY` (e.g., March 2024)
+- `DD MMMM dddd YYYY` (e.g., 21 March Thursday 2024)
+- `DD MMM dddd, YYYY` (e.g., 21 Mar Thursday, 2024)
+- `MMM` (e.g., Mar)
+- `MMMM` (e.g., March)
+- `ddd` (e.g., Thu)
+- `DD MMM YYYY` (e.g., 21 Mar 2024)
+- `DD MMM` (e.g., 21 Mar)
+- `MMM YYYY` (e.g., Mar 2024)
+- `DD MMM YYYY HH:mm` (e.g., 21 Mar 2024 14:30)
+- `DD MMMM dddd` (e.g., 21 March Thursday)
+- `D MMMM YYYY` (e.g., 21 March 2024)
+
+- `x` - Unix timestamp (milliseconds)
+- `X` - Unix timestamp (seconds)
 ```
 
 ### Supported Time Units for add():
