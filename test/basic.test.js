@@ -7,6 +7,25 @@ const timezone = 'Europe/Istanbul';
 
 kk_date.config({ timezone: timezone });
 
+describe('kk_date validation', () => {
+	test('not valid', () => {
+		expect(() => {
+			new kk_date('2025-01-31', 'HH:mm:ss');
+		}).toThrow();
+		expect(() => {
+			new kk_date('2025-01-31', 'HH:mm');
+		}).toThrow();
+		expect(() => {
+			new kk_date('2025-01-31', 'YYYY/MM/DD');
+		}).toThrow();
+	});
+	test('valid', () => {
+		expect(new kk_date(`${test_date}`, 'YYYY-MM-DD').format('YYYY-MM-DD')).toBe(`${test_date}`);
+		expect(new kk_date(`${test_time}`, 'HH:mm:ss').format('HH:mm:ss')).toBe(test_time);
+		expect(new kk_date(`${test_date} ${test_time}`, 'YYYY-MM-DD HH:mm:ss').format('YYYY-MM-DD HH:mm:ss')).toBe(`${test_date} ${test_time}`);
+	});
+});
+
 describe('kk_date format', () => {
 	test('HH:mm:ss', () => {
 		expect(new kk_date(`${test_time}`).format('HH:mm:ss')).toBe(`${test_time}`);
@@ -15,6 +34,8 @@ describe('kk_date format', () => {
 		expect(new kk_date('24:00:00').format('HH:mm:ss')).toBe('00:00:00');
 		expect(new kk_date('25:00:00').format('HH:mm:ss')).toBe('01:00:00');
 		expect(new kk_date('26:00:00').format('HH:mm:ss')).toBe('02:00:00');
+		expect(new kk_date('22:53:00').format('HH:mm:ss')).toBe('22:53:00');
+		expect(new kk_date('22:53').format('HH:mm:ss')).toBe('22:53:00');
 	});
 
 	test('YYYY-MM-DD', () => {
@@ -104,6 +125,126 @@ describe('kk_date format', () => {
 	test('DD MMMM dddd YYYY', () => {
 		expect(new kk_date('2024-08-19').format('DD MMMM dddd YYYY')).toBe('19 August Monday 2024');
 		expect(new kk_date('2024-08-19').config({ locale: 'tr-tr' }).format('DD MMMM dddd YYYY')).toBe('19 Ağustos Pazartesi 2024');
+	});
+
+	test('YYYY-MM', () => {
+		expect(new kk_date('2024-08-19').format('YYYY-MM')).toBe('2024-08');
+		expect(new kk_date('2023-12-01').format('YYYY-MM')).toBe('2023-12');
+		// Test parsing (defaults day to 01)
+		expect(new kk_date('2024-05').format('YYYY-MM-DD')).toBe('2024-05-01');
+	});
+
+	test('DD MMMM dddd', () => {
+		const currentYear = new Date().getFullYear();
+		expect(new kk_date('2024-08-19').format('DD MMMM dddd')).toBe('19 August Monday');
+		expect(new kk_date('2024-08-19').config({ locale: 'tr-tr' }).format('DD MMMM dddd')).toBe('19 Ağustos Pazartesi');
+		// Test parsing (defaults to current year)
+		expect(new kk_date('15 January Tuesday').format('YYYY-MM-DD')).toBe(`${currentYear}-01-15`);
+		expect(new kk_date('31 December Sunday').format('YYYY-MM-DD')).toBe(`${currentYear}-12-31`);
+	});
+
+	test('DD MMMM dddd (different lang.)', () => {
+		const currentYear = new Date().getFullYear();
+		// Test parsing (defaults to current year)
+		expect(new kk_date('15 ديسمبر Tuesday').format('YYYY-MM-DD')).toBe(`${currentYear}-12-15`);
+		expect(new kk_date('31 दिसंबर Sunday').format('YYYY-MM-DD')).toBe(`${currentYear}-12-31`);
+		expect(new kk_date('31 十二月 Sunday').format('YYYY-MM-DD')).toBe(`${currentYear}-12-31`);
+		expect(new kk_date('15 ديسمبر Tuesday').config({ locale: 'tr-tr' }).format('DD MMMM YYYY dddd')).toBe(`15 Aralık ${currentYear} Pazartesi`);
+	});
+
+	test('YYYY-DD-MM', () => {
+		expect(new kk_date('2024-08-19').format('YYYY-DD-MM')).toBe('2024-19-08');
+		expect(new kk_date('2023-12-01').format('YYYY-DD-MM')).toBe('2023-01-12');
+		// Test parsing
+		expect(new kk_date('2024-25-05').format('YYYY-MM-DD')).toBe('2024-05-25');
+		expect(new kk_date('2023-10-11', 'YYYY-DD-MM').format('YYYY-MM-DD')).toBe('2023-11-10');
+	});
+
+	test('D MMMM YYYY', () => {
+		// Formatting
+		expect(new kk_date('2024-08-01').format('D MMMM YYYY')).toBe('1 August 2024');
+		expect(new kk_date('2024-08-19').format('D MMMM YYYY')).toBe('19 August 2024');
+		expect(new kk_date('2024-01-05').config({ locale: 'tr-tr' }).format('D MMMM YYYY')).toBe('5 Ocak 2024');
+		// Parsing
+		expect(new kk_date('1 January 2024').format('YYYY-MM-DD')).toBe('2024-01-01');
+		expect(new kk_date('05 December 2023').format('YYYY-MM-DD')).toBe('2023-12-05');
+		expect(new kk_date('31 July 2025').format('YYYY-MM-DD')).toBe('2025-07-31');
+	});
+});
+
+describe('kk_date startOf / endOf', () => {
+	const testDateTime = '2024-08-19 14:35:45';
+	const testLeapDateTime = '2024-02-15 10:10:10'; // Leap year
+	const testEndOfMonthDateTime = '2024-03-31 12:00:00';
+
+	// --- startOf Tests ---
+	test('startOf year', () => {
+		expect(new kk_date(testDateTime).startOf('year').format('YYYY-MM-DD HH:mm:ss')).toBe('2024-01-01 00:00:00');
+	});
+	test('startOf month', () => {
+		expect(new kk_date(testDateTime).startOf('month').format('YYYY-MM-DD HH:mm:ss')).toBe('2024-08-01 00:00:00');
+	});
+	test('startOf week (assuming Sunday start)', () => {
+		// 2024-08-19 is a Monday (day 1)
+		expect(new kk_date(testDateTime).startOf('week').format('YYYY-MM-DD HH:mm:ss')).toBe('2024-08-18 00:00:00');
+		// Test with a Sunday
+		expect(new kk_date('2024-08-18 10:00:00').startOf('week').format('YYYY-MM-DD HH:mm:ss')).toBe('2024-08-18 00:00:00');
+	});
+	test('startOf day', () => {
+		expect(new kk_date(testDateTime).startOf('day').format('YYYY-MM-DD HH:mm:ss')).toBe('2024-08-19 00:00:00');
+	});
+	test('startOf hour', () => {
+		expect(new kk_date(testDateTime).startOf('hour').format('YYYY-MM-DD HH:mm:ss')).toBe('2024-08-19 14:00:00');
+	});
+	test('startOf minute', () => {
+		expect(new kk_date(testDateTime).startOf('minute').format('YYYY-MM-DD HH:mm:ss')).toBe('2024-08-19 14:35:00');
+	});
+	test('startOf second', () => {
+		expect(new kk_date(testDateTime).startOf('second').format('YYYY-MM-DD HH:mm:ss')).toBe('2024-08-19 14:35:45');
+	});
+
+	// --- endOf Tests ---
+	test('endOf year', () => {
+		expect(new kk_date(testDateTime).endOf('year').format('YYYY-MM-DD HH:mm:ss')).toBe('2024-12-31 23:59:59');
+	});
+	test('endOf month', () => {
+		expect(new kk_date(testDateTime).endOf('month').format('YYYY-MM-DD HH:mm:ss')).toBe('2024-08-31 23:59:59');
+		// Test leap year February
+		expect(new kk_date(testLeapDateTime).endOf('month').format('YYYY-MM-DD HH:mm:ss')).toBe('2024-02-29 23:59:59');
+		// Test non-leap year February
+		expect(new kk_date('2025-02-10').endOf('month').format('YYYY-MM-DD HH:mm:ss')).toBe('2025-02-28 23:59:59');
+		// Test 30-day month
+		expect(new kk_date('2024-04-15').endOf('month').format('YYYY-MM-DD HH:mm:ss')).toBe('2024-04-30 23:59:59');
+		// Test 31-day month
+		expect(new kk_date(testEndOfMonthDateTime).endOf('month').format('YYYY-MM-DD HH:mm:ss')).toBe('2024-03-31 23:59:59');
+	});
+	test('endOf week (assuming Saturday end)', () => {
+		// 2024-08-19 is a Monday (day 1)
+		expect(new kk_date(testDateTime).endOf('week').format('YYYY-MM-DD HH:mm:ss')).toBe('2024-08-24 23:59:59');
+		// Test with a Saturday
+		expect(new kk_date('2024-08-24 10:00:00').endOf('week').format('YYYY-MM-DD HH:mm:ss')).toBe('2024-08-24 23:59:59');
+	});
+	test('endOf day', () => {
+		expect(new kk_date(testDateTime).endOf('day').format('YYYY-MM-DD HH:mm:ss')).toBe('2024-08-19 23:59:59');
+	});
+	test('endOf hour', () => {
+		expect(new kk_date(testDateTime).endOf('hour').format('YYYY-MM-DD HH:mm:ss')).toBe('2024-08-19 14:59:59');
+	});
+	test('endOf minute', () => {
+		expect(new kk_date(testDateTime).endOf('minute').format('YYYY-MM-DD HH:mm:ss')).toBe('2024-08-19 14:35:59');
+	});
+	test('endOf second', () => {
+		expect(new kk_date(testDateTime).endOf('second').format('HH:mm:ss.SSS')).toBe('14:35:45.999');
+	});
+
+	test('startOf/endOf chaining', () => {
+		expect(new kk_date(testDateTime).startOf('day').add(12, 'hours').format('HH:mm')).toBe('12:00');
+		expect(new kk_date(testDateTime).endOf('month').startOf('day').format('YYYY-MM-DD HH:mm:ss')).toBe('2024-08-31 00:00:00');
+	});
+
+	test('startOf/endOf invalid unit', () => {
+		expect(() => new kk_date(testDateTime).startOf('years')).toThrow('Invalid unit for startOf: years');
+		expect(() => new kk_date(testDateTime).endOf('days')).toThrow('Invalid unit for endOf: days');
 	});
 });
 
@@ -468,5 +609,134 @@ describe('KkDate Timezone Tests', () => {
 
 			expect(date.format('HH:mm')).toBe(time);
 		});
+	});
+});
+
+describe('KkDate fromNow Tests', () => {
+	test('should return seconds ago', () => {
+		const fewSecondsAgo = new kk_date().add(-15, 'seconds');
+		expect(fewSecondsAgo.fromNow()).toMatch(/seconds ago|second ago/);
+	});
+
+	test('should return minutes ago', () => {
+		const fewMinutesAgo = new kk_date().add(-5, 'minutes');
+		expect(fewMinutesAgo.fromNow()).toMatch(/minutes ago|minute ago/);
+	});
+
+	test('should return an hour ago', () => {
+		const anHourAgo = new kk_date().add(-1, 'hours');
+		expect(anHourAgo.fromNow()).toMatch(/an hour ago|1 hour ago/);
+	});
+
+	test('should return hours ago', () => {
+		const fewHoursAgo = new kk_date().add(-5, 'hours');
+		expect(fewHoursAgo.fromNow()).toMatch(/hours ago/);
+	});
+
+	test('should return a day ago', () => {
+		const yesterday = new kk_date().add(-1, 'days');
+		expect(yesterday.fromNow()).toMatch(/a day ago|yesterday|1 day ago/);
+	});
+
+	test('should return days ago', () => {
+		const fewDaysAgo = new kk_date().add(-5, 'days');
+		expect(fewDaysAgo.fromNow()).toMatch(/days ago/);
+	});
+
+	test('should return a month ago', () => {
+		const lastMonth = new kk_date().add(-1, 'months');
+		expect(lastMonth.fromNow()).toMatch(/last month/);
+	});
+
+	test('should return months ago', () => {
+		const fewMonthsAgo = new kk_date().add(-5, 'months');
+		expect(fewMonthsAgo.fromNow()).toMatch(/months ago/);
+	});
+
+	test('should return a year ago', () => {
+		const lastYear = new kk_date().add(-1, 'years');
+		expect(lastYear.fromNow()).toMatch(/a year ago|1 year ago|last year/);
+	});
+
+	test('should return years ago', () => {
+		const fewYearsAgo = new kk_date().add(-5, 'years');
+		expect(fewYearsAgo.fromNow()).toMatch(/years ago/);
+	});
+
+	test('should return in seconds', () => {
+		const inFewSeconds = new kk_date().add(15, 'seconds');
+		expect(inFewSeconds.fromNow()).toMatch(/in .* seconds|in .* second/);
+	});
+
+	test('should return in minutes', () => {
+		const inFewMinutes = new kk_date().add(5, 'minutes');
+		expect(inFewMinutes.fromNow()).toMatch(/in .* minutes|in .* minute/);
+	});
+
+	test('should return in an hour', () => {
+		const inAnHour = new kk_date().add(1, 'hours');
+		expect(inAnHour.fromNow()).toMatch(/in an hour|in 1 hour/);
+	});
+
+	test('should return in hours', () => {
+		const inFewHours = new kk_date().add(5, 'hours');
+		expect(inFewHours.fromNow()).toMatch(/in .* hours/);
+	});
+
+	test('should return in a day', () => {
+		const tomorrow = new kk_date().add(1, 'days');
+		expect(tomorrow.fromNow()).toMatch(/in a day|tomorrow|in 1 day/);
+	});
+
+	test('should return in days', () => {
+		const inFewDays = new kk_date().add(5, 'days');
+		expect(inFewDays.fromNow()).toMatch(/in .* days/);
+	});
+
+	test('should return in a month', () => {
+		const nextMonth = new kk_date().add(1, 'months');
+		expect(nextMonth.fromNow()).toMatch(/next month/);
+	});
+
+	test('should return in months', () => {
+		const inFewMonths = new kk_date().add(5, 'months');
+		expect(inFewMonths.fromNow()).toMatch(/in .* months/);
+	});
+
+	test('should return in a year', () => {
+		const nextYear = new kk_date().add(1, 'years');
+		expect(nextYear.fromNow()).toMatch(/in a year|in 1 year|next year/);
+	});
+
+	test('should return in years', () => {
+		const inFewYears = new kk_date().add(5, 'years');
+		expect(inFewYears.fromNow()).toMatch(/in .* years/);
+	});
+
+	// --- Locale Tests --- //
+	test('should return relative time in Turkish', () => {
+		const date = new kk_date().add(-3, 'days');
+		kk_date.config({ locale: 'tr-TR' });
+		expect(date.fromNow()).toMatch(/gün önce/);
+
+		const futureDate = new kk_date().add(3, 'hours');
+		expect(futureDate.fromNow()).toMatch(/saat sonra/);
+
+		kk_date.config({ locale: 'en-US' });
+	});
+
+	test('should return relative time in German using instance config', () => {
+		const date = new kk_date().add(-5, 'minutes');
+		expect(date.config({ locale: 'de-DE' }).fromNow()).toMatch(/Minuten/);
+
+		const futureDate = new kk_date().add(1, 'months');
+		expect(futureDate.config({ locale: 'de-DE' }).fromNow()).toMatch(/Monat|Wochen|Tagen/);
+	});
+
+	test('should default to English for unsupported/invalid locale', () => {
+		const date = new kk_date().add(-10, 'seconds');
+		expect(() => kk_date.config({ locale: 'absolutly-invalid-locale' })).toThrow();
+		expect(date.fromNow()).toMatch(/seconds ago/);
+		kk_date.config({ locale: 'en-US' });
 	});
 });

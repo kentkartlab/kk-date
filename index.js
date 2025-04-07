@@ -1,295 +1,362 @@
 const nopeRedis = require('./nope-redis');
-const functions = require('./functions');
-
-const parseWithTimezone = functions.parseWithTimezone;
-const getTimezoneOffset = functions.getTimezoneOffset;
-const absFloor = functions.absFloor;
-const duration = functions.duration;
-const padZero = functions.padZero;
-const checkTimezone = functions.checkTimezone;
-const dateTimeFormat = functions.dateTimeFormat;
-const format_types = functions.format_types;
-const cached_dateTimeFormat = functions.cached_dateTimeFormat;
-const timeInMilliseconds = functions.timeInMilliseconds;
-const converter = functions.converter;
+const {
+	parseWithTimezone,
+	getTimezoneOffset,
+	absFloor,
+	duration,
+	padZero,
+	checkTimezone,
+	dateTimeFormat,
+	converter,
+	isValidMonth,
+} = require('./functions');
+const { cached_dateTimeFormat, format_types, timeInMilliseconds, format_types_regex, global_config } = require('./constants');
 
 nopeRedis.config({ defaultTtl: 1300 });
 
-const global_config = {
-	locale: 'en',
-	timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-	userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-};
-
-const format_types_regex = {
-	YYYY: /^(17|18|19|20|21)\d\d$/,
-	MM: /^(0[1-9]|1[0-2])$/,
-	DD: /^(0[1-9]|[12][0-9]|3[01])$/,
-	'YYYY-MM-DD': /^(|17|18|19|20|21)\d\d-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$/,
-	YYYYMMDD: /^(|17|18|19|20|21)\d\d(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])$/,
-	'YYYY-MM-DD HH:mm:ss': /^(|17|18|19|20|21)\d\d-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01]) ([01]\d|2[0-9]):([0-5]\d):([0-5]\d)$/,
-	'YYYY-MM-DD HH:mm': /^(|17|18|19|20|21)\d\d-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01]) ([01]\d|2[0-9]):([0-5]\d)$/,
-	'YYYY.MM.DD': /^(|17|18|19|20|21)\d\d\.(0[1-9]|1[0-2])\.(0[1-9]|[12][0-9]|3[01])$/,
-	'YYYY.MM.DD HH:mm:ss': /^(|17|18|19|20|21)\d\d\.(0[1-9]|1[0-2])\.(0[1-9]|[12][0-9]|3[01]) ([01]\d|2[0-9]):([0-5]\d):([0-5]\d)$/,
-	'YYYY.MM.DD HH:mm': /^(|17|18|19|20|21)\d\d\.(0[1-9]|1[0-2])\.(0[1-9]|[12][0-9]|3[01]) ([01]\d|2[0-9]):([0-5]\d)$/,
-	'DD.MM.YYYY': /^(0[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[0-2])\.(|17|18|19|20|21)\d\d$/,
-	'DD.MM.YYYY HH:mm:ss': /^(0[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[0-2])\.(|17|18|19|20|21)\d\d ([01]\d|2[0-9]):([0-5]\d):([0-5]\d)$/,
-	'DD.MM.YYYY HH:mm': /^(0[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[0-2])\.(|17|18|19|20|21)\d\d ([01]\d|2[0-9]):([0-5]\d)$/,
-	'DD-MM-YYYY': /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-(|17|18|19|20|21)\d\d$/,
-	'DD-MM-YYYY HH:mm:ss': /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-(|17|18|19|20|21)\d\d ([01]\d|2[0-9]):([0-5]\d):([0-5]\d)$/,
-	'DD-MM-YYYY HH:mm': /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-(|17|18|19|20|21)\d\d ([01]\d|2[0-9]):([0-5]\d)$/,
-	'DD MMMM YYYY':
-		/^(0[1-9]|[12][0-9]|3[01]) (January|February|March|April|May|June|July|August|September|October|November|December) (|17|18|19|20|21)\d\d$/,
-	'DD MMMM YYYY dddd':
-		/^(0[1-9]|[12][0-9]|3[01]) (January|February|March|April|May|June|July|August|September|October|November|December) (|17|18|19|20|21)\d\d (Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$/,
-	'MMMM YYYY': /^(January|February|March|April|May|June|July|August|September|October|November|December) (|17|18|19|20|21)\d\d$/,
-	'DD MMMM dddd YYYY':
-		/^(0[1-9]|[12][0-9]|3[01]) (January|February|March|April|May|June|July|August|September|October|November|December) (Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday) (|17|18|19|20|21)\d\d$/,
-	'HH:mm:ss': /^([01]\d|2[0-9]):([0-5]\d):([0-5]\d)$/,
-	'HH:mm': /^([01]\d|2[0-9]):([0-5]\d)(?::[0-5]\d)?$/,
-	HH: /^([01]\d|2[0-9])$/,
-	mm: /^([0-5]\d)$/,
-	ss: /^([0-5]\d)$/,
-	MMM: /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)$/,
-	MMMM: /^(January|February|March|April|May|June|July|August|September|October|November|December)$/,
-	ddd: /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)$/,
-	'DD MMM YYYY': /^(0[1-9]|[12][0-9]|3[01]) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (|17|18|19|20|21)\d\d$/,
-	'DD MMM': /^(0[1-9]|[12][0-9]|3[01]) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)$/,
-	'MMM YYYY': /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (|17|18|19|20|21)\d\d$/,
-	'DD MMM YYYY HH:mm': /^(0[1-9]|[12][0-9]|3[01]) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (|17|18|19|20|21)\d\d ([01]\d|2[0-9]):([0-5]\d)$/,
-};
-
 /**
- * @kkDate method
+ * @class KkDate
+ * @description A utility class for date parsing, validation, and formatting.
+ * Accepts various input types (string, Date, KkDate) and supports multiple date formats
+ * like "YYYY-MM-DD" or "YYYY-DD-MM".
  */
 class KkDate {
 	/**
+	 * Constructs a KkDate instance with the given input and format.
 	 *
-	 * @param {string|Date|KkDate} date - date/datetime/time
+	 * @param {string|Date|KkDate} date - The input value. Can be:
+	 *  - a date string,
+	 *  - a native Date object,
+	 *  - another KkDate instance.
+	 *
+	 * @param {string} date_format - The format used to parse and validate the input.
+	 * Supported formats include: `"YYYY-MM-DD"`, `"YYYY-DD-MM"`.
 	 */
 	constructor(...params) {
 		let is_can_cache = false;
 		let cached = false;
+		this.detected_format = null;
 		if (params.length === 0) {
 			this.date = new Date();
 		} else {
 			const date = params[0];
-			if (Number.isInteger(date)) {
-				const stringed_date_length = `${date}`.length;
-				if (stringed_date_length <= 10) {
-					this.date = new Date(date * 1000);
-					this.date = parseWithTimezone(this, global_config.timezone, global_config.timezone, true);
-				} else if (stringed_date_length > 10) {
-					this.date = new Date(date);
-					this.date = parseWithTimezone(this, global_config.timezone, global_config.timezone, true);
-				}
-			} else if (isKkDate(date)) {
-				this.date = new Date(date.date.toUTCString());
-			} else if (date instanceof Date) {
-				this.date = new Date(date.toUTCString());
-			} else {
-				is_can_cache = true;
+			let forced_format_founded = false;
+			if (params[1]) {
 				cached = nopeRedis.getItem(`${date}`);
 				if (!cached) {
-					if (isValid(date, format_types['HH:mm:ss']) || isValid(date, format_types['HH:mm'])) {
-						let [hours, minutes, seconds] = date.split(':').map(Number);
-						if (hours >= 24) {
-							const extraDays = Math.floor(hours / 24);
-							hours = hours % 24;
+					if (!format_types_regex[params[1]]) {
+						throw new Error(`Unsupported Format! ${params[1]} !`);
+					}
+					if (!format_types_regex[params[1]].test(params[0])) {
+						throw new Error(`Invalid format ! ${format_types[params[1]]} !`);
+					}
+					if (params[1] === format_types['YYYY-DD-MM']) {
+						is_can_cache = true;
+						const [year, day, month] = date.split('-');
+						this.date = new Date(`${year}-${month}-${day}`);
+						forced_format_founded = true;
+					} else if (params[1] === format_types['YYYY-MM-DD']) {
+						is_can_cache = true;
+						const [year, month, day] = date.split('-');
+						this.date = new Date(`${year}-${month}-${day}`);
+						forced_format_founded = true;
+					}
+				}
+			}
 
-							const dateObj = new Date();
-							dateObj.setDate(dateObj.getDate() + extraDays);
-
-							const newDay = String(dateObj.getDate()).padStart(2, '0');
-							const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
-							const newYear = dateObj.getFullYear();
-							let date_string = `${newYear}-${newMonth}-${newDay}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-							if (seconds) {
-								date_string += `:${seconds.toString().padStart(2, '0')}`;
+			if (!forced_format_founded) {
+				if (Number.isInteger(date)) {
+					const stringed_date_length = `${date}`.length;
+					if (stringed_date_length <= 10) {
+						this.date = new Date(date * 1000);
+						this.date = parseWithTimezone(this, global_config.timezone, global_config.timezone, true);
+					} else if (stringed_date_length > 10) {
+						this.date = new Date(date);
+						this.date = parseWithTimezone(this, global_config.timezone, global_config.timezone, true);
+					}
+				} else if (isKkDate(date)) {
+					this.date = new Date(date.date.toUTCString());
+				} else if (date instanceof Date) {
+					this.date = new Date(date.getTime());
+				} else {
+					is_can_cache = true;
+					cached = nopeRedis.getItem(`${date}`);
+					if (!cached) {
+						if (
+							isValid(date, format_types['HH:mm:ss.SSS']) ||
+							isValid(date, format_types['HH:mm:ss']) ||
+							isValid(date, format_types['HH:mm']) ||
+							isValid(date, format_types['hh:mm']) ||
+							isValid(date, format_types['hh:mm:ss']) ||
+							isValid(date, format_types['hh:mm:ss.SSS'])
+						) {
+							const [hours, minutes, seconds] = date.split(':').map((n) => parseInt(n, 10));
+							const finalSeconds = Number.isNaN(seconds) || !seconds ? 0 : seconds;
+							if (hours >= 24) {
+								const extraDays = Math.floor(hours / 24);
+								const remainingHours = hours % 24;
+								const currentDate = new Date();
+								currentDate.setDate(currentDate.getDate() + extraDays);
+								currentDate.setHours(remainingHours, minutes, finalSeconds, 0);
+								this.date = currentDate;
+							} else {
+								const currentDate = new Date();
+								currentDate.setHours(hours, minutes, finalSeconds, 0);
+								this.date = currentDate;
 							}
-							this.date = new Date(date_string);
+							this.detected_format = format_types['HH:mm:ss'];
 						} else {
-							this.date = new Date(`${new Date().toISOString().split('T')[0]} ${date}`);
-						}
-					} else {
-						this.date = false;
-						if (isValid(date, format_types['DD.MM.YYYY HH:mm:ss'])) {
-							const [datePart, timePart] = date.split(' ');
-							const [day, month, year] = datePart.split('.');
-							let [hours, minutes, seconds] = timePart.split(':').map(Number);
-							if (hours >= 24) {
-								const extraDays = Math.floor(hours / 24);
-								hours = hours % 24;
+							this.date = false;
+							if (isValid(date, format_types['DD.MM.YYYY HH:mm:ss'])) {
+								const [datePart, timePart] = date.split(' ');
+								const [day, month, year] = datePart.split('.');
+								const [hours, minutes, seconds] = timePart.split(':').map(Number);
+								if (hours >= 24) {
+									const extraDays = Math.floor(hours / 24);
 
-								const dateObj = new Date(`${year}-${month}-${day}`);
-								dateObj.setDate(dateObj.getDate() + extraDays);
+									const dateObj = new Date(`${year}-${month}-${day}`);
+									dateObj.setDate(dateObj.getDate() + extraDays);
 
-								const newDay = String(dateObj.getDate()).padStart(2, '0');
-								const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
-								const newYear = dateObj.getFullYear();
+									const newDay = String(dateObj.getDate()).padStart(2, '0');
+									const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
+									const newYear = dateObj.getFullYear();
 
-								this.date = new Date(
-									`${newYear}-${newMonth}-${newDay}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`,
-								);
-							} else {
-								this.date = new Date(`${year}-${month}-${day}T${timePart}`);
+									this.date = new Date(
+										`${newYear}-${newMonth}-${newDay}T${(hours % 24).toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`,
+									);
+								} else {
+									this.date = new Date(`${year}-${month}-${day}T${timePart}`);
+								}
+								this.detected_format = format_types['DD.MM.YYYY HH:mm:ss'];
+							} else if (isValid(date, format_types['DD.MM.YYYY HH:mm'])) {
+								const [datePart, timePart] = date.split(' ');
+								const [day, month, year] = datePart.split('.');
+								const [hours, minutes] = timePart.split(':').map(Number);
+								if (hours >= 24) {
+									const extraDays = Math.floor(hours / 24);
+
+									const dateObj = new Date(`${year}-${month}-${day}`);
+									dateObj.setDate(dateObj.getDate() + extraDays);
+
+									const newDay = String(dateObj.getDate()).padStart(2, '0');
+									const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
+									const newYear = dateObj.getFullYear();
+
+									this.date = new Date(
+										`${newYear}-${newMonth}-${newDay}T${(hours % 24).toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`,
+									);
+								} else {
+									this.date = new Date(`${year}-${month}-${day}T${timePart}`);
+								}
+								this.detected_format = format_types['DD.MM.YYYY HH:mm'];
+							} else if (isValid(date, format_types['DD.MM.YYYY'])) {
+								const [day, month, year] = date.split('.');
+								this.date = new Date(`${year}-${month}-${day}`);
+								this.detected_format = format_types['DD.MM.YYYY'];
+							} else if (isValid(date, format_types['YYYY-MM-DD HH:mm:ss'])) {
+								const [datePart, timePart] = date.split(' ');
+								const [year, month, day] = datePart.split('-');
+								const [hours, minutes, seconds] = timePart.split(':').map(Number);
+								if (hours >= 24) {
+									const extraDays = Math.floor(hours / 24);
+									const dateObj = new Date(`${year}-${month}-${day}`);
+									dateObj.setDate(dateObj.getDate() + extraDays);
+
+									const newDay = String(dateObj.getDate()).padStart(2, '0');
+									const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
+									const newYear = dateObj.getFullYear();
+
+									this.date = new Date(
+										`${newYear}-${newMonth}-${newDay}T${(hours % 24).toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`,
+									);
+								} else {
+									this.date = new Date(`${year}-${month}-${day}T${timePart}`);
+								}
+								this.detected_format = format_types['YYYY-MM-DD HH:mm:ss'];
+							} else if (isValid(date, format_types['YYYY-MM-DD HH:mm'])) {
+								const [datePart, timePart] = date.split(' ');
+								const [year, month, day] = datePart.split('-');
+								const [hours, minutes] = timePart.split(':').map(Number);
+								if (hours >= 24) {
+									const extraDays = Math.floor(hours / 24);
+									const dateObj = new Date(`${year}-${month}-${day}`);
+									dateObj.setDate(dateObj.getDate() + extraDays);
+
+									const newDay = String(dateObj.getDate()).padStart(2, '0');
+									const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
+									const newYear = dateObj.getFullYear();
+
+									this.date = new Date(
+										`${newYear}-${newMonth}-${newDay}T${(hours % 24).toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`,
+									);
+								} else {
+									this.date = new Date(`${year}-${month}-${day}T${timePart}`);
+								}
+								this.detected_format = format_types['YYYY-MM-DD HH:mm'];
+							} else if (isValid(date, format_types['YYYY.MM.DD HH:mm:ss'])) {
+								const [datePart, timePart] = date.split(' ');
+								const [year, month, day] = datePart.split('.');
+								const [hours, minutes, seconds] = timePart.split(':').map(Number);
+								if (hours >= 24) {
+									const extraDays = Math.floor(hours / 24);
+
+									const dateObj = new Date(`${year}-${month}-${day}`);
+									dateObj.setDate(dateObj.getDate() + extraDays);
+
+									const newDay = String(dateObj.getDate()).padStart(2, '0');
+									const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
+									const newYear = dateObj.getFullYear();
+
+									this.date = new Date(
+										`${newYear}-${newMonth}-${newDay}T${(hours % 24).toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`,
+									);
+								} else {
+									this.date = new Date(`${year}-${month}-${day}T${timePart}`);
+								}
+								this.detected_format = format_types['YYYY.MM.DD HH:mm:ss'];
+							} else if (isValid(date, format_types['YYYY.MM.DD HH:mm'])) {
+								const [datePart, timePart] = date.split(' ');
+								const [year, month, day] = datePart.split('.');
+								const [hours, minutes] = timePart.split(':').map(Number);
+								if (hours >= 24) {
+									const extraDays = Math.floor(hours / 24);
+
+									const dateObj = new Date(`${year}-${month}-${day}`);
+									dateObj.setDate(dateObj.getDate() + extraDays);
+
+									const newDay = String(dateObj.getDate()).padStart(2, '0');
+									const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
+									const newYear = dateObj.getFullYear();
+
+									this.date = new Date(
+										`${newYear}-${newMonth}-${newDay}T${(hours % 24).toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}}`,
+									);
+								} else {
+									this.date = new Date(`${year}-${month}-${day}T${timePart}`);
+								}
+								this.detected_format = format_types['YYYY.MM.DD HH:mm'];
+							} else if (isValid(date, format_types['DD-MM-YYYY'])) {
+								const [day, month, year] = date.split('-');
+								this.date = new Date(`${year}-${month}-${day}`);
+								this.detected_format = format_types['DD-MM-YYYY'];
+							} else if (isValid(date, format_types['DD-MM-YYYY HH:mm:ss'])) {
+								const [datePart, timePart] = date.split(' ');
+								const [day, month, year] = datePart.split('-');
+								const [hours, minutes, seconds] = timePart.split(':').map(Number);
+								if (hours >= 24) {
+									const extraDays = Math.floor(hours / 24);
+
+									const dateObj = new Date(`${year}-${month}-${day}`);
+									dateObj.setDate(dateObj.getDate() + extraDays);
+
+									const newDay = String(dateObj.getDate()).padStart(2, '0');
+									const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
+									const newYear = dateObj.getFullYear();
+
+									this.date = new Date(
+										`${newYear}-${newMonth}-${newDay}T${(hours % 24).toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`,
+									);
+								} else {
+									this.date = new Date(`${year}-${month}-${day}T${timePart}`);
+								}
+								this.detected_format = format_types['DD-MM-YYYY HH:mm:ss'];
+							} else if (isValid(date, format_types['DD-MM-YYYY HH:mm'])) {
+								const [datePart, timePart] = date.split(' ');
+								const [day, month, year] = datePart.split('-');
+								const [hours, minutes] = timePart.split(':').map(Number);
+								if (hours >= 24) {
+									const extraDays = Math.floor(hours / 24);
+
+									const dateObj = new Date(`${year}-${month}-${day}`);
+									dateObj.setDate(dateObj.getDate() + extraDays);
+
+									const newDay = String(dateObj.getDate()).padStart(2, '0');
+									const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
+									const newYear = dateObj.getFullYear();
+
+									this.date = new Date(
+										`${newYear}-${newMonth}-${newDay}T${(hours % 24).toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`,
+									);
+								} else {
+									this.date = new Date(`${year}-${month}-${day}T${timePart}`);
+								}
+								this.detected_format = format_types['DD-MM-YYYY HH:mm'];
+							} else if (isValid(date, format_types['DD MMMM YYYY'])) {
+								const parts = date.split(' ');
+								const day = parseInt(parts[0], 10).toString();
+								const month = isValidMonth(parts[1]);
+								const year = parts[2];
+								this.date = new Date(`${year}-${month}-${day.padStart(2, '0')}`); // Ensure day is padded for Date constructor
+								this.detected_format = format_types['DD MMMM YYYY'];
+							} else if (isValid(date, format_types['YYYYMMDD'])) {
+								const year = String(date.substring(0, 4), 10); // Extract year
+								const month = String(date.substring(4, 6), 10); // Extract month
+								const day = String(date.substring(6, 8), 10); // Extract day
+								this.date = new Date(`${year}-${month}-${day}`);
+								this.detected_format = format_types['YYYYMMDD'];
+							} else if (isValid(date, format_types['YYYY-MM'])) {
+								const [year, month] = date.split('-');
+								this.date = new Date(`${year}-${month}-01`);
+								this.detected_format = format_types['YYYY-MM'];
+							} else if (isValid(date, format_types['DD MMMM dddd'])) {
+								const currentYear = new Date().getFullYear();
+								const parts = date.split(' '); // e.g., ['01', 'January', 'Monday']
+								const day = parts[0];
+								const month = isValidMonth(parts[1]);
+								this.date = new Date(`${currentYear}-${month}-${day}`);
+								this.detected_format = format_types['DD MMMM dddd'];
+							} else if (isValid(date, format_types['YYYY-MM-DD'])) {
+								const [year, month, day] = date.split('-');
+								this.date = new Date(`${year}-${month}-${day}`);
+								this.detected_format = format_types['YYYY-MM-DD'];
+							} else if (isValid(date, format_types['YYYY-DD-MM'])) {
+								const [year, day, month] = date.split('-');
+								this.date = new Date(`${year}-${month}-${day}`);
+								this.detected_format = format_types['YYYY-DD-MM'];
+							} else if (isValid(date, format_types['D MMMM YYYY'])) {
+								const parts = date.split(' '); // e.g., ['1', 'January', '2024'] or ['01', 'January', '2024']
+								const day = parts[0];
+								const year = parts[2];
+								const month = isValidMonth(parts[1]);
+								this.date = new Date(`${year}-${month}-${day.padStart(2, '0')}`); // Ensure day is padded for Date constructor
+								this.detected_format = format_types['D MMMM YYYY'];
+							} else if (isValid(date, format_types['YYYY MMM DD']) || isValid(date, format_types['YYYY MMMM DD'])) {
+								const parts = date.split(' ');
+								const year = parts[0];
+								const month = isValidMonth(parts[1]);
+								const day = parts[2];
+								this.date = new Date(`${year}-${month}-${day.padStart(2, '0')}`); // Ensure day is padded for Date constructor
+								this.detected_format = format_types['YYYY MMM DD'];
+							} else if (isValid(date, format_types['Do MMM YYYY']) || isValid(date, format_types['Do MMM YYYY'])) {
+								const parts = date.split(' ');
+								const day = parseInt(parts[0], 10).toString();
+								const month = isValidMonth(parts[1]);
+								const year = parts[2];
+								this.date = new Date(`${year}-${month}-${day.padStart(2, '0')}`); // Ensure day is padded for Date constructor
+								this.detected_format = format_types['Do MMM YYYY'];
+							} else if (isValid(date, format_types['DD MMMM dddd, YYYY'])) {
+								const parts = date.split(' ');
+								const day = parseInt(parts[0], 10).toString();
+								const month = isValidMonth(parts[1]);
+								const year = parts[3];
+								this.date = new Date(`${year}-${month}-${day.padStart(2, '0')}`); // Ensure day is padded for Date constructor
+								this.detected_format = format_types['YYYY.MM.DD HH:mm'];
+							} else if (isValid(date, format_types['dddd, DD MMMM YYYY'])) {
+								const parts = date.split(' ');
+								const day = parseInt(parts[1], 10).toString();
+								const month = isValidMonth(parts[2]);
+								const year = parts[3];
+								this.date = new Date(`${year}-${month}-${day.padStart(2, '0')}`); // Ensure day is padded for Date constructor
+								this.detected_format = format_types['dddd, DD MMMM YYYY'];
 							}
-						} else if (isValid(date, format_types['DD.MM.YYYY HH:mm'])) {
-							const [datePart, timePart] = date.split(' ');
-							const [day, month, year] = datePart.split('.');
-							let [hours, minutes] = timePart.split(':').map(Number);
-							if (hours >= 24) {
-								const extraDays = Math.floor(hours / 24);
-								hours = hours % 24;
-
-								const dateObj = new Date(`${year}-${month}-${day}`);
-								dateObj.setDate(dateObj.getDate() + extraDays);
-
-								const newDay = String(dateObj.getDate()).padStart(2, '0');
-								const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
-								const newYear = dateObj.getFullYear();
-
-								this.date = new Date(`${newYear}-${newMonth}-${newDay}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`);
-							} else {
-								this.date = new Date(`${year}-${month}-${day}T${timePart}`);
+							if (this.date === false) {
+								this.date = new Date(`${date}`);
 							}
-						} else if (isValid(date, format_types['DD.MM.YYYY'])) {
-							const [day, month, year] = date.split('.');
-							this.date = new Date(`${year}-${month}-${day}`);
-						} else if (isValid(date, format_types['YYYY-MM-DD HH:mm:ss'])) {
-							const [datePart, timePart] = date.split(' ');
-							const [year, month, day] = datePart.split('-');
-							let [hours, minutes, seconds] = timePart.split(':').map(Number);
-							if (hours >= 24) {
-								const extraDays = Math.floor(hours / 24);
-								hours = hours % 24;
-								const dateObj = new Date(`${year}-${month}-${day}`);
-								dateObj.setDate(dateObj.getDate() + extraDays);
-
-								const newDay = String(dateObj.getDate()).padStart(2, '0');
-								const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
-								const newYear = dateObj.getFullYear();
-
-								this.date = new Date(
-									`${newYear}-${newMonth}-${newDay}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`,
-								);
-							} else {
-								this.date = new Date(`${year}-${month}-${day}T${timePart}`);
-							}
-						} else if (isValid(date, format_types['YYYY-MM-DD HH:mm'])) {
-							const [datePart, timePart] = date.split(' ');
-							const [year, month, day] = datePart.split('-');
-							let [hours, minutes] = timePart.split(':').map(Number);
-							if (hours >= 24) {
-								const extraDays = Math.floor(hours / 24);
-								hours = hours % 24;
-								const dateObj = new Date(`${year}-${month}-${day}`);
-								dateObj.setDate(dateObj.getDate() + extraDays);
-
-								const newDay = String(dateObj.getDate()).padStart(2, '0');
-								const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
-								const newYear = dateObj.getFullYear();
-
-								this.date = new Date(`${newYear}-${newMonth}-${newDay}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`);
-							} else {
-								this.date = new Date(`${year}-${month}-${day}T${timePart}`);
-							}
-						} else if (isValid(date, format_types['YYYY.MM.DD HH:mm:ss'])) {
-							const [datePart, timePart] = date.split(' ');
-							const [year, month, day] = datePart.split('.');
-							let [hours, minutes, seconds] = timePart.split(':').map(Number);
-							if (hours >= 24) {
-								const extraDays = Math.floor(hours / 24);
-								hours = hours % 24;
-
-								const dateObj = new Date(`${year}-${month}-${day}`);
-								dateObj.setDate(dateObj.getDate() + extraDays);
-
-								const newDay = String(dateObj.getDate()).padStart(2, '0');
-								const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
-								const newYear = dateObj.getFullYear();
-
-								this.date = new Date(
-									`${newYear}-${newMonth}-${newDay}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`,
-								);
-							} else {
-								this.date = new Date(`${year}-${month}-${day}T${timePart}`);
-							}
-						} else if (isValid(date, format_types['YYYY.MM.DD HH:mm'])) {
-							const [datePart, timePart] = date.split(' ');
-							const [year, month, day] = datePart.split('.');
-							let [hours, minutes] = timePart.split(':').map(Number);
-							if (hours >= 24) {
-								const extraDays = Math.floor(hours / 24);
-								hours = hours % 24;
-
-								const dateObj = new Date(`${year}-${month}-${day}`);
-								dateObj.setDate(dateObj.getDate() + extraDays);
-
-								const newDay = String(dateObj.getDate()).padStart(2, '0');
-								const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
-								const newYear = dateObj.getFullYear();
-
-								this.date = new Date(`${newYear}-${newMonth}-${newDay}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}}`);
-							} else {
-								this.date = new Date(`${year}-${month}-${day}T${timePart}`);
-							}
-						} else if (isValid(date, format_types['DD-MM-YYYY'])) {
-							const [day, month, year] = date.split('-');
-							this.date = new Date(`${year}-${month}-${day}`);
-						} else if (isValid(date, format_types['DD-MM-YYYY HH:mm:ss'])) {
-							const [datePart, timePart] = date.split(' ');
-							const [day, month, year] = datePart.split('-');
-							let [hours, minutes, seconds] = timePart.split(':').map(Number);
-							if (hours >= 24) {
-								const extraDays = Math.floor(hours / 24);
-								hours = hours % 24;
-
-								const dateObj = new Date(`${year}-${month}-${day}`);
-								dateObj.setDate(dateObj.getDate() + extraDays);
-
-								const newDay = String(dateObj.getDate()).padStart(2, '0');
-								const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
-								const newYear = dateObj.getFullYear();
-
-								this.date = new Date(
-									`${newYear}-${newMonth}-${newDay}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`,
-								);
-							} else {
-								this.date = new Date(`${year}-${month}-${day}T${timePart}`);
-							}
-						} else if (isValid(date, format_types['DD-MM-YYYY HH:mm'])) {
-							const [datePart, timePart] = date.split(' ');
-							const [day, month, year] = datePart.split('-');
-							let [hours, minutes] = timePart.split(':').map(Number);
-							if (hours >= 24) {
-								const extraDays = Math.floor(hours / 24);
-								hours = hours % 24;
-
-								const dateObj = new Date(`${year}-${month}-${day}`);
-								dateObj.setDate(dateObj.getDate() + extraDays);
-
-								const newDay = String(dateObj.getDate()).padStart(2, '0');
-								const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
-								const newYear = dateObj.getFullYear();
-
-								this.date = new Date(`${newYear}-${newMonth}-${newDay}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`);
-							} else {
-								this.date = new Date(`${year}-${month}-${day}T${timePart}`);
-							}
-						} else if (isValid(date, format_types['YYYYMMDD'])) {
-							const year = String(date.substring(0, 4), 10); // Extract year
-							const month = String(date.substring(4, 6), 10); // Extract month
-							const day = String(date.substring(6, 8), 10); // Extract day
-
-							this.date = new Date(`${year}-${month}-${day}`);
-						}
-						if (this.date === false) {
-							this.date = new Date(`${date}`);
 						}
 					}
 				}
 			}
+
 			if (is_can_cache && cached) {
 				this.date = new Date(cached.getTime());
 			} else {
@@ -299,7 +366,9 @@ class KkDate {
 				}
 			}
 		}
-		this.temp_config = {};
+		this.temp_config = {
+			rtf: {},
+		};
 	}
 
 	/**
@@ -461,6 +530,7 @@ class KkDate {
 		if (!this.temp_config) {
 			this.temp_config = {
 				locale: global_config.locale || 'en-en',
+				rtf: {},
 			};
 		}
 		return this.date.toLocaleDateString(this.temp_config.locale, options);
@@ -478,6 +548,7 @@ class KkDate {
 		if (!this.temp_config) {
 			this.temp_config = {
 				locale: global_config.locale || 'en-en',
+				rtf: {},
 			};
 		}
 		return this.date.toLocaleString(this.temp_config.locale, options);
@@ -495,6 +566,7 @@ class KkDate {
 		if (!this.temp_config) {
 			this.temp_config = {
 				locale: global_config.locale || 'en-en',
+				rtf: {},
 			};
 		}
 		return this.date.toLocaleTimeString(this.temp_config.locale, options);
@@ -613,7 +685,7 @@ class KkDate {
 	 * @param {*} template
 	 * @returns {Array|Error}
 	 */
-	diff_range(end, type, template = 'YYYY-MM-DD') {
+	diff_range(end, type, template = format_types['YYYY-MM-DD']) {
 		const diffed = diff(this, end, type);
 		const rangeDates = [];
 		rangeDates.push(formatter(this, template));
@@ -700,11 +772,13 @@ class KkDate {
 	config(options) {
 		if (options.timezone) {
 			this.temp_config.timezone = options.timezone;
+			this.temp_config.rtf = {};
 			this.date = parseWithTimezone(this, global_config.timezone, options.timezone);
 		}
 		try {
 			if (options.locale) {
 				this.temp_config.locale = options.locale;
+				this.temp_config.rtf[options.locale] = new Intl.RelativeTimeFormat(options.locale, { numeric: 'auto' });
 				if (cached_dateTimeFormat.temp['dddd'][options.locale]) {
 					return this;
 				}
@@ -729,6 +803,7 @@ class KkDate {
 				}
 			}
 		} catch (error) {
+			console.error(error);
 			throw new Error('locale not valid for BCP 47, config error !');
 		}
 		return this;
@@ -744,6 +819,7 @@ class KkDate {
 		try {
 			isInvalid(this.date);
 		} catch (error) {
+			console.error(error);
 			return false;
 		}
 		return true;
@@ -777,6 +853,147 @@ class KkDate {
 		this.date = parseWithTimezone(this, global_config.timezone, timezone);
 		return this;
 	}
+
+	/**
+	 * @description Returns startOf date of the unit of time.
+	 * @param {'year'|'month'|'week'|'day'|'hour'|'minute'|'second'} unit
+	 * @returns {KkDate|Error}
+	 */
+	startOf(unit) {
+		switch (unit) {
+			case 'year':
+				this.date.setMonth(0, 1);
+				this.date.setHours(0, 0, 0, 0);
+				break;
+			case 'month':
+				this.date.setDate(1);
+				this.date.setHours(0, 0, 0, 0);
+				break;
+			case 'week': {
+				const dayOfWeek = this.date.getDay();
+				this.date.setDate(this.date.getDate() - dayOfWeek);
+				this.date.setHours(0, 0, 0, 0);
+				break;
+			}
+			case 'day':
+				this.date.setHours(0, 0, 0, 0);
+				break;
+			case 'hour':
+				this.date.setMinutes(0, 0, 0);
+				break;
+			case 'minute':
+				this.date.setSeconds(0, 0);
+				break;
+			case 'second':
+				this.date.setMilliseconds(0);
+				break;
+			default:
+				throw new Error(`Invalid unit for startOf: ${unit}`);
+		}
+		return this;
+	}
+
+	/**
+	 * @description returns endOf date of the unit of time.
+	 * @param {'year'|'month'|'week'|'day'|'hour'|'minute'|'second'} unit
+	 * @returns {KkDate|Error}
+	 */
+	endOf(unit) {
+		switch (unit) {
+			case 'year':
+				this.date.setMonth(11, 31);
+				this.date.setHours(23, 59, 59, 999);
+				break;
+			case 'month': {
+				const year = this.date.getFullYear();
+				const month = this.date.getMonth();
+				this.date.setDate(new Date(year, month + 1, 0).getDate());
+				this.date.setHours(23, 59, 59, 999);
+				break;
+			}
+			case 'week': {
+				const dayOfWeek = this.date.getDay();
+				this.date.setDate(this.date.getDate() + (6 - dayOfWeek));
+				this.date.setHours(23, 59, 59, 999);
+				break;
+			}
+			case 'day':
+				this.date.setHours(23, 59, 59, 999);
+				break;
+			case 'hour':
+				this.date.setMinutes(59, 59, 999);
+				break;
+			case 'minute':
+				this.date.setSeconds(59, 999);
+				break;
+			case 'second':
+				this.date.setMilliseconds(999);
+				break;
+			default:
+				throw new Error(`Invalid unit for endOf: ${unit}`);
+		}
+		return this;
+	}
+
+	/**
+	 * @description Returns the relative time from now.
+	 * @returns {string|Error} - "5 minutes ago"
+	 */
+	fromNow() {
+		isInvalid(this.date);
+
+		const now = Date.now();
+		const diffMs = this.date.getTime() - now;
+		const diffSeconds = Math.round(diffMs / 1000);
+		const diffMinutes = Math.round(diffSeconds / 60);
+		const diffHours = Math.round(diffMinutes / 60);
+		const diffDays = Math.round(diffHours / 24);
+		const diffMonths = Math.round(diffDays / 30.44); // approx. 30.44 days in a month
+		const diffYears = Math.round(diffDays / 365.25); // include leap years approx.
+
+		const locale = this.temp_config?.locale || global_config.locale || 'en';
+
+		let rtf = this.temp_config.rtf[locale] || global_config.rtf[locale];
+
+		if (!rtf) {
+			try {
+				rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+				this.temp_config.rtf[locale] = rtf;
+			} catch (error) {
+				throw new Error(`Failed to create Intl.RelativeTimeFormat for locale "${locale}": ${error}.`);
+			}
+		}
+
+		let value;
+		let unit;
+
+		// Determine the best unit to display
+		if (Math.abs(diffSeconds) < 45) {
+			value = diffSeconds;
+			unit = 'second';
+		} else if (Math.abs(diffMinutes) < 45) {
+			value = diffMinutes;
+			unit = 'minute';
+		} else if (Math.abs(diffHours) < 22) {
+			value = diffHours;
+			unit = 'hour';
+		} else if (Math.abs(diffDays) < 26) {
+			value = diffDays;
+			unit = 'day';
+		} else if (Math.abs(diffMonths) < 11) {
+			value = diffMonths;
+			unit = 'month';
+		} else {
+			value = diffYears;
+			unit = 'year';
+		}
+
+		try {
+			return rtf.format(value, unit);
+		} catch (error) {
+			throw new Error(`couldn't format relative time: ${error}`);
+		}
+	}
 }
 
 /**
@@ -793,6 +1010,7 @@ function isInvalid(date) {
 			throw new Error('Invalid Date');
 		}
 	} catch (error) {
+		console.error(error);
 		throw new Error('Invalid Date');
 	}
 	return true;
@@ -979,6 +1197,10 @@ function formatter(orj_this, template = null) {
 			const result = converter(orj_this.date, ['day', 'year']);
 			return `${result.day} ${dateTimeFormat(orj_this, 'MMMM').format(orj_this.date)} ${result.year} ${dateTimeFormat(orj_this, 'dddd').format(orj_this.date)}`;
 		}
+		case format_types['DD MMM YYYY dddd']: {
+			const result = converter(orj_this.date, ['day', 'year']);
+			return `${result.day} ${dateTimeFormat(orj_this, 'MMM').format(orj_this.date)} ${result.year} ${dateTimeFormat(orj_this, 'dddd').format(orj_this.date)}`;
+		}
 		case format_types['MMMM YYYY']: {
 			const result = converter(orj_this.date, ['year']);
 			return `${dateTimeFormat(orj_this, 'MMMM').format(orj_this.date)} ${result.year}`;
@@ -986,6 +1208,10 @@ function formatter(orj_this, template = null) {
 		case format_types['DD MMMM dddd YYYY']: {
 			const result = converter(orj_this.date, ['day', 'year']);
 			return `${result.day} ${dateTimeFormat(orj_this, 'MMMM').format(orj_this.date)} ${dateTimeFormat(orj_this, 'dddd').format(orj_this.date)} ${result.year}`;
+		}
+		case format_types['DD MMM dddd, YYYY']: {
+			const result = converter(orj_this.date, ['day', 'year']);
+			return `${result.day} ${dateTimeFormat(orj_this, 'MMM').format(orj_this.date)} ${dateTimeFormat(orj_this, 'dddd').format(orj_this.date)}, ${result.year}`;
 		}
 		case format_types['MMM']: {
 			return dateTimeFormat(orj_this, 'MMM').format(orj_this.date);
@@ -1009,6 +1235,22 @@ function formatter(orj_this, template = null) {
 		case format_types['DD MMM YYYY HH:mm']: {
 			const result = converter(orj_this.date, ['day', 'year', 'hours', 'minutes']);
 			return `${result.day} ${dateTimeFormat(orj_this, 'MMM').format(orj_this.date)} ${result.year} ${result.hours}:${result.minutes}`;
+		}
+		case format_types['YYYY-MM']: {
+			const result = converter(orj_this.date, ['month', 'year']);
+			return `${result.year}-${result.month}`;
+		}
+		case format_types['DD MMMM dddd']: {
+			return `${converter(orj_this.date, ['day']).day} ${dateTimeFormat(orj_this, 'MMMM').format(orj_this.date)} ${dateTimeFormat(orj_this, 'dddd').format(orj_this.date)}`;
+		}
+		case format_types['YYYY-DD-MM']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year']);
+			return `${result.year}-${result.day}-${result.month}`;
+		}
+		case format_types['D MMMM YYYY']: {
+			const day = converter(orj_this.date, ['day'], { pad: false }).day;
+			const year = converter(orj_this.date, ['year']).year;
+			return `${day} ${dateTimeFormat(orj_this, 'MMMM').format(orj_this.date)} ${year}`;
 		}
 		case null: {
 			const timezoneOffset = -orj_this.date.getTimezoneOffset();
@@ -1068,9 +1310,16 @@ function config(options) {
 			cached_dateTimeFormat.MMM = new Intl.DateTimeFormat(global_config.locale, {
 				month: 'short',
 			});
+			try {
+				global_config.rtf[global_config.locale] = new Intl.RelativeTimeFormat(global_config.locale, { numeric: 'auto' });
+			} catch (error) {
+				console.error(global_config.locale, error);
+				throw new Error('locale not valid for BCP 47 / relative time formatting');
+			}
 		}
 	} catch (error) {
-		throw new Error('locale not valid for BCP 47');
+		console.error(error);
+		throw new Error('locale not valid for BCP 47 / config');
 	}
 	if (options.timezone && global_config.timezone !== options.timezone) {
 		checkTimezone(options.timezone);
