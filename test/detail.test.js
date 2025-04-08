@@ -171,6 +171,19 @@ describe('kk_date format', () => {
 		expect(new kk_date('05 December 2023').format('YYYY-MM-DD')).toBe('2023-12-05');
 		expect(new kk_date('31 July 2025').format('YYYY-MM-DD')).toBe('2025-07-31');
 	});
+
+	test('DD MMMM', () => {
+		const currentYear = new Date().getFullYear();
+		// Formatting
+		expect(new kk_date('2024-08-19').format('DD MMMM')).toBe('19 August');
+		expect(new kk_date('2024-01-01').format('DD MMMM')).toBe('01 January');
+		expect(new kk_date('2024-12-31').format('DD MMMM')).toBe('31 December');
+		expect(new kk_date('2024-08-19').config({ locale: 'tr-tr' }).format('DD MMMM')).toBe('19 Ağustos');
+		// Parsing (defaults to current year)
+		expect(new kk_date('19 August').format('YYYY-MM-DD')).toBe(`${currentYear}-08-19`);
+		expect(new kk_date('01 January').format('YYYY-MM-DD')).toBe(`${currentYear}-01-01`);
+		expect(new kk_date('31 December').format('YYYY-MM-DD')).toBe(`${currentYear}-12-31`);
+	});
 });
 
 describe('kk_date startOf / endOf', () => {

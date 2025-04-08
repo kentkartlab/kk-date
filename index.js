@@ -348,6 +348,13 @@ class KkDate {
 								const year = parts[3];
 								this.date = new Date(`${year}-${month}-${day.padStart(2, '0')}`); // Ensure day is padded for Date constructor
 								this.detected_format = format_types['dddd, DD MMMM YYYY'];
+							} else if (isValid(date, format_types['DD MMMM'])) {
+								const currentYear = new Date().getFullYear();
+								const parts = date.split(' ');
+								const day = parts[0];
+								const month = isValidMonth(parts[1]);
+								this.date = new Date(`${currentYear}-${month}-${day.padStart(2, '0')}`);
+								this.detected_format = format_types['DD MMMM'];
 							}
 							if (this.date === false) {
 								this.date = new Date(`${date}`);
@@ -1227,7 +1234,8 @@ function formatter(orj_this, template = null) {
 			return `${result.day} ${dateTimeFormat(orj_this, 'MMM').format(orj_this.date)} ${result.year}`;
 		}
 		case format_types['DD MMM']: {
-			return `${converter(orj_this.date, ['day']).day} ${dateTimeFormat(orj_this, 'MMM').format(orj_this.date)}`;
+			const result = converter(orj_this.date, ['day']);
+			return `${result.day} ${dateTimeFormat(orj_this, 'MMM').format(orj_this.date)}`;
 		}
 		case format_types['MMM YYYY']: {
 			return `${dateTimeFormat(orj_this, 'MMM').format(orj_this.date)} ${converter(orj_this.date, ['year']).year}`;
@@ -1246,6 +1254,10 @@ function formatter(orj_this, template = null) {
 		case format_types['YYYY-DD-MM']: {
 			const result = converter(orj_this.date, ['day', 'month', 'year']);
 			return `${result.year}-${result.day}-${result.month}`;
+		}
+		case format_types['DD MMMM']: {
+			const result = converter(orj_this.date, ['day']);
+			return `${result.day} ${dateTimeFormat(orj_this, 'MMMM').format(orj_this.date)}`;
 		}
 		case format_types['D MMMM YYYY']: {
 			const day = converter(orj_this.date, ['day'], { pad: false }).day;
