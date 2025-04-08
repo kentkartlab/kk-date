@@ -152,6 +152,17 @@ new kk_date('2024-01-05').set(3, 'month').format('YYYY-MM-DD')
 // 2024-03-05
 ```
 
+### Supported Time Units for add():
+
+```javascript
+seconds
+minutes
+hours
+days
+months
+years
+```
+
 #### Date Comparison:
 ```javascript
 // Get difference between dates
@@ -196,6 +207,24 @@ new kk_date('2024-01-01').isValid()
 // Check if time is valid
 new kk_date('23:50:55').isValid()
 // true
+```
+
+#### Date Format Validation:
+```javascript
+// Check if date format is valid
+kk_date.isValid('2024-01-01', 'YYYY-MM-DD')
+// true
+
+// Check if time format is valid
+kk_date.isValid('23:50:55', 'HH:mm:ss')
+// true
+
+// False example
+kk_date.isValid('23:50', 'HH:mm:ss')
+// false
+
+kk_date.isValid('2025-01-01', 'YYYY.MM.DD HH:mm:ss')
+// false
 ```
 
 #### Timezone Support:
@@ -369,17 +398,6 @@ MMM                          // Mar (short month name)
 - `X` - Unix timestamp (seconds)
 ```
 
-### Supported Time Units for add():
-
-```javascript
-seconds
-minutes
-hours
-days
-months
-years
-```
-
 ### Native Date Methods:
 All native JavaScript Date methods are supported:
 - `.toDateString()`
@@ -390,17 +408,6 @@ All native JavaScript Date methods are supported:
 - `.toLocaleTimeString(locales, options)`
 - `.toTimeString()`
 - `.valueOf()`
-
-#### .add() supported types:
-
-```console
-seconds
-minutes
-hours
-days
-months
-years
-```
 
 ## Performance
 

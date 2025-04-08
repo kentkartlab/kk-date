@@ -337,6 +337,12 @@ describe('kk_date valid / invalid', () => {
 		expect(new kk_date('19 Aug').isValid()).toBe(true);
 		expect(new kk_date('19 Aug 2024 14:30').isValid()).toBe(true);
 	});
+
+	test('is valid format', () => {
+		expect(kk_date.isValid(`${test_date}`, 'YYYY-MM-DD')).toBe(true);
+		expect(kk_date.isValid(`${test_date}`, 'YYYY.MM.DD')).toBe(false);
+		expect(kk_date.isValid(`${test_date}`, 'HH:mm:ss')).toBe(false);
+	});
 });
 
 describe('kk_date duration', () => {

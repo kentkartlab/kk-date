@@ -43,7 +43,7 @@ module.exports.config = (options = { defaultTtl }) => {
 			return true;
 		}
 	} catch (error) {
-		console.error('nope-redis -> config error', error);
+		console.error('nope-redis -> config error', error.message);
 	}
 	return false;
 };
@@ -68,7 +68,7 @@ module.exports.setItemAsync = async (key, value, ttl = defaultTtl) => {
 		};
 		return true;
 	} catch (error) {
-		console.error('nope-redis -> Cant Set Error! ', error);
+		console.error('nope-redis -> Cant Set Error! ', error.message);
 		return false;
 	}
 };
@@ -90,7 +90,7 @@ module.exports.itemStats = (key) => {
 		}
 		return null;
 	} catch (error) {
-		console.error('nope-redis -> Cant get item stats Error! ', error);
+		console.error('nope-redis -> Cant get item stats Error! ', error.message);
 		return false;
 	}
 };
@@ -113,7 +113,7 @@ module.exports.getItem = (key) => {
 		}
 		return null;
 	} catch (error) {
-		console.error('nope-redis -> Crital error! ', error);
+		console.error('nope-redis -> Crital error! ', error.message);
 		return false;
 	}
 };
@@ -134,7 +134,7 @@ module.exports.deleteItem = (key) => {
 		}
 		return true;
 	} catch (error) {
-		console.error('nope-redis -> Cant delete item', error);
+		console.error('nope-redis -> Cant delete item', error.message);
 		return false;
 	}
 };
@@ -153,7 +153,7 @@ module.exports.flushAll = () => {
 		defaultMemory(false);
 		return true;
 	} catch (error) {
-		console.error('nope-redis -> Cant flush!', error);
+		console.error('nope-redis -> Cant flush!', error.message);
 		return false;
 	}
 };
@@ -186,7 +186,7 @@ module.exports.stats = (config = { showKeys: true, showTotal: true, showSize: fa
 		}
 		return result;
 	} catch (error) {
-		console.error('nope-redis -> stats error!', error);
+		console.error('nope-redis -> stats error!', error.message);
 		return false;
 	}
 };
@@ -215,7 +215,7 @@ function defaultMemory(withConfig = false) {
 			memory.config = JSON.parse(JSON.stringify(defaultMemory.config));
 		}
 	} catch (error) {
-		console.error('nope-redis -> Cant default memory!', error);
+		console.error('nope-redis -> Cant default memory!', error.message);
 		return false;
 	}
 }
@@ -268,11 +268,10 @@ function roughSizeOfObject(object) {
 		}
 		return formatSizeUnits(bytes);
 	} catch (error) {
-		console.error('nope-redis -> roughSizeOfObject error!', error);
+		console.error('nope-redis -> roughSizeOfObject error!', error.message);
 		return 'Error !';
 	}
 }
-
 
 /**
  * deleter for expired key
@@ -334,7 +333,7 @@ function runner() {
 				}
 				memory.config.nextKiller = Math.floor(new Date() / 1000) + intervalSecond;
 			} catch (error) {
-				console.error('nope-redis -> Critical Error flushed all data! > ', error);
+				console.error('nope-redis -> Critical Error flushed all data! > ', error.message);
 				clearInterval(runnerInterval);
 				defaultMemory(true);
 				criticalError++;
@@ -342,7 +341,7 @@ function runner() {
 			}
 		}, intervalSecond * 1000);
 	} catch (error) {
-		console.error('nope-redis -> Critical Error flushed all data! > ', error);
+		console.error('nope-redis -> Critical Error flushed all data! > ', error.message);
 		if (typeof runnerInterval !== 'undefined') {
 			clearInterval(runnerInterval);
 		}

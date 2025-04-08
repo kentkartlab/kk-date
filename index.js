@@ -809,8 +809,7 @@ class KkDate {
 					cached_dateTimeFormat.temp['MMM'][options.locale] = new Intl.DateTimeFormat(options.locale, { month: 'short' });
 				}
 			}
-			// biome-ignore lint/correctness/noUnusedVariables: <explanation>
-		} catch (error) {
+		} catch {
 			throw new Error('locale not valid for BCP 47, config error !');
 		}
 		return this;
@@ -825,8 +824,7 @@ class KkDate {
 	isValid() {
 		try {
 			isInvalid(this.date);
-			// biome-ignore lint/correctness/noUnusedVariables: <explanation>
-		} catch (error) {
+		} catch {
 			return false;
 		}
 		return true;
@@ -967,7 +965,7 @@ class KkDate {
 				rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
 				this.temp_config.rtf[locale] = rtf;
 			} catch (error) {
-				throw new Error(`Failed to create Intl.RelativeTimeFormat for locale "${locale}": ${error}.`);
+				throw new Error(`Failed to create Intl.RelativeTimeFormat for locale "${locale}": ${error.message || 'Unkown Error'}.`);
 			}
 		}
 
@@ -998,7 +996,7 @@ class KkDate {
 		try {
 			return rtf.format(value, unit);
 		} catch (error) {
-			throw new Error(`couldn't format relative time: ${error}`);
+			throw new Error(`couldn't format relative time: ${error.messag || 'Unkown Error'}`);
 		}
 	}
 }
@@ -1016,8 +1014,7 @@ function isInvalid(date) {
 		if (Number.isNaN(date.valueOf())) {
 			throw new Error('Invalid Date');
 		}
-		// biome-ignore lint/correctness/noUnusedVariables: <explanation>
-	} catch (error) {
+	} catch {
 		throw new Error('Invalid Date');
 	}
 	return true;
@@ -1279,6 +1276,7 @@ function formatter(orj_this, template = null) {
 }
 
 /**
+ * validation
  *
  * @param {KkDate.date_string} date_string
  * @param {string} template
@@ -1289,7 +1287,10 @@ function isValid(date_string, template) {
 		return true;
 	}
 	if (!format_types[template]) {
-		throw new Error('Invalid template');
+		throw new Error('Invalid template !');
+	}
+	if (!format_types_regex[template]) {
+		throw new Error('Unsported template for validation !');
 	}
 	const regex = format_types_regex[template];
 	if (!regex.test(date_string)) {
@@ -1324,13 +1325,11 @@ function config(options) {
 			});
 			try {
 				global_config.rtf[global_config.locale] = new Intl.RelativeTimeFormat(global_config.locale, { numeric: 'auto' });
-				// biome-ignore lint/correctness/noUnusedVariables: <explanation>
-			} catch (error) {
+			} catch {
 				throw new Error('locale not valid for BCP 47 / relative time formatting');
 			}
 		}
-		// biome-ignore lint/correctness/noUnusedVariables: <explanation>
-	} catch (error) {
+	} catch {
 		throw new Error('locale not valid for BCP 47 / config');
 	}
 	if (options.timezone && global_config.timezone !== options.timezone) {
@@ -1380,3 +1379,4 @@ module.exports.duration = duration;
 module.exports.caching = caching;
 module.exports.caching_status = caching_status;
 module.exports.caching_flush = nopeRedis.flushAll;
+module.exports.isValid = isValid;

@@ -79,8 +79,7 @@ function getTimezoneOffset(timezone) {
 		// save to cache
 		timezone_cache.set(timezone, { offset: totalOffset, timestamp: now });
 		return totalOffset;
-		// biome-ignore lint/correctness/noUnusedVariables: <explanation>
-	} catch (error) {
+	} catch {
 		throw Error('check timezone');
 	}
 }
@@ -117,8 +116,7 @@ function parseWithTimezone(kkDate, global_timezone, timezone, is_init = false) {
 function checkTimezone(timezone) {
 	try {
 		new Intl.DateTimeFormat('en-US', { timeZone: timezone });
-		// biome-ignore lint/correctness/noUnusedVariables: <explanation>
-	} catch (error) {
+	} catch {
 		throw Error('Invalid/Timezone');
 	}
 	return true;
