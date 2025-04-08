@@ -1044,7 +1044,7 @@ function isKkDate(value = {}) {
 function diff(start, end, type, is_decimal = false, turn_difftime = false) {
 	const startDate = start.getTime();
 	const endDate = new KkDate(end).getTime();
-	let type_value = null;
+	let type_value = 0;
 	switch (type) {
 		case 'seconds':
 			type_value = 1;

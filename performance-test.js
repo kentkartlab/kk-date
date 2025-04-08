@@ -3,7 +3,7 @@ const moment = require('moment');
 const dayjs = require('dayjs');
 const isBetween = require('dayjs/plugin/isBetween');
 
-KkDate.caching({ status: true });
+KkDate.caching({ status: false });
 
 // Initialize dayjs plugins
 dayjs.extend(isBetween);
@@ -113,8 +113,8 @@ const testCases = [
 		name: 'Test 9: isValid Format',
 		input: '23:50:55',
 		kkDate: () => KkDate.isValid('23:50:55', 'HH:mm:ss'),
-		moment: () => moment('23:50:55', 'HH:mm:ss').isValid(),
-		dayjs: () => dayjs('23:50:55', 'HH:mm:ss').isValid(),
+		moment: () => moment('23:50:55', 'HH:mm:ss', true).isValid(),
+		dayjs: () => dayjs('23:50:55', 'HH:mm:ss', true).isValid(),
 	},
 	{
 		name: 'Test 10: 1723996677',
