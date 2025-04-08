@@ -64,6 +64,7 @@ const format_types = {
 	'DD MMMM dddd': 'DD MMMM dddd',
 	'YYYY-DD-MM': 'YYYY-DD-MM',
 	'D MMMM YYYY': 'D MMMM YYYY',
+	'DD MMMM': 'DD MMMM', // 19 August
 };
 
 const format_types_regex = {
@@ -119,6 +120,7 @@ const format_types_regex = {
 	'YYYY MMM DD': /^(|17|18|19|20|21)\d\d [\p{L}\p{M}]+ (0[1-9]|[12][0-9]|3[01])$/u,
 	'YYYY MMMM DD': /^(|17|18|19|20|21)\d\d [\p{L}\p{M}]+ (0[1-9]|[12][0-9]|3[01])$/u,
 	'YYYY-MM-DDTHH:mm:ss': /^(17|18|19|20|21)\d\d-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01]\d|2[0-3]):([0-5]\d):([0-5]\d)$/,
+	'DD MMMM': /^(0?[1-9]|[12][0-9]|3[01]) \p{L}+$/u,
 };
 
 const month_numbers = {
