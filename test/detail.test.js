@@ -457,6 +457,62 @@ describe('kk_date instance duration method', () => {
 	});
 });
 
+describe('KkDate Duration as... Methods', () => {
+	test('kk_date.duration as... methods', () => {
+		const dur = kk_date.duration(1.5, 'day'); // 1 day and 12 hours
+		const totalMs = 1.5 * 24 * 60 * 60 * 1000;
+
+		expect(dur.asMilliseconds()).toBe(totalMs);
+		expect(dur.asSeconds()).toBe(totalMs / 1000);
+		expect(dur.asMinutes()).toBe(totalMs / (60 * 1000));
+		expect(dur.asHours()).toBe(totalMs / (60 * 60 * 1000)); // 36
+		expect(dur.asDays()).toBe(1.5);
+		expect(dur.asWeeks()).toBe(1.5 / 7);
+		expect(dur.asMonths()).toBe(totalMs / (31 * 24 * 60 * 60 * 1000)); // Using approximate month length
+		expect(dur.asYears()).toBe(totalMs / (365 * 24 * 60 * 60 * 1000)); // Using approximate year length
+	});
+
+	test('kk_date().duration as... methods', () => {
+		const date = new kk_date();
+		const dur = date.duration(90); // 90 seconds = 1 minute 30 seconds
+		const totalMs = 90 * 1000;
+
+		expect(dur.asMilliseconds()).toBe(totalMs);
+		expect(dur.asSeconds()).toBe(90);
+		expect(dur.asMinutes()).toBe(1.5);
+		expect(dur.asHours()).toBe(1.5 / 60);
+		expect(dur.asDays()).toBe(1.5 / (60 * 24));
+		expect(dur.asWeeks()).toBe(1.5 / (60 * 24 * 7));
+		expect(dur.asMonths()).toBe(totalMs / (31 * 24 * 60 * 60 * 1000));
+		expect(dur.asYears()).toBe(totalMs / (365 * 24 * 60 * 60 * 1000));
+	});
+
+	test('kk_date.duration with larger values', () => {
+		const dur = kk_date.duration(2, 'year'); // 2 years
+		const totalMs = 2 * 365 * 24 * 60 * 60 * 1000;
+
+		expect(dur.asMilliseconds()).toBe(totalMs);
+		expect(dur.asSeconds()).toBe(totalMs / 1000);
+		expect(dur.asMinutes()).toBe(totalMs / (60 * 1000));
+		expect(dur.asHours()).toBe(totalMs / (60 * 60 * 1000));
+		expect(dur.asDays()).toBe(730);
+		expect(dur.asWeeks()).toBeCloseTo(104.2857); // Approximate
+		expect(dur.asMonths()).toBeCloseTo(23.548); // Approximate
+		expect(dur.asYears()).toBe(2);
+	});
+
+	test('kk_date().duration with zero value', () => {
+		const date = new kk_date();
+		// Duration method expects a positive number
+		expect(() => date.duration(0)).toThrow('Invalid time');
+	});
+
+	test('kk_date.duration with zero value', () => {
+		// Duration method expects a positive number
+		expect(() => kk_date.duration(0, 'seconds')).toThrow('Invalid time');
+	});
+});
+
 test('Localization formats', () => {
 	expect(new kk_date('2024-08-19').config({ locale: 'de-de' }).format('dddd')).toBe('Montag'); // German
 	expect(new kk_date('2024-08-19').config({ locale: 'es-es' }).format('dddd')).toBe('lunes'); // Spanish

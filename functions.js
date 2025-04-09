@@ -146,7 +146,7 @@ const padZero = (num) => String(num).padStart(2, '0');
  * @description It divides the date string into parts and returns an object.
  * @param {string} time
  * @param {"year" | "month" | "week" | "day" | "hour" | "minute" | "second"} type
- * @returns {{year: number, month: number, week:number, day: number, hour: number, minute: number, second: number}}
+ * @returns {{year: number, month: number, week:number, day: number, hour: number, minute: number, second: number, millisecond: number, $kk_date: {milliseconds: number}, asMilliseconds: function(): number, asSeconds: function(): number, asMinutes: function(): number, asHours: function(): number, asDays: function(): number, asWeeks: function(): number, asMonths: function(): number, asYears: function(): number}}
  * @example
  * // Example usage:
  * const result = duration(1234, 'minute');
@@ -154,6 +154,8 @@ const padZero = (num) => String(num).padStart(2, '0');
  * // Output: { year: 0, month: 0, week: 0, day: 0, hour: 20, minute: 34, second: 0,millisecond: 0 }
  */
 function duration(time, type) {
+	const _milliseconds = time * timeInMilliseconds[type];
+
 	const response = {
 		year: 0,
 		month: 0,
@@ -164,6 +166,14 @@ function duration(time, type) {
 		second: 0,
 		millisecond: 0,
 		$kk_date: { milliseconds: 0 },
+		asMilliseconds: () => _milliseconds,
+		asSeconds: () => _milliseconds / timeInMilliseconds.second,
+		asMinutes: () => _milliseconds / timeInMilliseconds.minute,
+		asHours: () => _milliseconds / timeInMilliseconds.hour,
+		asDays: () => _milliseconds / timeInMilliseconds.day,
+		asWeeks: () => _milliseconds / timeInMilliseconds.week,
+		asMonths: () => _milliseconds / timeInMilliseconds.month,
+		asYears: () => _milliseconds / timeInMilliseconds.year,
 	};
 
 	if (!time || typeof time !== 'number' || time < 0) {
@@ -174,8 +184,8 @@ function duration(time, type) {
 		throw new Error('Invalid type');
 	}
 
-	response.$kk_date.milliseconds = time * timeInMilliseconds[type];
-	let milliseconds = time * timeInMilliseconds[type];
+	response.$kk_date.milliseconds = _milliseconds;
+	let milliseconds = _milliseconds;
 	response.year = Math.floor(milliseconds / timeInMilliseconds.year);
 	milliseconds = milliseconds % timeInMilliseconds.year;
 	response.month = Math.floor(milliseconds / timeInMilliseconds.month);
