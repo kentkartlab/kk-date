@@ -996,7 +996,7 @@ class KkDate {
 		try {
 			return rtf.format(value, unit);
 		} catch (error) {
-			throw new Error(`couldn't format relative time: ${error.messag || 'Unkown Error'}`);
+			throw new Error(`couldn't format relative time: ${error.message || 'Unknown Error'}`);
 		}
 	}
 }
