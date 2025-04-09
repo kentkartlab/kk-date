@@ -124,7 +124,7 @@ describe('KkDate fromNow Tests', () => {
 
 	test('should default to English for unsupported/invalid locale', () => {
 		const date = new kk_date().add(-10, 'seconds');
-		expect(() => kk_date.config({ locale: 'absolutly-invalid-locale' })).toThrow();
+		expect(() => kk_date.config({ locale: 'absolutely-invalid-locale' })).toThrow();
 		expect(date.fromNow()).toMatch(/seconds ago/);
 		kk_date.config({ locale: 'en-US' });
 	});
