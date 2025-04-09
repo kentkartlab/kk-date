@@ -15,7 +15,6 @@ describe('kk_date diff', () => {
 
 	test('diff range', () => {
 		expect(new kk_date(`${test_date}`).add(-1, 'months').diff_range('2024-09-19', 'months')).toHaveLength(3);
-		expect(new kk_date(`${test_date}`).add(-1, 'months').diff_range('2024-09-19', 'months')).toHaveLength(3);
 	});
 });
 
