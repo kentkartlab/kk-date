@@ -348,6 +348,13 @@ class KkDate {
 								const year = parts[3];
 								this.date = new Date(`${year}-${month}-${day.padStart(2, '0')}`); // Ensure day is padded for Date constructor
 								this.detected_format = format_types['dddd, DD MMMM YYYY'];
+							} else if (isValid(date, format_types['DD MMMM'])) {
+								const currentYear = new Date().getFullYear();
+								const parts = date.split(' ');
+								const day = parts[0];
+								const month = isValidMonth(parts[1]);
+								this.date = new Date(`${currentYear}-${month}-${day.padStart(2, '0')}`);
+								this.detected_format = format_types['DD MMMM'];
 							}
 							if (this.date === false) {
 								this.date = new Date(`${date}`);
@@ -692,7 +699,9 @@ class KkDate {
 		for (let index = 1; index < diffed.diffTime + 1; index++) {
 			const date = new Date(this.date.getTime());
 			date.setSeconds(this.date.getSeconds() + diffed.type_value * index);
-			rangeDates.push(formatter(new KkDate(date), template));
+			const newKkDateInstance = new KkDate(date);
+			newKkDateInstance.temp_config = this.temp_config;
+			rangeDates.push(formatter(newKkDateInstance, template));
 		}
 		return rangeDates;
 	}
@@ -802,8 +811,7 @@ class KkDate {
 					cached_dateTimeFormat.temp['MMM'][options.locale] = new Intl.DateTimeFormat(options.locale, { month: 'short' });
 				}
 			}
-			// biome-ignore lint/correctness/noUnusedVariables: <explanation>
-		} catch (error) {
+		} catch {
 			throw new Error('locale not valid for BCP 47, config error !');
 		}
 		return this;
@@ -818,8 +826,7 @@ class KkDate {
 	isValid() {
 		try {
 			isInvalid(this.date);
-			// biome-ignore lint/correctness/noUnusedVariables: <explanation>
-		} catch (error) {
+		} catch {
 			return false;
 		}
 		return true;
@@ -960,7 +967,7 @@ class KkDate {
 				rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
 				this.temp_config.rtf[locale] = rtf;
 			} catch (error) {
-				throw new Error(`Failed to create Intl.RelativeTimeFormat for locale "${locale}": ${error}.`);
+				throw new Error(`Failed to create Intl.RelativeTimeFormat for locale "${locale}": ${error.message || 'Unkown Error'}.`);
 			}
 		}
 
@@ -991,7 +998,7 @@ class KkDate {
 		try {
 			return rtf.format(value, unit);
 		} catch (error) {
-			throw new Error(`couldn't format relative time: ${error}`);
+			throw new Error(`couldn't format relative time: ${error.message || 'Unknown Error'}`);
 		}
 	}
 }
@@ -1009,8 +1016,7 @@ function isInvalid(date) {
 		if (Number.isNaN(date.valueOf())) {
 			throw new Error('Invalid Date');
 		}
-		// biome-ignore lint/correctness/noUnusedVariables: <explanation>
-	} catch (error) {
+	} catch {
 		throw new Error('Invalid Date');
 	}
 	return true;
@@ -1040,7 +1046,7 @@ function isKkDate(value = {}) {
 function diff(start, end, type, is_decimal = false, turn_difftime = false) {
 	const startDate = start.getTime();
 	const endDate = new KkDate(end).getTime();
-	let type_value = null;
+	let type_value = 0;
 	switch (type) {
 		case 'seconds':
 			type_value = 1;
@@ -1227,7 +1233,8 @@ function formatter(orj_this, template = null) {
 			return `${result.day} ${dateTimeFormat(orj_this, 'MMM').format(orj_this.date)} ${result.year}`;
 		}
 		case format_types['DD MMM']: {
-			return `${converter(orj_this.date, ['day']).day} ${dateTimeFormat(orj_this, 'MMM').format(orj_this.date)}`;
+			const result = converter(orj_this.date, ['day']);
+			return `${result.day} ${dateTimeFormat(orj_this, 'MMM').format(orj_this.date)}`;
 		}
 		case format_types['MMM YYYY']: {
 			return `${dateTimeFormat(orj_this, 'MMM').format(orj_this.date)} ${converter(orj_this.date, ['year']).year}`;
@@ -1246,6 +1253,10 @@ function formatter(orj_this, template = null) {
 		case format_types['YYYY-DD-MM']: {
 			const result = converter(orj_this.date, ['day', 'month', 'year']);
 			return `${result.year}-${result.day}-${result.month}`;
+		}
+		case format_types['DD MMMM']: {
+			const result = converter(orj_this.date, ['day']);
+			return `${result.day} ${dateTimeFormat(orj_this, 'MMMM').format(orj_this.date)}`;
 		}
 		case format_types['D MMMM YYYY']: {
 			const day = converter(orj_this.date, ['day'], { pad: false }).day;
@@ -1267,6 +1278,7 @@ function formatter(orj_this, template = null) {
 }
 
 /**
+ * validation
  *
  * @param {KkDate.date_string} date_string
  * @param {string} template
@@ -1277,7 +1289,10 @@ function isValid(date_string, template) {
 		return true;
 	}
 	if (!format_types[template]) {
-		throw new Error('Invalid template');
+		throw new Error('Invalid template !');
+	}
+	if (!format_types_regex[template]) {
+		throw new Error('Unsported template for validation !');
 	}
 	const regex = format_types_regex[template];
 	if (!regex.test(date_string)) {
@@ -1312,13 +1327,11 @@ function config(options) {
 			});
 			try {
 				global_config.rtf[global_config.locale] = new Intl.RelativeTimeFormat(global_config.locale, { numeric: 'auto' });
-				// biome-ignore lint/correctness/noUnusedVariables: <explanation>
-			} catch (error) {
+			} catch {
 				throw new Error('locale not valid for BCP 47 / relative time formatting');
 			}
 		}
-		// biome-ignore lint/correctness/noUnusedVariables: <explanation>
-	} catch (error) {
+	} catch {
 		throw new Error('locale not valid for BCP 47 / config');
 	}
 	if (options.timezone && global_config.timezone !== options.timezone) {
@@ -1368,3 +1381,4 @@ module.exports.duration = duration;
 module.exports.caching = caching;
 module.exports.caching_status = caching_status;
 module.exports.caching_flush = nopeRedis.flushAll;
+module.exports.isValid = isValid;

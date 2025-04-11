@@ -150,6 +150,31 @@ new kk_date('2024-01-05').set(1, 'day').format('YYYY-MM-DD')
 // Set month
 new kk_date('2024-01-05').set(3, 'month').format('YYYY-MM-DD')
 // 2024-03-05
+
+// Get the start of a time unit
+new kk_date('2024-08-19 14:35:45').startOf('day').format('YYYY-MM-DD HH:mm:ss')
+// 2024-08-19 00:00:00
+
+new kk_date('2024-08-19 14:35:45').startOf('month').format('YYYY-MM-DD HH:mm:ss')
+// 2024-08-01 00:00:00
+
+// Get the end of a time unit
+new kk_date('2024-08-19 14:35:45').endOf('day').format('YYYY-MM-DD HH:mm:ss')
+// 2024-08-19 23:59:59
+
+new kk_date('2024-08-19 14:35:45').endOf('month').format('YYYY-MM-DD HH:mm:ss')
+// 2024-08-31 23:59:59
+```
+
+### Supported Time Units for add():
+
+```javascript
+seconds
+minutes
+hours
+days
+months
+years
 ```
 
 #### Date Comparison:
@@ -198,6 +223,24 @@ new kk_date('23:50:55').isValid()
 // true
 ```
 
+#### Date Format Validation:
+```javascript
+// Check if date format is valid
+kk_date.isValid('2024-01-01', 'YYYY-MM-DD')
+// true
+
+// Check if time format is valid
+kk_date.isValid('23:50:55', 'HH:mm:ss')
+// true
+
+// False example
+kk_date.isValid('23:50', 'HH:mm:ss')
+// false
+
+kk_date.isValid('2025-01-01', 'YYYY.MM.DD HH:mm:ss')
+// false
+```
+
 #### Timezone Support:
 ```javascript
 // Convert to specific timezone
@@ -222,9 +265,37 @@ new kk_date('2024-01-01').config({ locale: 'tr-TR' })
 kk_date.duration(1234, 'minute')
 // { year: 0, month: 0, week: 0, day: 0, hour: 20, minute: 34, second: 0, millisecond: 0 }
 
+// Getting Duration in Specific Units:
+const dur = kk_date.duration(1.5, 'day'); // 1 day and 12 hours
+dur.asDays();       // 1.5
+dur.asHours();      // 36
+dur.asMinutes();    // 2160
+dur.asSeconds();    // 129600
+dur.asMilliseconds(); // 129600000
+dur.asWeeks();      // 0.21428...
+dur.asMonths();     // ~0.048...
+dur.asYears();      // ~0.0041...
+
 // Get duration from date
 new kk_date('2024-01-01').duration(1234)
 // { year: 0, month: 0, week: 0, day: 0, hour: 0, minute: 20, second: 34 }
+```
+
+#### Relative Time:
+```javascript
+// Get relative time from now
+new kk_date().add(-5, 'minutes').fromNow()
+// "5 minutes ago"
+
+new kk_date().add(2, 'hours').fromNow()
+// "in 2 hours"
+
+new kk_date('2023-01-01').fromNow()
+// "last year" (or similar, depending on current date)
+
+// Relative time with localization
+new kk_date().add(-3, 'days').config({ locale: 'tr-TR' }).fromNow()
+// "3 gün önce"
 ```
 
 ### Supported Format Templates:
@@ -369,17 +440,6 @@ MMM                          // Mar (short month name)
 - `X` - Unix timestamp (seconds)
 ```
 
-### Supported Time Units for add():
-
-```javascript
-seconds
-minutes
-hours
-days
-months
-years
-```
-
 ### Native Date Methods:
 All native JavaScript Date methods are supported:
 - `.toDateString()`
@@ -390,17 +450,6 @@ All native JavaScript Date methods are supported:
 - `.toLocaleTimeString(locales, options)`
 - `.toTimeString()`
 - `.valueOf()`
-
-#### .add() supported types:
-
-```console
-seconds
-minutes
-hours
-days
-months
-years
-```
 
 ## Performance
 

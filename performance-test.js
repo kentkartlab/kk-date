@@ -3,7 +3,7 @@ const moment = require('moment');
 const dayjs = require('dayjs');
 const isBetween = require('dayjs/plugin/isBetween');
 
-KkDate.caching({ status: true });
+KkDate.caching({ status: false });
 
 // Initialize dayjs plugins
 dayjs.extend(isBetween);
@@ -33,9 +33,8 @@ function isValidResult(fn) {
 			return false;
 		}
 		return true;
-	} catch (error) {
-		return false;
-	}
+	} catch {}
+	return false;
 }
 
 // Test cases
@@ -109,6 +108,13 @@ const testCases = [
 		kkDate: () => new KkDate('23:50:55').isValid(),
 		moment: () => moment('23:50:55', 'HH:mm:ss').isValid(),
 		dayjs: () => dayjs('23:50:55', 'HH:mm:ss').isValid(),
+	},
+	{
+		name: 'Test 9: isValid Format',
+		input: '23:50:55',
+		kkDate: () => KkDate.isValid('23:50:55', 'HH:mm:ss'),
+		moment: () => moment('23:50:55', 'HH:mm:ss', true).isValid(),
+		dayjs: () => dayjs('23:50:55', 'HH:mm:ss', true).isValid(),
 	},
 	{
 		name: 'Test 10: 1723996677',
@@ -246,7 +252,7 @@ const testCases = [
 ];
 
 // Run performance tests
-const results = testCases.map((test, index) => {
+const results = testCases.map((test) => {
 	const kkDateTime = measureExecutionTime(test.kkDate);
 
 	// Check if each library's result is valid
