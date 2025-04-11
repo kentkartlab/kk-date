@@ -4,6 +4,7 @@ const test_date = '2024-08-19';
 const test_time = '23:50:59';
 const timestamp = 1724100659;
 const global_timezone = 'Europe/Istanbul';
+
 kk_date.config({ timezone: global_timezone });
 
 describe('format', () => {
@@ -403,6 +404,7 @@ describe('combined time tests', () => {
 			}
 			expect(date.format('YYYY-MM-DD HH:mm:ss')).toBe(expected);
 		}
+		// set global default
 		kk_date.config({ timezone: global_timezone });
 	});
 

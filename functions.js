@@ -8,6 +8,7 @@ const {
 	format_types,
 	cached_dateTimeFormat,
 	timezone_cache,
+	global_config,
 } = require('./constants');
 
 const months = {};
@@ -61,11 +62,11 @@ function isValidDayName(dayname) {
  */
 function getTimezoneOffset(timezone) {
 	try {
-		const now = Date.now();
+		const new_date = new Date();
 
 		if (timezone_cache.has(timezone)) {
 			const { offset, timestamp } = timezone_cache.get(timezone);
-			if (now - timestamp < cache_ttl) {
+			if (new_date.getTime() - timestamp < cache_ttl) {
 				return offset; // Cache is avaible return from cache
 			}
 		}
@@ -77,7 +78,7 @@ function getTimezoneOffset(timezone) {
 		const totalOffset = offsetHours * 3600 + offsetMinutes * 60;
 
 		// save to cache
-		timezone_cache.set(timezone, { offset: totalOffset, timestamp: now });
+		timezone_cache.set(timezone, { offset: totalOffset, timestamp: new_date.getTime() });
 		return totalOffset;
 	} catch {
 		throw Error('check timezone');
@@ -103,7 +104,10 @@ function parseWithTimezone(kkDate, global_timezone, timezone, is_init = false) {
 	if (kkDate.temp_config && global_timezone && timezone === kkDate.temp_config.timezone) {
 		extraAddDiff = getTimezoneOffset(timezone) - getTimezoneOffset(global_timezone);
 	}
-	const tzTime = utcTime + targetOffset + localOffset + extraAddDiff;
+	if (!kkDate.temp_config) {
+		extraAddDiff = getTimezoneOffset(global_config.userTimezone) - getTimezoneOffset(global_config.timezone);
+	}
+	const tzTime = utcTime + targetOffset + localOffset + extraAddDiff * 1000;
 	return new Date(tzTime);
 }
 
