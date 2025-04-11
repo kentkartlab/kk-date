@@ -19,9 +19,18 @@
 		"url": "git+https://github.com/kentkartlab/kk-date.git"
 	},
 	"maintainers": [
-		{ "name": "Orhan AYDOGDU", "email": "orhan.aydogdu@kentkart.com.tr" },
-		{ "name": "Enes KAHRAMAN", "email": "enes.kahraman@kentkart.com.tr" },
-		{ "name": "Ugur Ozan YILDIZ", "email": "ozan.yildiz@kentkart.com.tr" }
+		{
+			"name": "Orhan AYDOGDU",
+			"email": "orhan.aydogdu@kentkart.com.tr"
+		},
+		{
+			"name": "Enes KAHRAMAN",
+			"email": "enes.kahraman@kentkart.com.tr"
+		},
+		{
+			"name": "Ugur Ozan YILDIZ",
+			"email": "ozan.yildiz@kentkart.com.tr"
+		}
 	],
 	"keywords": [
 		"kk-date",
@@ -43,6 +52,5 @@
 	"bugs": {
 		"url": "https://github.com/kentkartlab/kk-date/issues"
 	},
-	"homepage": "https://github.com/kentkartlab/kk-date#readme",
-	"devDependencies": {}
+	"homepage": "https://github.com/kentkartlab/kk-date#readme"
 }

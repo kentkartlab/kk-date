@@ -1,4 +1,4 @@
-const { describe, test, expect } = require('@jest/globals');
+const { describe, test, expect, beforeEach } = require('@jest/globals');
 const kk_date = require('../index');
 const test_date = '2024-08-19';
 const test_time = '23:50:59';
@@ -6,6 +6,9 @@ const timestamp = 1724100659;
 const timezone = 'Europe/Istanbul';
 
 describe('format', () => {
+	beforeEach(() => {
+		kk_date.config({ timezone: timezone });
+	 });
 	test('valid', () => {
 		expect(new kk_date(`${test_date}`, 'YYYY-MM-DD').format('YYYY-MM-DD')).toBe(`${test_date}`);
 		expect(new kk_date(`${test_time}`, 'HH:mm:ss').format('HH:mm:ss')).toBe(test_time);
@@ -399,8 +402,6 @@ describe('combined time tests', () => {
 			}
 			expect(date.format('YYYY-MM-DD HH:mm:ss')).toBe(expected);
 		}
-		// set global default
-		kk_date.config({ timezone: timezone });
 	});
 
 	test('should handle timezone *conversions* with complex operations', () => {
