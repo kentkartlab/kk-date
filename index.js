@@ -699,7 +699,9 @@ class KkDate {
 		for (let index = 1; index < diffed.diffTime + 1; index++) {
 			const date = new Date(this.date.getTime());
 			date.setSeconds(this.date.getSeconds() + diffed.type_value * index);
-			rangeDates.push(formatter(new KkDate(date), template));
+			const newKkDateInstance = new KkDate(date);
+			newKkDateInstance.temp_config = this.temp_config;
+			rangeDates.push(formatter(newKkDateInstance, template));
 		}
 		return rangeDates;
 	}
