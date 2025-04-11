@@ -22,7 +22,7 @@
 			"correctness": {
 				"noInvalidUseBeforeDeclaration": "error",
 				"noUndeclaredVariables": "error",
-                "noUnusedVariables": "error"
+				"noUnusedVariables": "error"
 			},
 			"style": {
 				"useNumberNamespace": "off",
