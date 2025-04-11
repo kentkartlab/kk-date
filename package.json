@@ -6,7 +6,8 @@
 	"scripts": {
 		"test": "npx jest",
 		"lint": "npx biome lint",
-		"format": "npx biome format"
+		"format": "npx biome format",
+		"husky": "npx husky"
 	},
 	"author": {
 		"name": "Orhan AYDOGDU",
