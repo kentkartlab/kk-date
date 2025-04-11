@@ -36,6 +36,7 @@ class KkDate {
 		let is_can_cache = false;
 		let cached = false;
 		this.detected_format = null;
+		console.log(this, global_config);
 		if (params.length === 0) {
 			this.date = new Date();
 		} else {
@@ -857,6 +858,7 @@ class KkDate {
 	 * @returns
 	 */
 	tz(timezone) {
+		this.temp_config.timezone = timezone;
 		this.date = parseWithTimezone(this, global_config.timezone, timezone);
 		return this;
 	}
