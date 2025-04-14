@@ -71,15 +71,14 @@ function getTimezoneOffset(timezone) {
 			}
 		}
 
-		const resolver = new Intl.DateTimeFormat('en-US', { timeZone: timezone, timeZoneName: 'longOffset' }).formatToParts(new Date());
+		const resolver = new Intl.DateTimeFormat('en-US', { timeZone: timezone, timeZoneName: 'longOffset' }).formatToParts(new_date);
 		const offset = resolver.find((part) => part.type === 'timeZoneName');
 		const offsetValue = offset.value.split('GMT')[1];
 		const [offsetHours, offsetMinutes = '0'] = offsetValue.split(':').map(Number);
 		const totalOffset = offsetHours * 3600 + offsetMinutes * 60;
-
 		// save to cache
-		timezone_cache.set(timezone, { offset: totalOffset, timestamp: new_date.getTime() });
-		return totalOffset;
+		timezone_cache.set(timezone, { offset: totalOffset * 1000, timestamp: new_date.getTime() });
+		return totalOffset * 1000;
 	} catch {
 		throw Error('check timezone');
 	}
@@ -93,21 +92,35 @@ function getTimezoneOffset(timezone) {
  * @param {boolean} is_init
  * @returns {Date|Error}
  */
-function parseWithTimezone(kkDate, global_timezone, timezone, is_init = false) {
-	if (timezone === global_timezone && !is_init) {
+function parseWithTimezone(kkDate, is_init = false) {
+	if (global_config.timezone === global_config.userTimezone && !is_init) {
 		return kkDate.date;
 	}
 	const utcTime = kkDate.date.getTime();
-	const localOffset = kkDate.date.getTimezoneOffset() * 60 * 1000;
-	const targetOffset = getTimezoneOffset(timezone) * 1000;
 	let extraAddDiff = 0;
-	if (kkDate.temp_config && global_timezone && timezone === kkDate.temp_config.timezone) {
-		extraAddDiff = getTimezoneOffset(timezone) - getTimezoneOffset(global_timezone);
+	let bigger = 0;
+	let smaller = 0;
+	let localOffset = 0;
+	if (
+		(global_config.timezone !== global_config.userTimezone && kkDate.detected_format === 'Xx') ||
+		(kkDate.temp_config.timezone && global_config.timezone !== kkDate.temp_config.timezone)
+	) {
+		const timezone1 = getTimezoneOffset(kkDate.temp_config.timezone || global_config.timezone);
+		const timezone2 = getTimezoneOffset(global_config.userTimezone);
+		if (timezone1 > timezone2) {
+			bigger = timezone1;
+			smaller = timezone2;
+		} else {
+			bigger = timezone2;
+			smaller = timezone2;
+		}
+		if (kkDate.temp_config.timezone) {
+			localOffset = kkDate.date.getTimezoneOffset() * 60 * 1000;
+		}
+
+		extraAddDiff = bigger - smaller;
 	}
-	if (!kkDate.temp_config) {
-		extraAddDiff = getTimezoneOffset(global_config.userTimezone) - getTimezoneOffset(global_config.timezone);
-	}
-	const tzTime = utcTime + targetOffset + localOffset + extraAddDiff * 1000;
+	const tzTime = utcTime + extraAddDiff + localOffset;
 	return new Date(tzTime);
 }
 

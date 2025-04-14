@@ -8,9 +8,6 @@ const global_timezone = 'Europe/Istanbul';
 kk_date.config({ timezone: global_timezone });
 
 describe('format', () => {
-	beforeEach(() => {
-		kk_date.config({ timezone: global_timezone });
-	});
 	test('valid', () => {
 		expect(new kk_date(`${test_date}`, 'YYYY-MM-DD').format('YYYY-MM-DD')).toBe(`${test_date}`);
 		expect(new kk_date(`${test_time}`, 'HH:mm:ss').format('HH:mm:ss')).toBe(test_time);
@@ -417,7 +414,7 @@ describe('combined time tests', () => {
 					{ type: 'add', value: 1, unit: 'seconds' },
 					{ type: 'add', value: 1, unit: 'minutes' },
 				],
-				expected: '2024-01-01 17:01:00',
+				expected: '2024-01-01 16:01:00',
 			},
 			{
 				input: '2024-12-31 23:59:59',
@@ -429,11 +426,10 @@ describe('combined time tests', () => {
 				expected: '2025-01-01 06:01:00',
 			},
 		];
-
 		for (const { input, timezone, operations, expected } of testCases) {
-			let date = new kk_date(input).tz(timezone);
+			const date = new kk_date(input).tz(timezone);
 			for (const { type, value, unit } of operations) {
-				date = type === 'add' ? date.add(value, unit) : date.add(-value, unit);
+				type === 'add' ? date.add(value, unit) : date.add(-value, unit);
 			}
 			expect(date.format('YYYY-MM-DD HH:mm:ss')).toBe(expected);
 		}

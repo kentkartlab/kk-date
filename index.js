@@ -36,6 +36,7 @@ class KkDate {
 		let is_can_cache = false;
 		let cached = false;
 		this.detected_format = null;
+		this.temp_config = {};
 		if (params.length === 0) {
 			this.date = new Date();
 		} else {
@@ -55,11 +56,13 @@ class KkDate {
 						const [year, day, month] = date.split('-');
 						this.date = new Date(`${year}-${month}-${day} 00:00:00`);
 						forced_format_founded = true;
+						this.detected_format = 'YYYY-DD-MM';
 					} else if (params[1] === format_types['YYYY-MM-DD']) {
 						is_can_cache = true;
 						const [year, month, day] = date.split('-');
 						this.date = new Date(`${year}-${month}-${day} 00:00:00`);
 						forced_format_founded = true;
+						this.detected_format = 'YYYY-MM-DD';
 					}
 				}
 			}
@@ -72,10 +75,13 @@ class KkDate {
 					} else if (stringed_date_length > 10) {
 						this.date = new Date(date);
 					}
+					this.detected_format = 'Xx';
 				} else if (isKkDate(date)) {
 					this.date = new Date(date.date.toUTCString());
+					this.detected_format = 'kkDate';
 				} else if (date instanceof Date) {
 					this.date = new Date(date.getTime());
+					this.detected_format = 'Date';
 				} else {
 					is_can_cache = true;
 					cached = nopeRedis.getItem(`${date}`);
@@ -371,10 +377,8 @@ class KkDate {
 				}
 			}
 		}
-		this.date = parseWithTimezone(this, global_config.timezone, global_config.timezone, true);
-		this.temp_config = {
-			rtf: {},
-		};
+		this.temp_config.rtf = {};
+		this.date = parseWithTimezone(this, true);
 	}
 
 	/**
@@ -609,7 +613,7 @@ class KkDate {
 		if (check_error) {
 			isInvalid(this.date);
 		}
-		return this.date.valueOf() + (getTimezoneOffset(global_config.userTimezone) * 1000 - getTimezoneOffset(global_config.timezone) * 1000);
+		return this.date.valueOf() + (getTimezoneOffset(global_config.userTimezone) - getTimezoneOffset(global_config.timezone));
 	}
 
 	/**
@@ -617,7 +621,7 @@ class KkDate {
 	 *
 	 * @param {number} amount
 	 * @param {'seconds'|'minutes'|'hours'|'days'|'months'|'years'} type - The unit of time type
-	 * @returns {KkDate|Error}
+	 * @returns {KkDate}
 	 */
 	add(amount, type) {
 		isInvalid(this.date);
@@ -710,7 +714,7 @@ class KkDate {
 	 *
 	 * @param {'second'|'minute'|'hour'|'day'|'month'|'year'} type - The unit of time type
 	 * @param {number} value
-	 * @returns {KkDate|Error}
+	 * @returns {KkDate}
 	 */
 	set(type, value) {
 		switch (type) {
@@ -781,7 +785,6 @@ class KkDate {
 		if (options.timezone) {
 			this.temp_config.timezone = options.timezone;
 			this.temp_config.rtf = {};
-			this.date = parseWithTimezone(this, global_config.timezone, options.timezone);
 		}
 		try {
 			if (options.locale) {
@@ -857,14 +860,14 @@ class KkDate {
 	 */
 	tz(timezone) {
 		this.temp_config.timezone = timezone;
-		this.date = parseWithTimezone(this, global_config.timezone, timezone);
+		this.date = parseWithTimezone(this);
 		return this;
 	}
 
 	/**
 	 * @description Returns startOf date of the unit of time.
 	 * @param {'year'|'month'|'week'|'day'|'hour'|'minute'|'second'} unit
-	 * @returns {KkDate|Error}
+	 * @returns {KkDate}
 	 */
 	startOf(unit) {
 		switch (unit) {
@@ -903,7 +906,7 @@ class KkDate {
 	/**
 	 * @description returns endOf date of the unit of time.
 	 * @param {'year'|'month'|'week'|'day'|'hour'|'minute'|'second'} unit
-	 * @returns {KkDate|Error}
+	 * @returns {KkDate}
 	 */
 	endOf(unit) {
 		switch (unit) {
