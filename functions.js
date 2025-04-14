@@ -83,41 +83,33 @@ function getTimezoneOffset(timezone) {
 		throw Error('check timezone');
 	}
 }
-
 /**
  * @description It parses the date with the timezone and returns the date.
  * @param {KkDate} kkDate
  * @param {string} customTimezone
  * @returns {Date|Error}
  */
-function parseWithTimezone(kkDate, customTimezone) {
-	if (!customTimezone && global_config.timezone === global_config.userTimezone) {
+function parseWithTimezone(kkDate, is_init = false) {
+	if (!kkDate.temp_config.timezone && global_config.timezone === global_config.userTimezone) {
 		return kkDate.date;
 	}
-	const utcTime = kkDate.date.getTime();
-	let extraAddDiff = 0;
-	let bigger = 0;
-	let smaller = 0;
-	let localOffset = 0;
 	if (kkDate.detected_format === 'Xx' || (kkDate.temp_config.timezone && global_config.timezone !== kkDate.temp_config.timezone)) {
-		const timezone1 = getTimezoneOffset(customTimezone || kkDate.temp_config.timezone || global_config.timezone);
-		const timezone2 = getTimezoneOffset(global_config.userTimezone);
-		if (timezone1 > timezone2) {
-			bigger = timezone1;
-			smaller = timezone2;
-		} else {
-			bigger = timezone2;
-			smaller = timezone2;
+		const utcTime = kkDate.date.getTime();
+		const temp_timezone = getTimezoneOffset(kkDate.temp_config.timezone);
+		const global_timezone = getTimezoneOffset(global_config.timezone);
+		const kk_ofset = kkDate.date.getTimezoneOffset() * 60 * 1000;
+		if (kkDate.detected_format === 'Xx' && global_config.timezone === global_config.userTimezone && is_init) {
+			return new Date(utcTime);
 		}
-		// timezone values are equal if timezone 1 and 2 are equal.
-		if (timezone1 !== timezone2 && kkDate.temp_config.timezone) {
-			localOffset = kkDate.date.getTimezoneOffset() * 60 * 1000;
+		if (kkDate.detected_format === 'Xx' && global_config.timezone !== global_config.userTimezone && is_init) {
+			return new Date(utcTime + kk_ofset + global_timezone);
 		}
-
-		extraAddDiff = bigger - smaller;
+		if (temp_timezone > 0) {
+			return new Date(utcTime + temp_timezone - global_timezone);
+		}
+		return new Date(utcTime + temp_timezone - global_timezone + (global_timezone + temp_timezone));
 	}
-	const tzTime = utcTime + extraAddDiff + localOffset;
-	return new Date(tzTime);
+	return kkDate.date;
 }
 
 /**

@@ -378,7 +378,7 @@ class KkDate {
 			}
 		}
 		this.temp_config.rtf = {};
-		this.date = parseWithTimezone(this);
+		this.date = parseWithTimezone(this, true);
 	}
 
 	/**
@@ -601,7 +601,7 @@ class KkDate {
 	 */
 	valueOf() {
 		isInvalid(this.date);
-		this.date.valueOf();
+		return this.date.valueOf();
 	}
 
 	/**
@@ -613,7 +613,11 @@ class KkDate {
 		if (check_error) {
 			isInvalid(this.date);
 		}
-		return this.date.valueOf() + (getTimezoneOffset(global_config.userTimezone) - getTimezoneOffset(global_config.timezone));
+		const utcTime = this.date.getTime();
+		const kk_ofset = this.date.getTimezoneOffset() * 60 * 1000;
+		const global_timezone = getTimezoneOffset(global_config.timezone);
+		const total = global_timezone + kk_ofset;
+		return utcTime - total;
 	}
 
 	/**
@@ -861,7 +865,7 @@ class KkDate {
 	tz(timezone) {
 		checkTimezone(timezone);
 		this.temp_config.timezone = timezone;
-		this.date = parseWithTimezone(this, timezone);
+		this.date = parseWithTimezone(this);
 		return this;
 	}
 
