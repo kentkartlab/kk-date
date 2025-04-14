@@ -339,6 +339,9 @@ describe('year tests', () => {
 });
 
 describe('combined time tests', () => {
+	beforeEach(() => {
+		kk_date.config({ timezone: global_timezone });
+	});
 	test('should handle complex time operations', () => {
 		const testCases = [
 			{
@@ -409,7 +412,7 @@ describe('combined time tests', () => {
 		const testCases = [
 			{
 				input: '2024-01-01 23:59:59',
-				timezone: 'America/New_York', // UTC-5
+				timezone: 'America/New_York',
 				operations: [
 					{ value: 1, unit: 'seconds' }, // -> 2024-01-01 16:00:00
 					{ value: 1, unit: 'minutes' }, // -> 2024-01-01 16:01:00
@@ -418,7 +421,7 @@ describe('combined time tests', () => {
 			},
 			{
 				input: '2024-12-31 23:59:59',
-				timezone: 'Asia/Tokyo', // UTC+9
+				timezone: 'Asia/Tokyo',
 				operations: [
 					{ value: 1, unit: 'seconds' }, // -> 2025-01-01 06:00:00
 					{ value: 1, unit: 'minutes' }, // -> 2025-01-01 06:01:00
