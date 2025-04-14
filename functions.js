@@ -109,7 +109,8 @@ function parseWithTimezone(kkDate, customTimezone) {
 			bigger = timezone2;
 			smaller = timezone2;
 		}
-		if (kkDate.temp_config.timezone) {
+		// timezone values are equal if timezone 1 and 2 are equal.
+		if (timezone1 !== timezone2 && kkDate.temp_config.timezone) {
 			localOffset = kkDate.date.getTimezoneOffset() * 60 * 1000;
 		}
 

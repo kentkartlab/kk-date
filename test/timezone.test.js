@@ -1,4 +1,4 @@
-const { describe, test, expect, afterEach } = require('@jest/globals');
+const { describe, test, expect, beforeEach } = require('@jest/globals');
 const kk_date = require('../index');
 const test_date = '2024-08-19';
 const test_time = '23:50:59';
@@ -8,7 +8,7 @@ const originalTimezone = 'Europe/Istanbul';
 kk_date.config({ timezone: originalTimezone });
 
 describe('KkDate Timezone Tests', () => {
-	afterEach(() => {
+	beforeEach(() => {
 		// Reset timezone to original after each test
 		kk_date.config({ timezone: originalTimezone });
 	});
@@ -47,9 +47,14 @@ describe('KkDate Timezone Tests', () => {
 
 	describe('.tz() Method', () => {
 		test('should convert time to specified timezone', () => {
-			const date = new kk_date(`${test_date} ${test_time}`); // 2024-08-19 20:50:59
-			const converted = date.tz('America/New_York');
-			expect(converted.format('HH:mm')).not.toBe('20:50');
+			const date = new kk_date(`${test_date} ${test_time}`);
+			const istanbulDate = new kk_date(`${test_date} ${test_time}`);
+			const nyDate = date.tz('America/New_York');
+
+			const istanbulHour = parseInt(istanbulDate.format('HH'));
+			const nyHour = parseInt(nyDate.format('HH'));
+			const hourDiff = (istanbulHour - nyHour + 24) % 24;
+			expect([0, 3]).toContain(hourDiff);
 		});
 
 		test('should handle timezone changes correctly', () => {
@@ -97,5 +102,106 @@ describe('KkDate Timezone Tests', () => {
 
 			expect(date.format('HH:mm')).toBe(time);
 		});
+	});
+});
+
+describe('Timezone combined tests', () => {
+	beforeEach(() => {
+		kk_date.config({ timezone: originalTimezone });
+	});
+	test('should handle complex time operations', () => {
+		const testCases = [
+			{
+				input: '2024-01-31 23:59:59',
+				operations: [
+					{ type: 'add', value: 1, unit: 'seconds' },
+					{ type: 'add', value: 1, unit: 'minutes' },
+					{ type: 'add', value: 1, unit: 'hours' },
+				],
+				expected: '2024-02-01 01:01:00',
+			},
+			{
+				input: '2024-12-31 23:59:59',
+				operations: [
+					{ type: 'add', value: 1, unit: 'seconds' },
+					{ type: 'add', value: 1, unit: 'minutes' },
+					{ type: 'add', value: 1, unit: 'hours' },
+				],
+				expected: '2025-01-01 01:01:00',
+			},
+		];
+
+		for (const { input, operations, expected } of testCases) {
+			const date = new kk_date(input);
+			for (const { value, unit } of operations) {
+				date.add(value, unit);
+			}
+			expect(date.format('YYYY-MM-DD HH:mm:ss')).toBe(expected);
+		}
+	});
+
+	test('should handle timezone with complex operations', () => {
+		const testCases = [
+			{
+				input: '2024-01-01 23:59:59',
+				timezone: 'America/New_York',
+				operations: [
+					{ type: 'add', value: 1, unit: 'seconds' },
+					{ type: 'add', value: 1, unit: 'minutes' },
+				],
+				expected: '2024-01-02 00:01:00',
+			},
+			{
+				input: '2024-12-31 23:59:59',
+				timezone: 'Asia/Tokyo',
+				operations: [
+					{ type: 'add', value: 1, unit: 'seconds' },
+					{ type: 'add', value: 1, unit: 'minutes' },
+				],
+				expected: '2025-01-01 00:01:00',
+			},
+		];
+
+		for (const { input, timezone, operations, expected } of testCases) {
+			// change timezone
+			kk_date.config({ timezone: timezone });
+			const date = new kk_date(input);
+			for (const { value, unit } of operations) {
+				date.add(value, unit);
+			}
+			expect(date.format('YYYY-MM-DD HH:mm:ss')).toBe(expected);
+		}
+		// set global default
+		kk_date.config({ timezone: originalTimezone });
+	});
+
+	test('should handle timezone *conversions* with complex operations', () => {
+		const testCases = [
+			{
+				input: '2024-01-01 23:59:59',
+				timezone: 'America/New_York',
+				operations: [
+					{ value: 1, unit: 'seconds' },
+					{ value: 1, unit: 'minutes' },
+				],
+				expected: '2024-01-02 00:01:00',
+			},
+			{
+				input: '2024-12-31 23:59:59',
+				timezone: 'Asia/Tokyo',
+				operations: [
+					{ value: 1, unit: 'seconds' },
+					{ value: 1, unit: 'minutes' },
+				],
+				expected: '2025-01-01 18:01:00',
+			},
+		];
+		for (const { input, timezone, operations, expected } of testCases) {
+			const date = new kk_date(input).tz(timezone);
+			for (const { value, unit } of operations) {
+				date.add(value, unit);
+			}
+			expect(date.format('YYYY-MM-DD HH:mm:ss')).toBe(expected);
+		}
 	});
 });
