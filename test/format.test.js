@@ -414,7 +414,7 @@ describe('combined time tests', () => {
 				input: '2024-01-01 23:59:59',
 				timezone: 'America/New_York',
 				operations: [
-					{ value: 1, unit: 'seconds' }
+					{ value: 1, unit: 'seconds' },
 					{ value: 1, unit: 'minutes' },
 				],
 				expected: '2024-01-02 00:01:00',
