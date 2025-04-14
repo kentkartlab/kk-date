@@ -87,13 +87,11 @@ function getTimezoneOffset(timezone) {
 /**
  * @description It parses the date with the timezone and returns the date.
  * @param {KkDate} kkDate
- * @param {string} global_timezone
- * @param {string} timezone
- * @param {boolean} is_init
+ * @param {string} customTimezone
  * @returns {Date|Error}
  */
-function parseWithTimezone(kkDate, is_init = false) {
-	if (global_config.timezone === global_config.userTimezone && !is_init) {
+function parseWithTimezone(kkDate, customTimezone) {
+	if (!customTimezone && global_config.timezone === global_config.userTimezone) {
 		return kkDate.date;
 	}
 	const utcTime = kkDate.date.getTime();
@@ -101,11 +99,8 @@ function parseWithTimezone(kkDate, is_init = false) {
 	let bigger = 0;
 	let smaller = 0;
 	let localOffset = 0;
-	if (
-		(global_config.timezone !== global_config.userTimezone && kkDate.detected_format === 'Xx') ||
-		(kkDate.temp_config.timezone && global_config.timezone !== kkDate.temp_config.timezone)
-	) {
-		const timezone1 = getTimezoneOffset(kkDate.temp_config.timezone || global_config.timezone);
+	if (kkDate.detected_format === 'Xx' || (kkDate.temp_config.timezone && global_config.timezone !== kkDate.temp_config.timezone)) {
+		const timezone1 = getTimezoneOffset(customTimezone || kkDate.temp_config.timezone || global_config.timezone);
 		const timezone2 = getTimezoneOffset(global_config.userTimezone);
 		if (timezone1 > timezone2) {
 			bigger = timezone1;

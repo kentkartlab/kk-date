@@ -378,7 +378,7 @@ class KkDate {
 			}
 		}
 		this.temp_config.rtf = {};
-		this.date = parseWithTimezone(this, true);
+		this.date = parseWithTimezone(this);
 	}
 
 	/**
@@ -859,8 +859,9 @@ class KkDate {
 	 * @returns
 	 */
 	tz(timezone) {
+		checkTimezone(timezone);
 		this.temp_config.timezone = timezone;
-		this.date = parseWithTimezone(this);
+		this.date = parseWithTimezone(this, timezone);
 		return this;
 	}
 

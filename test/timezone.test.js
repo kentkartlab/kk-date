@@ -47,9 +47,9 @@ describe('KkDate Timezone Tests', () => {
 
 	describe('.tz() Method', () => {
 		test('should convert time to specified timezone', () => {
-			const date = new kk_date(`${test_date} ${test_time}`);
+			const date = new kk_date(`${test_date} ${test_time}`); // 2024-08-19 20:50:59
 			const converted = date.tz('America/New_York');
-			expect(converted.format('HH:mm')).not.toBe('23:50');
+			expect(converted.format('HH:mm')).not.toBe('20:50');
 		});
 
 		test('should handle timezone changes correctly', () => {
