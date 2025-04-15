@@ -213,6 +213,48 @@ describe('Timezone combined tests', () => {
 				],
 				expected: '2025-01-01 06:01:00',
 			},
+			{
+				test_global_timezone: 'Europe/London',
+				input: '2024-01-01 12:00:00', // 0
+				timezone: 'Asia/Tokyo', // 9
+				operations: [{ value: 12, unit: 'hours' }],
+				expected: '2024-01-02 09:00:00',
+			},
+			{
+				test_global_timezone: 'Europe/Berlin',
+				input: '2024-06-21 08:30:00',
+				timezone: 'Australia/Sydney',
+				operations: [{ value: 30, unit: 'minutes' }],
+				expected: '2024-06-21 16:00:00',
+			},
+			{
+				test_global_timezone: 'America/Los_Angeles',
+				input: '2024-03-10 01:30:00',
+				timezone: 'Europe/Paris',
+				operations: [{ value: 1, unit: 'hours' }],
+				expected: '2024-03-10 10:30:00',
+			},
+			{
+				test_global_timezone: 'Asia/Kolkata',
+				input: '2024-12-31 22:45:00',
+				timezone: 'Pacific/Auckland',
+				operations: [{ value: 2, unit: 'hours' }],
+				expected: '2025-01-01 05:45:00',
+			},
+			{
+				test_global_timezone: 'America/Chicago',
+				input: '2024-02-29 23:00:00',
+				timezone: 'Asia/Singapore',
+				operations: [{ value: 2, unit: 'hours' }],
+				expected: '2024-03-01 13:00:00',
+			},
+			{
+				test_global_timezone: 'Europe/Moscow',
+				input: '2024-10-27 02:30:00',
+				timezone: 'America/New_York',
+				operations: [{ value: 45, unit: 'minutes' }],
+				expected: '2024-10-26 20:15:00',
+			},
 		];
 		for (const { input, timezone, operations, expected, test_global_timezone } of testCases) {
 			if (test_global_timezone) {
