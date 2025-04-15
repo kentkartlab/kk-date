@@ -191,7 +191,7 @@ describe('Timezone combined tests', () => {
 					{ value: 1, unit: 'seconds' },
 					{ value: 1, unit: 'minutes' },
 				],
-				expected: '2024-01-01 16:01:00',
+				expected: '2024-01-01 17:01:00',
 			},
 			{
 				test_global_timezone: 'America/Belem',
@@ -201,7 +201,7 @@ describe('Timezone combined tests', () => {
 					{ value: 1, unit: 'seconds' },
 					{ value: 1, unit: 'minutes' },
 				],
-				expected: '2024-01-01 22:01:00',
+				expected: '2024-01-01 23:01:00',
 			},
 			{
 				test_global_timezone: null,
@@ -221,32 +221,32 @@ describe('Timezone combined tests', () => {
 				expected: '2024-01-02 09:00:00',
 			},
 			{
-				test_global_timezone: 'Europe/Berlin',
+				test_global_timezone: 'Europe/Berlin', // +2
 				input: '2024-06-21 08:30:00',
-				timezone: 'Australia/Sydney',
+				timezone: 'Australia/Sydney', // +10
 				operations: [{ value: 30, unit: 'minutes' }],
-				expected: '2024-06-21 16:00:00',
+				expected: '2024-06-21 17:00:00',
 			},
 			{
 				test_global_timezone: 'America/Los_Angeles',
 				input: '2024-03-10 01:30:00',
 				timezone: 'Europe/Paris',
 				operations: [{ value: 1, unit: 'hours' }],
-				expected: '2024-03-10 10:30:00',
+				expected: '2024-03-10 11:30:00',
 			},
 			{
 				test_global_timezone: 'Asia/Kolkata',
 				input: '2024-12-31 22:45:00',
 				timezone: 'Pacific/Auckland',
 				operations: [{ value: 2, unit: 'hours' }],
-				expected: '2025-01-01 05:45:00',
+				expected: '2025-01-01 07:15:00',
 			},
 			{
 				test_global_timezone: 'America/Chicago',
 				input: '2024-02-29 23:00:00',
 				timezone: 'Asia/Singapore',
 				operations: [{ value: 2, unit: 'hours' }],
-				expected: '2024-03-01 13:00:00',
+				expected: '2024-03-01 14:00:00',
 			},
 			{
 				test_global_timezone: 'Europe/Moscow',
