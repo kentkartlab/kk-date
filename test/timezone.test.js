@@ -184,6 +184,7 @@ describe('Timezone combined tests', () => {
 	test('should handle timezone *conversions* with complex operations', () => {
 		const testCases = [
 			{
+				test_global_timezone: null,
 				input: '2024-01-01 23:59:59',
 				timezone: 'America/New_York',
 				operations: [
@@ -193,6 +194,17 @@ describe('Timezone combined tests', () => {
 				expected: '2024-01-01 16:01:00',
 			},
 			{
+				test_global_timezone: 'America/Belem',
+				input: '2024-01-01 23:59:59',
+				timezone: 'America/New_York',
+				operations: [
+					{ value: 1, unit: 'seconds' },
+					{ value: 1, unit: 'minutes' },
+				],
+				expected: '2024-01-01 22:01:00',
+			},
+			{
+				test_global_timezone: null,
 				input: '2024-12-31 23:59:59',
 				timezone: 'Asia/Tokyo',
 				operations: [
@@ -202,7 +214,12 @@ describe('Timezone combined tests', () => {
 				expected: '2025-01-01 06:01:00',
 			},
 		];
-		for (const { input, timezone, operations, expected } of testCases) {
+		for (const { input, timezone, operations, expected, test_global_timezone } of testCases) {
+			if (test_global_timezone) {
+				kk_date.config({ timezone: test_global_timezone });
+			} else {
+				kk_date.config({ originalTimezone });
+			}
 			const date = new kk_date(input).tz(timezone);
 			for (const { value, unit } of operations) {
 				date.add(value, unit);

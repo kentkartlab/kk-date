@@ -95,18 +95,30 @@ function parseWithTimezone(kkDate, is_init = false) {
 	}
 	if (kkDate.detected_format === 'Xx' || (kkDate.temp_config.timezone && global_config.timezone !== kkDate.temp_config.timezone)) {
 		const utcTime = kkDate.date.getTime();
-		const temp_timezone = getTimezoneOffset(kkDate.temp_config.timezone);
-		const global_timezone = getTimezoneOffset(global_config.timezone);
-		const kk_ofset = kkDate.date.getTimezoneOffset() * 60 * 1000;
 		if (kkDate.detected_format === 'Xx' && global_config.timezone === global_config.userTimezone && is_init) {
 			return new Date(utcTime);
 		}
+		const temp_timezone = getTimezoneOffset(kkDate.temp_config.timezone);
+		const global_timezone = getTimezoneOffset(global_config.timezone);
+		const kk_ofset = kkDate.date.getTimezoneOffset() * 60 * 1000;
+
+		console.log(temp_timezone / 1000 / 60 / 60, global_timezone / 1000 / 60 / 60, kk_ofset / 1000 / 60 / 60);
 		if (kkDate.detected_format === 'Xx' && global_config.timezone !== global_config.userTimezone && is_init) {
 			return new Date(utcTime + kk_ofset + global_timezone);
 		}
-		if (temp_timezone > 0) {
+
+		// to +plus
+		if (temp_timezone > 0 && global_timezone > 0) {
 			return new Date(utcTime + temp_timezone - global_timezone);
 		}
+
+		// minus to minus TODO:
+		if (temp_timezone < 0 && global_timezone < 0 && kk_ofset < 0) {
+			return new Date(utcTime + global_timezone - (temp_timezone - global_timezone));
+		}
+
+		// utc
+		console.log('burada', temp_timezone / 1000 / 60 / 60, global_timezone / 1000 / 60 / 60);
 		return new Date(utcTime + temp_timezone - global_timezone + (global_timezone + temp_timezone));
 	}
 	return kkDate.date;
