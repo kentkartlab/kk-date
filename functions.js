@@ -102,23 +102,32 @@ function parseWithTimezone(kkDate, is_init = false) {
 		const global_timezone = getTimezoneOffset(global_config.timezone);
 		const kk_ofset = kkDate.date.getTimezoneOffset() * 60 * 1000;
 
-		console.log(temp_timezone / 1000 / 60 / 60, global_timezone / 1000 / 60 / 60, kk_ofset / 1000 / 60 / 60);
+		// console.log(temp_timezone / 1000 / 60 / 60, global_timezone / 1000 / 60 / 60, kk_ofset / 1000 / 60 / 60);
 		if (kkDate.detected_format === 'Xx' && global_config.timezone !== global_config.userTimezone && is_init) {
 			return new Date(utcTime + kk_ofset + global_timezone);
 		}
 
 		// to +plus
-		if (temp_timezone > 0 && global_timezone > 0) {
-			return new Date(utcTime + temp_timezone - global_timezone);
+		if (temp_timezone > 0) {
+			return new Date(utcTime + temp_timezone + global_timezone);
 		}
 
 		// minus to minus TODO:
+		if (temp_timezone < 0 && global_timezone < 0 && kk_ofset > 0) {
+			return new Date(utcTime + global_timezone - (temp_timezone - global_timezone));
+		}
+
+		// minus to minus TODO:
+		if (temp_timezone < 0 && global_timezone < 0 && kk_ofset >= 0) {
+			return new Date(utcTime + global_timezone - (temp_timezone - global_timezone) - kk_ofset);
+		}
+
+		// timezone minus + global minux + offset minus
 		if (temp_timezone < 0 && global_timezone < 0 && kk_ofset < 0) {
 			return new Date(utcTime + global_timezone - (temp_timezone - global_timezone));
 		}
 
 		// utc
-		console.log('burada', temp_timezone / 1000 / 60 / 60, global_timezone / 1000 / 60 / 60);
 		return new Date(utcTime + temp_timezone - global_timezone + (global_timezone + temp_timezone));
 	}
 	return kkDate.date;
