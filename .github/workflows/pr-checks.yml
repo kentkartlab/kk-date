@@ -1,0 +1,30 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+    types:
+      - opened
+      - synchronize
+  workflow_dispatch:
+
+jobs:
+  unit-tests:
+    name: Unit tests
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Out Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install packages
+        run: npm install
+      - name: Run tests
+        run: npm run test

@@ -8,6 +8,7 @@ const {
 	format_types,
 	cached_dateTimeFormat,
 	timezone_cache,
+	global_config,
 } = require('./constants');
 
 const months = {};
@@ -61,50 +62,75 @@ function isValidDayName(dayname) {
  */
 function getTimezoneOffset(timezone) {
 	try {
-		const now = Date.now();
+		const new_date = new Date();
 
 		if (timezone_cache.has(timezone)) {
 			const { offset, timestamp } = timezone_cache.get(timezone);
-			if (now - timestamp < cache_ttl) {
+			if (new_date.getTime() - timestamp < cache_ttl) {
 				return offset; // Cache is avaible return from cache
 			}
 		}
 
-		const resolver = new Intl.DateTimeFormat('en-US', { timeZone: timezone, timeZoneName: 'longOffset' }).formatToParts(new Date());
+		const resolver = new Intl.DateTimeFormat('en-US', { timeZone: timezone, timeZoneName: 'longOffset' }).formatToParts(new_date);
 		const offset = resolver.find((part) => part.type === 'timeZoneName');
 		const offsetValue = offset.value.split('GMT')[1];
 		const [offsetHours, offsetMinutes = '0'] = offsetValue.split(':').map(Number);
 		const totalOffset = offsetHours * 3600 + offsetMinutes * 60;
-
 		// save to cache
-		timezone_cache.set(timezone, { offset: totalOffset, timestamp: now });
-		return totalOffset;
+		timezone_cache.set(timezone, { offset: totalOffset * 1000, timestamp: new_date.getTime() });
+		return totalOffset * 1000;
 	} catch {
 		throw Error('check timezone');
 	}
 }
-
 /**
  * @description It parses the date with the timezone and returns the date.
  * @param {KkDate} kkDate
- * @param {string} global_timezone
- * @param {string} timezone
- * @param {boolean} is_init
+ * @param {string} customTimezone
  * @returns {Date|Error}
  */
-function parseWithTimezone(kkDate, global_timezone, timezone, is_init = false) {
-	if (timezone === global_timezone && !is_init) {
+function parseWithTimezone(kkDate, is_init = false) {
+	if (!kkDate.temp_config.timezone && global_config.timezone === global_config.userTimezone) {
 		return kkDate.date;
 	}
-	const utcTime = kkDate.date.getTime();
-	const localOffset = kkDate.date.getTimezoneOffset() * 60 * 1000;
-	const targetOffset = getTimezoneOffset(timezone) * 1000;
-	let extraAddDiff = 0;
-	if (kkDate.temp_config && global_timezone && timezone === kkDate.temp_config.timezone) {
-		extraAddDiff = getTimezoneOffset(timezone) - getTimezoneOffset(global_timezone);
+	if (kkDate.detected_format === 'Xx' || (kkDate.temp_config.timezone && global_config.timezone !== kkDate.temp_config.timezone)) {
+		const utcTime = kkDate.date.getTime();
+		if (kkDate.detected_format === 'Xx' && global_config.timezone === global_config.userTimezone && is_init) {
+			return new Date(utcTime);
+		}
+		const temp_timezone = getTimezoneOffset(kkDate.temp_config.timezone);
+		const global_timezone = getTimezoneOffset(global_config.timezone);
+		const kk_ofset = kkDate.date.getTimezoneOffset() * 60 * 1000;
+
+		// console.log(temp_timezone / 1000 / 60 / 60, global_timezone / 1000 / 60 / 60, kk_ofset / 1000 / 60 / 60);
+		if (kkDate.detected_format === 'Xx' && global_config.timezone !== global_config.userTimezone && is_init) {
+			return new Date(utcTime + kk_ofset + global_timezone);
+		}
+
+		// to +plus
+		if (temp_timezone > 0) {
+			return new Date(utcTime + temp_timezone + global_timezone);
+		}
+
+		// minus to minus TODO:
+		if (temp_timezone < 0 && global_timezone < 0 && kk_ofset > 0) {
+			return new Date(utcTime + global_timezone - (temp_timezone - global_timezone));
+		}
+
+		// minus to minus TODO:
+		if (temp_timezone < 0 && global_timezone < 0 && kk_ofset >= 0) {
+			return new Date(utcTime + global_timezone - (temp_timezone - global_timezone) - kk_ofset);
+		}
+
+		// timezone minus + global minux + offset minus
+		if (temp_timezone < 0 && global_timezone < 0 && kk_ofset < 0) {
+			return new Date(utcTime + global_timezone - (temp_timezone - global_timezone));
+		}
+
+		// utc
+		return new Date(utcTime + temp_timezone - global_timezone + (global_timezone + temp_timezone));
 	}
-	const tzTime = utcTime + targetOffset + localOffset + extraAddDiff;
-	return new Date(tzTime);
+	return kkDate.date;
 }
 
 /**
