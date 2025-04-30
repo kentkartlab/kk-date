@@ -783,6 +783,7 @@ class KkDate {
 	 * @param {object} options
 	 * @param {string} options.locale BCP 47 language tag
 	 * @param {string} options.timezone timezone
+	 * @param {number} options.weekStartDay week start day (0-6)
 	 * @returns {Error|KkDate}
 	 */
 	config(options) {
@@ -790,7 +791,12 @@ class KkDate {
 			this.temp_config.timezone = options.timezone;
 			this.temp_config.rtf = {};
 		}
-		if (options.weekStartDay && typeof options.weekStartDay === 'number') {
+		if (
+			typeof options.weekStartDay === 'number' &&
+			Number.isInteger(options.weekStartDay) &&
+			options.weekStartDay >= 0 &&
+			options.weekStartDay <= 6
+		) {
 			this.temp_config.weekStartDay = options.weekStartDay;
 		}
 		try {
