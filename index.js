@@ -783,12 +783,21 @@ class KkDate {
 	 * @param {object} options
 	 * @param {string} options.locale BCP 47 language tag
 	 * @param {string} options.timezone timezone
+	 * @param {number} options.weekStartDay week start day (0-6)
 	 * @returns {Error|KkDate}
 	 */
 	config(options) {
 		if (options.timezone) {
 			this.temp_config.timezone = options.timezone;
 			this.temp_config.rtf = {};
+		}
+		if (
+			typeof options.weekStartDay === 'number' &&
+			Number.isInteger(options.weekStartDay) &&
+			options.weekStartDay >= 0 &&
+			options.weekStartDay <= 6
+		) {
+			this.temp_config.weekStartDay = options.weekStartDay;
 		}
 		try {
 			if (options.locale) {
@@ -886,7 +895,9 @@ class KkDate {
 				break;
 			case 'week': {
 				const dayOfWeek = this.date.getDay();
-				this.date.setDate(this.date.getDate() - dayOfWeek);
+				const weekStartDay = this.temp_config.weekStartDay || 0;
+				const diff = dayOfWeek < weekStartDay ? dayOfWeek + (7 - weekStartDay) : dayOfWeek - weekStartDay;
+				this.date.setDate(this.date.getDate() - diff);
 				this.date.setHours(0, 0, 0, 0);
 				break;
 			}
@@ -928,7 +939,9 @@ class KkDate {
 			}
 			case 'week': {
 				const dayOfWeek = this.date.getDay();
-				this.date.setDate(this.date.getDate() + (6 - dayOfWeek));
+				const weekStartDay = this.temp_config.weekStartDay || 0;
+				const diff = dayOfWeek < weekStartDay ? 7 - (weekStartDay - dayOfWeek) : 6 - (dayOfWeek - weekStartDay);
+				this.date.setDate(this.date.getDate() + diff);
 				this.date.setHours(23, 59, 59, 999);
 				break;
 			}
