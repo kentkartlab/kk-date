@@ -32,7 +32,7 @@ describe('kk_date date checks', () => {
 	test('is between', () => {
 		expect(new kk_date(`${test_date} ${test_time}`).isBetween('2024-08-19', '2024-08-19 23:51')).toBe(true);
 	});
-	test('is between minutes', () => {
+	test('is between with minutes unit', () => {
 		expect(new kk_date(`${test_date} ${test_time}`).isBetween('2024-08-19', '2024-08-19 23:51', 'minutes')).toBe(true);
 	});
 	test('is same', () => {
