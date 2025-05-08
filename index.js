@@ -458,19 +458,18 @@ class KkDate {
 		const starts = isKkDate(start) ? start.getTime() : new KkDate(start).getTime();
 		const ends = isKkDate(end) ? end.getTime() : new KkDate(end).getTime();
 		const date_time = this.date.getTime();
-		const unit_key = `${unit}s`;
 
 		if (unit === 'milliseconds') {
 			return date_time >= starts && date_time <= ends;
 		}
 
-		if (!timeInMilliseconds[unit_key]) {
+		if (!timeInMilliseconds[unit]) {
 			throw new Error('Invalid unit type. Must be one of: milliseconds, seconds, minutes, hours, days, months, years');
 		}
 
-		const startUnit = Math.floor(starts / timeInMilliseconds[unit_key]);
-		const endUnit = Math.floor(ends / timeInMilliseconds[unit_key]);
-		const dateUnit = Math.floor(date_time / timeInMilliseconds[unit_key]);
+		const startUnit = Math.floor(starts / timeInMilliseconds[unit]);
+		const endUnit = Math.floor(ends / timeInMilliseconds[unit]);
+		const dateUnit = Math.floor(date_time / timeInMilliseconds[unit]);
 
 		return dateUnit >= startUnit && dateUnit <= endUnit;
 	}
@@ -716,28 +715,28 @@ class KkDate {
 	/**
 	 * set method of Date instances changes
 	 *
-	 * @param {'second'|'minute'|'hour'|'day'|'month'|'year'} type - The unit of time type
+	 * @param {'seconds'|'minutes'|'hours'|'days'|'months'|'years'} type - The unit of time type
 	 * @param {number} value
 	 * @returns {KkDate}
 	 */
 	set(type, value) {
 		switch (type) {
-			case 'second':
+			case 'seconds':
 				this.date.setSeconds(value);
 				break;
-			case 'minute':
+			case 'minutes':
 				this.date.setMinutes(value);
 				break;
-			case 'hour':
+			case 'hours':
 				this.date.setHours(value);
 				break;
-			case 'day':
+			case 'days':
 				this.date.setDate(value);
 				break;
-			case 'month':
+			case 'months':
 				this.date.setMonth(value);
 				break;
-			case 'year':
+			case 'years':
 				this.date.setFullYear(value);
 				break;
 			default:
@@ -860,10 +859,10 @@ class KkDate {
 	/**
 	 * @description It divides the date string into parts and returns an object.
 	 * @param {string} time - time seconds
-	 * @returns {{year: number, month: number, week:number, day: number, hour: number, minute: number, second: number}}
+	 * @returns {{years: number, months: number, weeks: number, days: number, hours: number, minutes: number, seconds: number}}
 	 */
 	duration(time) {
-		return duration(time, 'second');
+		return duration(time, 'seconds');
 	}
 
 	/**
@@ -880,20 +879,20 @@ class KkDate {
 
 	/**
 	 * @description Returns startOf date of the unit of time.
-	 * @param {'year'|'month'|'week'|'day'|'hour'|'minute'|'second'} unit
+	 * @param {'years'|'months'|'weeks'|'days'|'hours'|'minutes'|'seconds'} unit
 	 * @returns {KkDate}
 	 */
 	startOf(unit) {
 		switch (unit) {
-			case 'year':
+			case 'years':
 				this.date.setMonth(0, 1);
 				this.date.setHours(0, 0, 0, 0);
 				break;
-			case 'month':
+			case 'months':
 				this.date.setDate(1);
 				this.date.setHours(0, 0, 0, 0);
 				break;
-			case 'week': {
+			case 'weeks': {
 				const dayOfWeek = this.date.getDay();
 				const weekStartDay = this.temp_config.weekStartDay || 0;
 				const diff = dayOfWeek < weekStartDay ? dayOfWeek + (7 - weekStartDay) : dayOfWeek - weekStartDay;
@@ -901,16 +900,16 @@ class KkDate {
 				this.date.setHours(0, 0, 0, 0);
 				break;
 			}
-			case 'day':
+			case 'days':
 				this.date.setHours(0, 0, 0, 0);
 				break;
-			case 'hour':
+			case 'hours':
 				this.date.setMinutes(0, 0, 0);
 				break;
-			case 'minute':
+			case 'minutes':
 				this.date.setSeconds(0, 0);
 				break;
-			case 'second':
+			case 'seconds':
 				this.date.setMilliseconds(0);
 				break;
 			default:
@@ -921,23 +920,23 @@ class KkDate {
 
 	/**
 	 * @description returns endOf date of the unit of time.
-	 * @param {'year'|'month'|'week'|'day'|'hour'|'minute'|'second'} unit
+	 * @param {'years'|'months'|'weeks'|'days'|'hours'|'minutes'|'seconds'} unit
 	 * @returns {KkDate}
 	 */
 	endOf(unit) {
 		switch (unit) {
-			case 'year':
+			case 'years':
 				this.date.setMonth(11, 31);
 				this.date.setHours(23, 59, 59, 999);
 				break;
-			case 'month': {
+			case 'months': {
 				const year = this.date.getFullYear();
 				const month = this.date.getMonth();
 				this.date.setDate(new Date(year, month + 1, 0).getDate());
 				this.date.setHours(23, 59, 59, 999);
 				break;
 			}
-			case 'week': {
+			case 'weeks': {
 				const dayOfWeek = this.date.getDay();
 				const weekStartDay = this.temp_config.weekStartDay || 0;
 				const diff = dayOfWeek < weekStartDay ? 7 - (weekStartDay - dayOfWeek) : 6 - (dayOfWeek - weekStartDay);
@@ -945,16 +944,16 @@ class KkDate {
 				this.date.setHours(23, 59, 59, 999);
 				break;
 			}
-			case 'day':
+			case 'days':
 				this.date.setHours(23, 59, 59, 999);
 				break;
-			case 'hour':
+			case 'hours':
 				this.date.setMinutes(59, 59, 999);
 				break;
-			case 'minute':
+			case 'minutes':
 				this.date.setSeconds(59, 999);
 				break;
-			case 'second':
+			case 'seconds':
 				this.date.setMilliseconds(999);
 				break;
 			default:
@@ -993,7 +992,7 @@ class KkDate {
 		}
 
 		let value;
-		let unit;
+		let unit; // ! READ: unit must be validate for .format !
 
 		// Determine the best unit to display
 		if (Math.abs(diffSeconds) < 45) {

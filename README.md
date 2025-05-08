@@ -144,25 +144,25 @@ new kk_date('2024-01-05').add(-1, 'days').format('YYYY-MM-DD')
 // 2024-01-04
 
 // Set specific date part
-new kk_date('2024-01-05').set(1, 'day').format('YYYY-MM-DD')
+new kk_date('2024-01-05').set(1, 'days').format('YYYY-MM-DD')
 // 2024-01-01
 
 // Set month
-new kk_date('2024-01-05').set(3, 'month').format('YYYY-MM-DD')
+new kk_date('2024-01-05').set(3, 'months').format('YYYY-MM-DD')
 // 2024-03-05
 
 // Get the start of a time unit
-new kk_date('2024-08-19 14:35:45').startOf('day').format('YYYY-MM-DD HH:mm:ss')
+new kk_date('2024-08-19 14:35:45').startOf('days').format('YYYY-MM-DD HH:mm:ss')
 // 2024-08-19 00:00:00
 
-new kk_date('2024-08-19 14:35:45').startOf('month').format('YYYY-MM-DD HH:mm:ss')
+new kk_date('2024-08-19 14:35:45').startOf('months').format('YYYY-MM-DD HH:mm:ss')
 // 2024-08-01 00:00:00
 
 // Get the end of a time unit
-new kk_date('2024-08-19 14:35:45').endOf('day').format('YYYY-MM-DD HH:mm:ss')
+new kk_date('2024-08-19 14:35:45').endOf('days').format('YYYY-MM-DD HH:mm:ss')
 // 2024-08-19 23:59:59
 
-new kk_date('2024-08-19 14:35:45').endOf('month').format('YYYY-MM-DD HH:mm:ss')
+new kk_date('2024-08-19 14:35:45').endOf('months').format('YYYY-MM-DD HH:mm:ss')
 // 2024-08-31 23:59:59
 ```
 
@@ -262,11 +262,11 @@ new kk_date('2024-01-01').config({ locale: 'tr-TR' })
 #### Duration:
 ```javascript
 // Convert seconds to duration object
-kk_date.duration(1234, 'minute')
-// { year: 0, month: 0, week: 0, day: 0, hour: 20, minute: 34, second: 0, millisecond: 0 }
+kk_date.duration(1234, 'minutes')
+// { years: 0, months: 0, weeks: 0, days: 0, hours: 20, minutes: 34, seconds: 0, milliseconds: 0 }
 
 // Getting Duration in Specific Units:
-const dur = kk_date.duration(1.5, 'day'); // 1 day and 12 hours
+const dur = kk_date.duration(1.5, 'days'); // 1 day and 12 hours
 dur.asDays();       // 1.5
 dur.asHours();      // 36
 dur.asMinutes();    // 2160
@@ -278,7 +278,7 @@ dur.asYears();      // ~0.0041...
 
 // Get duration from date
 new kk_date('2024-01-01').duration(1234)
-// { year: 0, month: 0, week: 0, day: 0, hour: 0, minute: 20, second: 34 }
+// { years: 0, months: 0, weeks: 0, days: 0, hours: 0, minutes: 20, seconds: 34 }
 ```
 
 #### Relative Time:
