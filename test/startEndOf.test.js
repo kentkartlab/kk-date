@@ -59,7 +59,7 @@ describe('kk_date startOf / endOf', () => {
 	test('endOf hours', () => {
 		expect(new kk_date(testDateTime).endOf('hours').format('YYYY-MM-DD HH:mm:ss')).toBe('2024-08-19 14:59:59');
 	});
-	test('endOf minute', () => {
+	test('endOf minutes', () => {
 		expect(new kk_date(testDateTime).endOf('minutes').format('YYYY-MM-DD HH:mm:ss')).toBe('2024-08-19 14:35:59');
 	});
 	test('endOf seconds', () => {
