@@ -45,7 +45,7 @@ describe('kk_date valid / invalid', () => {
 	});
 
 	test('duration invalid type', () => {
-		expect(() => kk_date.duration(10, 'days')).toThrow('Invalid type');
+		expect(() => kk_date.duration(10, 'day')).toThrow('Invalid type');
 		expect(() => kk_date.duration(10, '')).toThrow('Invalid type');
 		expect(() => kk_date.duration(10)).toThrow('Invalid type');
 	});

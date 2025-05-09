@@ -171,35 +171,35 @@ const padZero = (num) => String(num).padStart(2, '0');
 /**
  * @description It divides the date string into parts and returns an object.
  * @param {string} time
- * @param {"year" | "month" | "week" | "day" | "hour" | "minute" | "second"} type
- * @returns {{year: number, month: number, week:number, day: number, hour: number, minute: number, second: number, millisecond: number, $kk_date: {milliseconds: number}, asMilliseconds: function(): number, asSeconds: function(): number, asMinutes: function(): number, asHours: function(): number, asDays: function(): number, asWeeks: function(): number, asMonths: function(): number, asYears: function(): number}}
+ * @param {"years" | "months" | "weeks" | "days" | "hours" | "minutes" | "seconds"} type
+ * @returns {{years: number, months: number, weeks: number, days: number, hours: number, minutes: number, seconds: number, milliseconds: number, $kk_date: {milliseconds: number}, asMilliseconds: function(): number, asSeconds: function(): number, asMinutes: function(): number, asHours: function(): number, asDays: function(): number, asWeeks: function(): number, asMonths: function(): number, asYears: function(): number}}
  * @example
  * // Example usage:
  * const result = duration(1234, 'minute');
  * console.log(result);
- * // Output: { year: 0, month: 0, week: 0, day: 0, hour: 20, minute: 34, second: 0,millisecond: 0 }
+ * // Output: { years: 0, months: 0, weeks: 0, days: 0, hours: 20, minutes: 34, seconds: 0, milliseconds: 0 }
  */
 function duration(time, type) {
 	const _milliseconds = time * timeInMilliseconds[type];
 
 	const response = {
-		year: 0,
-		month: 0,
-		week: 0,
-		day: 0,
-		hour: 0,
-		minute: 0,
-		second: 0,
-		millisecond: 0,
+		years: 0,
+		months: 0,
+		weeks: 0,
+		days: 0,
+		hours: 0,
+		minutes: 0,
+		seconds: 0,
+		milliseconds: 0,
 		$kk_date: { milliseconds: 0 },
 		asMilliseconds: () => _milliseconds,
-		asSeconds: () => _milliseconds / timeInMilliseconds.second,
-		asMinutes: () => _milliseconds / timeInMilliseconds.minute,
-		asHours: () => _milliseconds / timeInMilliseconds.hour,
-		asDays: () => _milliseconds / timeInMilliseconds.day,
-		asWeeks: () => _milliseconds / timeInMilliseconds.week,
-		asMonths: () => _milliseconds / timeInMilliseconds.month,
-		asYears: () => _milliseconds / timeInMilliseconds.year,
+		asSeconds: () => _milliseconds / timeInMilliseconds.seconds,
+		asMinutes: () => _milliseconds / timeInMilliseconds.minutes,
+		asHours: () => _milliseconds / timeInMilliseconds.hours,
+		asDays: () => _milliseconds / timeInMilliseconds.days,
+		asWeeks: () => _milliseconds / timeInMilliseconds.weeks,
+		asMonths: () => _milliseconds / timeInMilliseconds.months,
+		asYears: () => _milliseconds / timeInMilliseconds.years,
 	};
 
 	if (!time || typeof time !== 'number' || time < 0) {
@@ -212,21 +212,21 @@ function duration(time, type) {
 
 	response.$kk_date.milliseconds = _milliseconds;
 	let milliseconds = _milliseconds;
-	response.year = Math.floor(milliseconds / timeInMilliseconds.year);
-	milliseconds = milliseconds % timeInMilliseconds.year;
-	response.month = Math.floor(milliseconds / timeInMilliseconds.month);
-	milliseconds = milliseconds % timeInMilliseconds.month;
-	response.week = Math.floor(milliseconds / timeInMilliseconds.week);
-	milliseconds = milliseconds % timeInMilliseconds.week;
-	response.day = Math.floor(milliseconds / timeInMilliseconds.day);
-	milliseconds = milliseconds % timeInMilliseconds.day;
-	response.hour = Math.floor(milliseconds / timeInMilliseconds.hour);
-	milliseconds = milliseconds % timeInMilliseconds.hour;
-	response.minute = Math.floor(milliseconds / timeInMilliseconds.minute);
-	milliseconds = milliseconds % timeInMilliseconds.minute;
-	response.second = Math.floor(milliseconds / timeInMilliseconds.second);
-	milliseconds = milliseconds % timeInMilliseconds.second;
-	response.millisecond = milliseconds;
+	response.years = Math.floor(milliseconds / timeInMilliseconds.years);
+	milliseconds = milliseconds % timeInMilliseconds.years;
+	response.months = Math.floor(milliseconds / timeInMilliseconds.months);
+	milliseconds = milliseconds % timeInMilliseconds.months;
+	response.weeks = Math.floor(milliseconds / timeInMilliseconds.weeks);
+	milliseconds = milliseconds % timeInMilliseconds.weeks;
+	response.days = Math.floor(milliseconds / timeInMilliseconds.days);
+	milliseconds = milliseconds % timeInMilliseconds.days;
+	response.hours = Math.floor(milliseconds / timeInMilliseconds.hours);
+	milliseconds = milliseconds % timeInMilliseconds.hours;
+	response.minutes = Math.floor(milliseconds / timeInMilliseconds.minutes);
+	milliseconds = milliseconds % timeInMilliseconds.minutes;
+	response.seconds = Math.floor(milliseconds / timeInMilliseconds.seconds);
+	milliseconds = milliseconds % timeInMilliseconds.seconds;
+	response.milliseconds = milliseconds;
 
 	return response;
 }

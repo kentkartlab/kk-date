@@ -1,13 +1,13 @@
 const cache_ttl = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 const timeInMilliseconds = {
-	year: 365 * 24 * 60 * 60 * 1000, // 1 year (365 days)
-	month: 31 * 24 * 60 * 60 * 1000, // 1 month (31 days)
-	week: 7 * 24 * 60 * 60 * 1000, // 1 week (7 days)
-	day: 24 * 60 * 60 * 1000, // 1 day (24 hours)
-	hour: 60 * 60 * 1000, // 1 hour
-	minute: 60 * 1000, // 1 minute
-	second: 1000, // 1 second
+	years: 365 * 24 * 60 * 60 * 1000, // 1 year (365 days)
+	months: 31 * 24 * 60 * 60 * 1000, // 1 month (31 days)
+	weeks: 7 * 24 * 60 * 60 * 1000, // 1 week (7 days)
+	days: 24 * 60 * 60 * 1000, // 1 day (24 hours)
+	hours: 60 * 60 * 1000, // 1 hour
+	minutes: 60 * 1000, // 1 minute
+	seconds: 1000, // 1 second
 };
 
 const format_types = {
