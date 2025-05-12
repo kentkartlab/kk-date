@@ -58,17 +58,28 @@ describe('weekStartDay tests for startOf and endOf', () => {
 		expect(date.endOf('weeks').format('dddd')).toBe('Saturday');
 	});
 
-	test('should return Sunday as startOf and Saturday as endOf when weekStartDay is negative', () => {
-		const date = new kk_date();
-		date.config({ weekStartDay: -1 });
-		expect(date.startOf('weeks').format('dddd')).toBe('Sunday');
-		expect(date.endOf('weeks').format('dddd')).toBe('Saturday');
-	});
-
 	test('should default to Sunday as startOf and Saturday as endOf when weekStartDay is not provided', () => {
 		const date = new kk_date();
 		date.config({});
 		expect(date.startOf('weeks').format('dddd')).toBe('Sunday');
 		expect(date.endOf('weeks').format('dddd')).toBe('Saturday');
+	});
+	test('should throw an error when weekStartDay', () => {
+		expect(() => new kk_date().config({ weekStartDay: 8 })).toThrow();
+	});
+	test('Should be six days weekStartDay when 0-1 is entered, the difference between the start and end ', () => {
+		kk_date.config({ weekStartDay: 0 });
+		const kkdate1 = new kk_date();
+		expect(new kk_date(kkdate1.startOf('weeks')).diff(new kk_date(kkdate1.endOf('weeks')), 'days')).toBe(6);
+
+		kk_date.config({ weekStartDay: 2 });
+		const kkdate2 = new kk_date();
+		expect(new kk_date(kkdate2.startOf('weeks')).diff(new kk_date(kkdate2.endOf('weeks')), 'days')).toBe(6);
+	});
+
+	test('Should be six days weekStartDay when random 0-6 is entered, the difference between the start and end ', () => {
+		kk_date.config({ weekStartDay: Math.floor(Math.random() * 7) });
+		const kkdate1 = new kk_date();
+		expect(new kk_date(kkdate1.startOf('weeks')).diff(new kk_date(kkdate1.endOf('weeks')), 'days')).toBe(6);
 	});
 });

@@ -268,6 +268,7 @@ const global_config = {
 	timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 	userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 	rtf: {},
+	weekStartDay: 0,
 };
 
 module.exports.cache_ttl = cache_ttl;

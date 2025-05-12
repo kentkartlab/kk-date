@@ -102,7 +102,6 @@ function parseWithTimezone(kkDate, is_init = false) {
 		const global_timezone = getTimezoneOffset(global_config.timezone);
 		const kk_ofset = kkDate.date.getTimezoneOffset() * 60 * 1000;
 
-		// console.log(temp_timezone / 1000 / 60 / 60, global_timezone / 1000 / 60 / 60, kk_ofset / 1000 / 60 / 60);
 		if (kkDate.detected_format === 'Xx' && global_config.timezone !== global_config.userTimezone && is_init) {
 			return new Date(utcTime + kk_ofset + global_timezone);
 		}

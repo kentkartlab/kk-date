@@ -778,11 +778,10 @@ class KkDate {
 
 	/**
 	 * @description kk-date config for in call
-	 *
 	 * @param {object} options
 	 * @param {string} options.locale BCP 47 language tag
 	 * @param {string} options.timezone timezone
-	 * @param {number} options.weekStartDay week start day (0-6)
+	 * @param {0|1|2|3|4|5|6} options.weekStartDay - The day of the week to start from (0 = Sunday, 1 = Monday ...)
 	 * @returns {Error|KkDate}
 	 */
 	config(options) {
@@ -790,12 +789,8 @@ class KkDate {
 			this.temp_config.timezone = options.timezone;
 			this.temp_config.rtf = {};
 		}
-		if (
-			typeof options.weekStartDay === 'number' &&
-			Number.isInteger(options.weekStartDay) &&
-			options.weekStartDay >= 0 &&
-			options.weekStartDay <= 6
-		) {
+		if (typeof options.weekStartDay === 'number') {
+			isValidWeekStartDay(options.weekStartDay);
 			this.temp_config.weekStartDay = options.weekStartDay;
 		}
 		try {
@@ -894,7 +889,7 @@ class KkDate {
 				break;
 			case 'weeks': {
 				const dayOfWeek = this.date.getDay();
-				const weekStartDay = this.temp_config.weekStartDay || 0;
+				const weekStartDay = this.temp_config.weekStartDay || global_config.weekStartDay;
 				const diff = dayOfWeek < weekStartDay ? dayOfWeek + (7 - weekStartDay) : dayOfWeek - weekStartDay;
 				this.date.setDate(this.date.getDate() - diff);
 				this.date.setHours(0, 0, 0, 0);
@@ -937,10 +932,8 @@ class KkDate {
 				break;
 			}
 			case 'weeks': {
-				const dayOfWeek = this.date.getDay();
-				const weekStartDay = this.temp_config.weekStartDay || 0;
-				const diff = dayOfWeek < weekStartDay ? 7 - (weekStartDay - dayOfWeek) : 6 - (dayOfWeek - weekStartDay);
-				this.date.setDate(this.date.getDate() + diff);
+				this.startOf('weeks');
+				this.date.setDate(this.date.getDate() + 6);
 				this.date.setHours(23, 59, 59, 999);
 				break;
 			}
@@ -1322,10 +1315,26 @@ function isValid(date_string, template) {
 }
 
 /**
+ * @description checks the number of week start day
+ * @param {number} weekStartDay
+ * @returns {boolean}
+ */
+function isValidWeekStartDay(weekStartDay) {
+	if (typeof weekStartDay !== 'number' || !Number.isInteger(weekStartDay)) {
+		throw new Error('weekStartDay must be an integer');
+	}
+	if (weekStartDay < 0 || weekStartDay > 6) {
+		throw new Error('weekStartDay must be between 0 and 6');
+	}
+	return true;
+}
+
+/**
  * @description It configures the global config.
  * @param {Object} options
  * @param {string} options.locale
  * @param {string} options.timezone
+ * @param {0|1|2|3|4|5|6} options.weekStartDay - The day of the week to start from (0 = Sunday, 1 = Monday ...)
  * @returns {boolean}
  */
 function config(options) {
@@ -1345,14 +1354,18 @@ function config(options) {
 			cached_dateTimeFormat.MMM = new Intl.DateTimeFormat(global_config.locale, {
 				month: 'short',
 			});
+			if (typeof options.weekStartDay === 'number') {
+				isValidWeekStartDay(options.weekStartDay);
+				global_config.weekStartDay = options.weekStartDay;
+			}
 			try {
 				global_config.rtf[global_config.locale] = new Intl.RelativeTimeFormat(global_config.locale, { numeric: 'auto' });
 			} catch {
 				throw new Error('locale not valid for BCP 47 / relative time formatting');
 			}
 		}
-	} catch {
-		throw new Error('locale not valid for BCP 47 / config');
+	} catch (error) {
+		throw new Error(error.message || 'locale not valid for BCP 47 / config');
 	}
 	if (options.timezone && global_config.timezone !== options.timezone) {
 		checkTimezone(options.timezone);
