@@ -523,3 +523,6 @@ kk-date is significantly faster than other date libraries. Here are the performa
 | Test 28 | `25 апрель 2025`                | Test 28: Russian Date Format       | 23.975       | unsupported   | unsupported   | 100%            |
 
 Average Speed Improvement: 89.05% faster than other libraries
+
+### Disclaimer;
+This software is provided "as is", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and noninfringement. Use of the kk-date package is at your own risk. The maintainers and contributors do not guarantee that the package will function without errors or produce accurate results in all scenarios. In no event shall the authors or contributors be held liable for any damages, losses, or issues arising from the use of this package.
