@@ -1109,12 +1109,13 @@ function formatter(orj_this, template = null) {
 		}
 		case format_types.dddd: {
 			const formatter = dateTimeFormat(orj_this, template);
-			const cache = nopeRedis.getItem(`${template}_${formatter.id}_${orj_this.date.getTime()}`);
+			const cache_key = `${template}_${formatter.id}_${orj_this.date.getTime()}`;
+			const cache = nopeRedis.getItem(cache_key);
 			if (cache) {
 				return cache;
 			}
 			const value = formatter.value.format(orj_this.date);
-			nopeRedis.setItemAsync(`${template}_${formatter.id}_${orj_this.date.getTime()}`, value);
+			nopeRedis.setItemAsync(cache_key, value);
 			return value;
 		}
 		case format_types.DD: {
@@ -1217,58 +1218,124 @@ function formatter(orj_this, template = null) {
 		}
 		case format_types['DD MMMM YYYY']: {
 			const result = converter(orj_this.date, ['day', 'year']);
-			return `${result.day} ${dateTimeFormat(orj_this, 'MMMM').format(orj_this.date)} ${result.year}`;
+			const value = dateTimeFormat(orj_this, 'MMMM');
+			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
+			const cache = nopeRedis.getItem(cache_key);
+			if (cache) {
+				return cache;
+			}
+			nopeRedis.setItemAsync(cache_key, value);
+			return `${result.day} ${value.value.format(orj_this.date)} ${result.year}`;
 		}
 		case format_types['DD MMMM YYYY dddd']: {
 			const result = converter(orj_this.date, ['day', 'year']);
-			return `${result.day} ${dateTimeFormat(orj_this, 'MMMM').format(orj_this.date)} ${result.year} ${dateTimeFormat(orj_this, 'dddd').format(orj_this.date)}`;
+			return `${result.day} ${dateTimeFormat(orj_this, 'MMMM').value.format(orj_this.date)} ${result.year} ${dateTimeFormat(orj_this, 'dddd').value.format(orj_this.date)}`;
 		}
 		case format_types['DD MMM YYYY dddd']: {
 			const result = converter(orj_this.date, ['day', 'year']);
-			return `${result.day} ${dateTimeFormat(orj_this, 'MMM').format(orj_this.date)} ${result.year} ${dateTimeFormat(orj_this, 'dddd').format(orj_this.date)}`;
+			return `${result.day} ${dateTimeFormat(orj_this, 'MMM').value.format(orj_this.date)} ${result.year} ${dateTimeFormat(orj_this, 'dddd').value.format(orj_this.date)}`;
 		}
 		case format_types['MMMM YYYY']: {
 			const result = converter(orj_this.date, ['year']);
-			return `${dateTimeFormat(orj_this, 'MMMM').format(orj_this.date)} ${result.year}`;
+			const value = dateTimeFormat(orj_this, 'MMMM');
+			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
+			const cache = nopeRedis.getItem(cache_key);
+			if (cache) {
+				return cache;
+			}
+			nopeRedis.setItemAsync(cache_key, value);
+			return `${value.value.format(orj_this.date)} ${result.year}`;
 		}
 		case format_types['DD MMMM dddd YYYY']: {
 			const result = converter(orj_this.date, ['day', 'year']);
-			return `${result.day} ${dateTimeFormat(orj_this, 'MMMM').format(orj_this.date)} ${dateTimeFormat(orj_this, 'dddd').format(orj_this.date)} ${result.year}`;
+			return `${result.day} ${dateTimeFormat(orj_this, 'MMMM').value.format(orj_this.date)} ${dateTimeFormat(orj_this, 'dddd').value.format(orj_this.date)} ${result.year}`;
 		}
 		case format_types['DD MMM dddd, YYYY']: {
 			const result = converter(orj_this.date, ['day', 'year']);
-			return `${result.day} ${dateTimeFormat(orj_this, 'MMM').format(orj_this.date)} ${dateTimeFormat(orj_this, 'dddd').format(orj_this.date)}, ${result.year}`;
+			return `${result.day} ${dateTimeFormat(orj_this, 'MMM').value.format(orj_this.date)} ${dateTimeFormat(orj_this, 'dddd').value.format(orj_this.date)}, ${result.year}`;
 		}
 		case format_types['MMM']: {
-			return dateTimeFormat(orj_this, 'MMM').format(orj_this.date);
+			const formatter = dateTimeFormat(orj_this, template);
+			const cache_key = `${template}_${formatter.id}_${orj_this.date.getTime()}`;
+			const cache = nopeRedis.getItem(cache_key);
+			if (cache) {
+				return cache;
+			}
+			const value = formatter.value.format(orj_this.date);
+			nopeRedis.setItemAsync(cache_key, value);
+			return value;
 		}
 		case format_types['MMMM']: {
-			return dateTimeFormat(orj_this, 'MMMM').format(orj_this.date);
+			const formatter = dateTimeFormat(orj_this, template);
+			const cache_key = `${template}_${formatter.id}_${orj_this.date.getTime()}`;
+			const cache = nopeRedis.getItem(cache_key);
+			if (cache) {
+				return cache;
+			}
+			const value = formatter.value.format(orj_this.date);
+			nopeRedis.setItemAsync(cache_key, value);
+			return value;
 		}
 		case format_types['ddd']: {
-			return dateTimeFormat(orj_this, 'ddd').format(orj_this.date);
+			const formatter = dateTimeFormat(orj_this, template);
+			const cache_key = `${template}_${formatter.id}_${orj_this.date.getTime()}`;
+			const cache = nopeRedis.getItem(cache_key);
+			if (cache) {
+				return cache;
+			}
+			const value = formatter.value.format(orj_this.date);
+			nopeRedis.setItemAsync(cache_key, value);
+			return value;
 		}
 		case format_types['DD MMM YYYY']: {
 			const result = converter(orj_this.date, ['day', 'year']);
-			return `${result.day} ${dateTimeFormat(orj_this, 'MMM').format(orj_this.date)} ${result.year}`;
+			const value = dateTimeFormat(orj_this, 'MMM');
+			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
+			const cache = nopeRedis.getItem(cache_key);
+			if (cache) {
+				return cache;
+			}
+			nopeRedis.setItemAsync(cache_key, value);
+			return `${result.day} ${value.value.format(orj_this.date)} ${result.year}`;
 		}
 		case format_types['DD MMM']: {
 			const result = converter(orj_this.date, ['day']);
-			return `${result.day} ${dateTimeFormat(orj_this, 'MMM').format(orj_this.date)}`;
+			const value = dateTimeFormat(orj_this, 'MMM');
+			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
+			const cache = nopeRedis.getItem(cache_key);
+			if (cache) {
+				return cache;
+			}
+			nopeRedis.setItemAsync(cache_key, value);
+			return `${result.day} ${value.value.format(orj_this.date)}`;
 		}
 		case format_types['MMM YYYY']: {
-			return `${dateTimeFormat(orj_this, 'MMM').format(orj_this.date)} ${converter(orj_this.date, ['year']).year}`;
+			const value = dateTimeFormat(orj_this, 'MMM');
+			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
+			const cache = nopeRedis.getItem(cache_key);
+			if (cache) {
+				return cache;
+			}
+			nopeRedis.setItemAsync(cache_key, value);
+			return `${value.value.format(orj_this.date)} ${converter(orj_this.date, ['year']).year}`;
 		}
 		case format_types['DD MMM YYYY HH:mm']: {
 			const result = converter(orj_this.date, ['day', 'year', 'hours', 'minutes']);
-			return `${result.day} ${dateTimeFormat(orj_this, 'MMM').format(orj_this.date)} ${result.year} ${result.hours}:${result.minutes}`;
+			const value = dateTimeFormat(orj_this, 'MMM');
+			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
+			const cache = nopeRedis.getItem(cache_key);
+			if (cache) {
+				return cache;
+			}
+			nopeRedis.setItemAsync(cache_key, value);
+			return `${result.day} ${value.value.format(orj_this.date)} ${result.year} ${result.hours}:${result.minutes}`;
 		}
 		case format_types['YYYY-MM']: {
 			const result = converter(orj_this.date, ['month', 'year']);
 			return `${result.year}-${result.month}`;
 		}
 		case format_types['DD MMMM dddd']: {
-			return `${converter(orj_this.date, ['day']).day} ${dateTimeFormat(orj_this, 'MMMM').format(orj_this.date)} ${dateTimeFormat(orj_this, 'dddd').format(orj_this.date)}`;
+			return `${converter(orj_this.date, ['day']).day} ${dateTimeFormat(orj_this, 'MMMM').value.format(orj_this.date)} ${dateTimeFormat(orj_this, 'dddd').value.format(orj_this.date)}`;
 		}
 		case format_types['YYYY-DD-MM']: {
 			const result = converter(orj_this.date, ['day', 'month', 'year']);
@@ -1276,12 +1343,26 @@ function formatter(orj_this, template = null) {
 		}
 		case format_types['DD MMMM']: {
 			const result = converter(orj_this.date, ['day']);
-			return `${result.day} ${dateTimeFormat(orj_this, 'MMMM').format(orj_this.date)}`;
+			const value = dateTimeFormat(orj_this, 'MMMM');
+			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
+			const cache = nopeRedis.getItem(cache_key);
+			if (cache) {
+				return cache;
+			}
+			nopeRedis.setItemAsync(cache_key, value);
+			return `${result.day} ${value.value.format(orj_this.date)}`;
 		}
 		case format_types['D MMMM YYYY']: {
 			const day = converter(orj_this.date, ['day'], { pad: false }).day;
 			const year = converter(orj_this.date, ['year']).year;
-			return `${day} ${dateTimeFormat(orj_this, 'MMMM').format(orj_this.date)} ${year}`;
+			const value = dateTimeFormat(orj_this, 'MMMM');
+			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
+			const cache = nopeRedis.getItem(cache_key);
+			if (cache) {
+				return cache;
+			}
+			nopeRedis.setItemAsync(cache_key, value);
+			return `${day} ${value.value.format(orj_this.date)} ${year}`;
 		}
 		case null: {
 			const timezoneOffset = -orj_this.date.getTimezoneOffset();
