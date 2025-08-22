@@ -1217,15 +1217,18 @@ function formatter(orj_this, template = null) {
 			return `${converter(orj_this.date, ['hours']).hours}`;
 		}
 		case format_types['DD MMMM YYYY']: {
-			const result = converter(orj_this.date, ['day', 'year']);
 			const value = dateTimeFormat(orj_this, 'MMMM');
 			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
 			const cache = nopeRedis.getItem(cache_key);
+			let formatted = null;
 			if (cache) {
-				return cache;
+				formatted = cache;
+			} else {
+				formatted = value.value.format(orj_this.date);
+				nopeRedis.setItemAsync(cache_key, formatted);
 			}
-			nopeRedis.setItemAsync(cache_key, value);
-			return `${result.day} ${value.value.format(orj_this.date)} ${result.year}`;
+			const result = converter(orj_this.date, ['day', 'year']);
+			return `${result.day} ${formatted} ${result.year}`;
 		}
 		case format_types['DD MMMM YYYY dddd']: {
 			const result = converter(orj_this.date, ['day', 'year']);
@@ -1236,15 +1239,18 @@ function formatter(orj_this, template = null) {
 			return `${result.day} ${dateTimeFormat(orj_this, 'MMM').value.format(orj_this.date)} ${result.year} ${dateTimeFormat(orj_this, 'dddd').value.format(orj_this.date)}`;
 		}
 		case format_types['MMMM YYYY']: {
-			const result = converter(orj_this.date, ['year']);
 			const value = dateTimeFormat(orj_this, 'MMMM');
 			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
 			const cache = nopeRedis.getItem(cache_key);
+			let formatted = null;
 			if (cache) {
-				return cache;
+				formatted = cache;
+			} else {
+				formatted = value.value.format(orj_this.date);
+				nopeRedis.setItemAsync(cache_key, formatted);
 			}
-			nopeRedis.setItemAsync(cache_key, value);
-			return `${value.value.format(orj_this.date)} ${result.year}`;
+			const result = converter(orj_this.date, ['year']);
+			return `${formatted} ${result.year}`;
 		}
 		case format_types['DD MMMM dddd YYYY']: {
 			const result = converter(orj_this.date, ['day', 'year']);
@@ -1292,43 +1298,55 @@ function formatter(orj_this, template = null) {
 			const value = dateTimeFormat(orj_this, 'MMM');
 			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
 			const cache = nopeRedis.getItem(cache_key);
+			let formatted = null;
 			if (cache) {
-				return cache;
+				formatted = cache;
+			} else {
+				formatted = value.value.format(orj_this.date);
+				nopeRedis.setItemAsync(cache_key, formatted);
 			}
-			nopeRedis.setItemAsync(cache_key, value);
-			return `${result.day} ${value.value.format(orj_this.date)} ${result.year}`;
+			return `${result.day} ${formatted} ${result.year}`;
 		}
 		case format_types['DD MMM']: {
 			const result = converter(orj_this.date, ['day']);
 			const value = dateTimeFormat(orj_this, 'MMM');
 			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
 			const cache = nopeRedis.getItem(cache_key);
+			let formatted = null;
 			if (cache) {
-				return cache;
+				formatted = cache;
+			} else {
+				formatted = value.value.format(orj_this.date);
+				nopeRedis.setItemAsync(cache_key, formatted);
 			}
-			nopeRedis.setItemAsync(cache_key, value);
-			return `${result.day} ${value.value.format(orj_this.date)}`;
+			return `${result.day} ${formatted}`;
 		}
 		case format_types['MMM YYYY']: {
 			const value = dateTimeFormat(orj_this, 'MMM');
 			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
 			const cache = nopeRedis.getItem(cache_key);
+			let formatted = null;
 			if (cache) {
-				return cache;
+				formatted = cache;
+			} else {
+				formatted = value.value.format(orj_this.date);
+				nopeRedis.setItemAsync(cache_key, formatted);
 			}
-			nopeRedis.setItemAsync(cache_key, value);
-			return `${value.value.format(orj_this.date)} ${converter(orj_this.date, ['year']).year}`;
+			return `${formatted} ${converter(orj_this.date, ['year']).year}`;
 		}
 		case format_types['DD MMM YYYY HH:mm']: {
 			const result = converter(orj_this.date, ['day', 'year', 'hours', 'minutes']);
 			const value = dateTimeFormat(orj_this, 'MMM');
 			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
 			const cache = nopeRedis.getItem(cache_key);
+			let formatted = null;
 			if (cache) {
-				return cache;
+				formatted = cache;
+			} else {
+				formatted = value.value.format(orj_this.date);
+				nopeRedis.setItemAsync(cache_key, formatted);
 			}
-			nopeRedis.setItemAsync(cache_key, value);
-			return `${result.day} ${value.value.format(orj_this.date)} ${result.year} ${result.hours}:${result.minutes}`;
+			return `${result.day} ${formatted} ${result.year} ${result.hours}:${result.minutes}`;
 		}
 		case format_types['YYYY-MM']: {
 			const result = converter(orj_this.date, ['month', 'year']);
@@ -1346,11 +1364,14 @@ function formatter(orj_this, template = null) {
 			const value = dateTimeFormat(orj_this, 'MMMM');
 			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
 			const cache = nopeRedis.getItem(cache_key);
+			let formatted = null;
 			if (cache) {
-				return cache;
+				formatted = cache;
+			} else {
+				formatted = value.value.format(orj_this.date);
+				nopeRedis.setItemAsync(cache_key, formatted);
 			}
-			nopeRedis.setItemAsync(cache_key, value);
-			return `${result.day} ${value.value.format(orj_this.date)}`;
+			return `${result.day} ${formatted}`;
 		}
 		case format_types['D MMMM YYYY']: {
 			const day = converter(orj_this.date, ['day'], { pad: false }).day;
@@ -1358,11 +1379,14 @@ function formatter(orj_this, template = null) {
 			const value = dateTimeFormat(orj_this, 'MMMM');
 			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
 			const cache = nopeRedis.getItem(cache_key);
+			let formatted = null;
 			if (cache) {
-				return cache;
+				formatted = cache;
+			} else {
+				formatted = value.value.format(orj_this.date);
+				nopeRedis.setItemAsync(cache_key, formatted);
 			}
-			nopeRedis.setItemAsync(cache_key, value);
-			return `${day} ${value.value.format(orj_this.date)} ${year}`;
+			return `${day} ${formatted} ${year}`;
 		}
 		case null: {
 			const timezoneOffset = -orj_this.date.getTimezoneOffset();
