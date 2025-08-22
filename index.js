@@ -1108,7 +1108,14 @@ function formatter(orj_this, template = null) {
 			return parseInt(orj_this.valueOfLocal(true) / 1000, 10);
 		}
 		case format_types.dddd: {
-			return dateTimeFormat(orj_this, template).format(orj_this.date);
+			const formatter = dateTimeFormat(orj_this, template);
+			const cache = nopeRedis.getItem(`${template}_${formatter.id}_${orj_this.date.getTime()}`);
+			if (cache) {
+				return cache;
+			}
+			const value = formatter.value.format(orj_this.date);
+			nopeRedis.setItemAsync(`${template}_${formatter.id}_${orj_this.date.getTime()}`, value);
+			return value;
 		}
 		case format_types.DD: {
 			return converter(orj_this.date, ['day']).day;

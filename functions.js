@@ -241,30 +241,30 @@ function dateTimeFormat(orj_this, template) {
 
 	if (template === format_types.dddd) {
 		if (tempLocale) {
-			return cached_dateTimeFormat.temp[template][tempLocale];
+			return { value: cached_dateTimeFormat.temp[template][tempLocale], id: 0 };
 		}
-		return cached_dateTimeFormat.dddd;
+		return { value: cached_dateTimeFormat.dddd, id: 1 };
 	}
 
 	if (template === format_types.ddd) {
 		if (tempLocale) {
-			return cached_dateTimeFormat.temp[template][tempLocale];
+			return { value: cached_dateTimeFormat.temp[template][tempLocale], id: 2 };
 		}
-		return cached_dateTimeFormat.ddd;
+		return { value: cached_dateTimeFormat.ddd, id: 3 };
 	}
 
 	if (template === format_types.MMMM) {
 		if (tempLocale) {
-			return cached_dateTimeFormat.temp[template][tempLocale];
+			return { value: cached_dateTimeFormat.temp[template][tempLocale], id: 4 };
 		}
-		return cached_dateTimeFormat.MMMM;
+		return { value: cached_dateTimeFormat.MMMM, id: 5 };
 	}
 
 	if (template === format_types.MMM) {
 		if (tempLocale) {
-			return cached_dateTimeFormat.temp[template][tempLocale];
+			return { value: cached_dateTimeFormat.temp[template][tempLocale], id: 6 };
 		}
-		return cached_dateTimeFormat.MMM;
+		return { value: cached_dateTimeFormat.MMM, id: 7 };
 	}
 
 	throw new Error('unkown template for dateTimeFormat !');
