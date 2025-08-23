@@ -3,13 +3,13 @@ const kk_date = require('../index');
 const test_date = '2024-08-19';
 const test_time = '23:50:59';
 
-const originalTimezone = 'Europe/Istanbul';
+const originalTimezone = 'UTC';
 
 kk_date.config({ timezone: originalTimezone });
 
 describe('KkDate Enhanced Timezone Tests', () => {
 	beforeEach(() => {
-		// Reset timezone to original after each test
+		// Reset timezone to UTC after each test for consistent results
 		kk_date.config({ timezone: originalTimezone });
 	});
 

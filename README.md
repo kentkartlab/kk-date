@@ -8,7 +8,7 @@ A blazing-fast JavaScript date library with intelligent caching, automatic DST d
 
 ## 🌟 Why Choose kk-date?
 
-- **⚡ Lightning Fast** - 74x faster timezone operations than alternatives
+- **⚡ Lightning Fast** - 49.1x faster timezone operations than alternatives
 - **🌍 Accurate Timezone Handling** - Consistent, reliable timezone conversions across all platforms
 - **🧠 Zero-Config DST** - Automatic Daylight Saving Time detection without manual intervention
 - **📊 Big Data Ready** - Optional Redis-like caching for handling millions of date operations
@@ -260,10 +260,10 @@ date.config({
 
 | Operation | kk-date | Moment.js | Day.js | Speed Improvement |
 |-----------|---------|-----------|--------|-------------------|
-| **Timezone Conversions** | **57.7ms** | 160.3ms | 4,298ms | **74.4x faster** |
-| **Date Formatting** | **22.4ms** | 64.8ms | 164.7ms | **7.4x faster** |
-| **Date Construction** | **127.9ms** | 388.0ms | 38.6ms | **3.0x faster** |
-| **Comparison Operations** | **3.6ms** | 24.5ms | 61.2ms | **17.2x faster** |
+| **Timezone Conversions** | **43.6ms** | 119.6ms | 2140ms | **49.1x faster** |
+| **Date Formatting** | **139.1ms** | 443.3ms | 191.8ms | **3.2x faster** |
+| **Date Construction** | **121.1ms** | 374.2ms | 37.6ms | **3.1x faster** |
+| **Comparison Operations** | **235.3ms** | 794.0ms | 263.4ms | **3.4x faster** |
 
 ### Memory Efficiency
 
@@ -275,7 +275,7 @@ date.config({
 
 ### Key Advantages
 
-- **⚡ 74x faster** timezone operations than Day.js
+- **⚡ 49.1x faster** timezone operations than Day.js
 - **🌍 Perfect timezone accuracy** across all platforms
 - **🧠 Zero-config DST** handling eliminates bugs
 - **📊 Big Data Ready** with optional Redis-like caching

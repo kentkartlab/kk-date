@@ -3,7 +3,7 @@ const kk_date = require('../index');
 const test_date = '2024-08-19';
 const test_time = '23:50:59';
 
-const timezone = 'Europe/Istanbul';
+const timezone = 'UTC';
 
 kk_date.config({ timezone: timezone });
 

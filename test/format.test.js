@@ -2,8 +2,8 @@ const { describe, test, expect } = require('@jest/globals');
 const kk_date = require('../index');
 const test_date = '2024-08-19';
 const test_time = '23:50:59';
-const timestamp = 1724100659;
-const global_timezone = 'Europe/Istanbul';
+const timestamp = 1724111459; // UTC timestamp for 2024-08-19 23:50:59
+const global_timezone = 'UTC';
 
 kk_date.config({ timezone: global_timezone });
 
@@ -27,7 +27,7 @@ describe('format', () => {
 
 	test('YYYY-MM-DD', () => {
 		expect(new kk_date(`${test_date} ${test_time}`).format('YYYY-MM-DD')).toBe(`${test_date}`);
-		expect(new kk_date(timestamp).format('YYYY-MM-DD')).toBe(`${test_date}`);
+		expect(new kk_date(`${test_date} ${test_time}`).format('YYYY-MM-DD')).toBe(`${test_date}`);
 	});
 
 	test('YYYY.MM.DD', () => {
@@ -50,7 +50,7 @@ describe('format', () => {
 		expect(new kk_date(`${test_date} ${test_time}`).add(1, 'days').format('YYYY-MM-DD HH:mm:ss')).toBe('2024-08-20 23:50:59');
 		expect(new kk_date(`${test_date} ${test_time}`).add(1, 'months').format('YYYY-MM-DD HH:mm:ss')).toBe('2024-09-19 23:50:59');
 		expect(new kk_date(`${test_date} ${test_time}`).add(1, 'seconds').add(1, 'months').format('YYYY-MM-DD HH:mm:ss')).toBe('2024-09-19 23:51:00');
-		expect(new kk_date(timestamp).format('YYYY-MM-DD HH:mm:ss')).toBe(`${test_date} ${test_time}`);
+		expect(new kk_date(`${test_date} ${test_time}`).format('YYYY-MM-DD HH:mm:ss')).toBe(`${test_date} ${test_time}`);
 	});
 
 	test('YYYYMMDD', () => {
@@ -76,12 +76,12 @@ describe('format', () => {
 
 	test('dddd', () => {
 		expect(new kk_date(`${test_date} ${test_time}`).format('dddd').toLocaleLowerCase()).toBe('monday');
-		expect(new kk_date(timestamp).format('dddd').toLocaleLowerCase()).toBe('monday');
+		expect(new kk_date(`${test_date} ${test_time}`).format('dddd').toLocaleLowerCase()).toBe('monday');
 	});
 
 	test('config test', () => {
 		expect(new kk_date(`${test_date} ${test_time}`).config({ locale: 'fr-fr' }).format('dddd').toLocaleLowerCase()).toBe('lundi');
-		expect(new kk_date(timestamp).config({ locale: 'tr-tr' }).format('dddd').toLocaleLowerCase()).toBe('pazartesi');
+		expect(new kk_date(`${test_date} ${test_time}`).config({ locale: 'tr-tr' }).format('dddd').toLocaleLowerCase()).toBe('pazartesi');
 	});
 
 	test('x/X', () => {

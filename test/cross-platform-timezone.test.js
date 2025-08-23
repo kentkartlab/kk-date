@@ -1,10 +1,20 @@
-const { describe, test, expect, beforeEach } = require('@jest/globals');
+const { describe, test, expect, beforeEach, beforeAll, afterAll } = require('@jest/globals');
 const kk_date = require('../index');
 
 describe('Cross-Platform Timezone Compatibility Tests', () => {
-	beforeEach(() => {
+	beforeAll(() => {
+		// Set global timezone to UTC for consistent test results across all systems
+		kk_date.config({ timezone: 'UTC' });
+	});
+
+	afterAll(() => {
 		// Reset to default timezone
 		kk_date.config({ timezone: 'Europe/Istanbul' });
+	});
+
+	beforeEach(() => {
+		// Ensure UTC timezone for each test
+		kk_date.config({ timezone: 'UTC' });
 	});
 
 	describe('Environment Detection', () => {
@@ -321,23 +331,23 @@ describe('Cross-Platform Timezone Compatibility Tests', () => {
 			const departureTime = new Date('2024-07-15T10:00:00Z'); // 10 AM UTC
 			const flightDuration = 14 * 60 * 60 * 1000; // 14 hours
 
-			// Departure time in New York
+			// Departure time in New York (UTC-4 in July due to DST)
 			const nyDeparture = kk_date.convertToTimezone(departureTime, 'America/New_York', 'UTC');
 
-			// Arrival time in Tokyo
+			// Arrival time in Tokyo (UTC+9)
 			const arrivalTime = new Date(departureTime.getTime() + flightDuration);
 			const tokyoArrival = kk_date.convertToTimezone(arrivalTime, 'Asia/Tokyo', 'UTC');
 
-			// Should be reasonable times
-			expect(nyDeparture.getHours()).toBeGreaterThanOrEqual(5); // Early morning
-			expect(nyDeparture.getHours()).toBeLessThanOrEqual(12); // Before noon
+			// With UTC global timezone, results should be consistent across systems
+			// New York departure: 10:00 UTC = 06:00 EDT (UTC-4)
+			expect(nyDeparture.getUTCHours()).toBe(6); // 6 AM in New York
 
-			expect(tokyoArrival.getHours()).toBeGreaterThanOrEqual(0); // Any hour
-			expect(tokyoArrival.getHours()).toBeLessThanOrEqual(23); // Any hour
+			// Tokyo arrival: 24:00 UTC = 09:00 JST (UTC+9) next day
+			expect(tokyoArrival.getUTCHours()).toBe(9); // 9 AM in Tokyo
 		});
 
 		test('should handle business meeting across timezones', () => {
-			// Meeting at 2 PM London time
+			// Meeting at 2 PM London time (UTC+1 in July due to BST)
 			const londonTime = new Date('2024-07-15T14:00:00Z');
 			const londonMeeting = kk_date.convertToTimezone(londonTime, 'Europe/London', 'UTC');
 
@@ -345,13 +355,15 @@ describe('Cross-Platform Timezone Compatibility Tests', () => {
 			const nyTime = kk_date.convertToTimezone(londonTime, 'America/New_York', 'UTC');
 			const tokyoTime = kk_date.convertToTimezone(londonTime, 'Asia/Tokyo', 'UTC');
 
-			// Should be reasonable business hours
-			expect(nyTime.getHours()).toBeGreaterThanOrEqual(8); // After 8 AM
-			expect(nyTime.getHours()).toBeLessThanOrEqual(18); // Before 6 PM
+			// With UTC global timezone, results should be consistent across systems
+			// London: 14:00 UTC = 15:00 BST (UTC+1)
+			expect(londonMeeting.getUTCHours()).toBe(15); // 3 PM in London
 
-			// Tokyo time should be reasonable (any hour)
-			expect(tokyoTime.getHours()).toBeGreaterThanOrEqual(0);
-			expect(tokyoTime.getHours()).toBeLessThanOrEqual(23);
+			// New York: 14:00 UTC = 10:00 EDT (UTC-4)
+			expect(nyTime.getUTCHours()).toBe(10); // 10 AM in New York
+
+			// Tokyo: 14:00 UTC = 23:00 JST (UTC+9)
+			expect(tokyoTime.getUTCHours()).toBe(23); // 11 PM in Tokyo
 		});
 	});
 });

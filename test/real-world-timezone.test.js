@@ -3,8 +3,8 @@ const kk_date = require('../index');
 
 describe('Real-World Timezone Scenarios', () => {
 	beforeEach(() => {
-		// Reset to default timezone
-		kk_date.config({ timezone: 'Europe/Istanbul' });
+		// Reset to UTC timezone for consistent test results across all systems
+		kk_date.config({ timezone: 'UTC' });
 	});
 
 	describe('Malaysia-US Time Differences', () => {
