@@ -2,7 +2,7 @@
 
 [![npm version](https://badge.fury.io/js/kk-date.svg)](https://badge.fury.io/js/kk-date)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests](https://img.shields.io/badge/Tests-214%20passed-brightgreen)](https://github.com/your-username/kk-date)
+[![Tests](https://img.shields.io/badge/Tests-214%20passed-brightgreen)](https://github.com/kentkartlab/kk-date)
 
 A blazing-fast JavaScript date library with intelligent caching, automatic DST detection, and zero-config timezone handling. Perfect for high-performance applications, real-time systems, and data-intensive operations where speed and accuracy matter most.
 
@@ -186,9 +186,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Comprehensive timezone support using IANA timezone database
 
 ## 📞 Support
-- 🐛 **Issues**: [GitHub Issues](https://github.com/your-username/kk-date/issues)
+- 🐛 **Issues**: [GitHub Issues](https://github.com/kentkartlab/kk-date/issues)
 - 📖 **Documentation**: [Full Documentation](docs/)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/your-username/kk-date/discussions)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/kentkartlab/kk-date/discussions)
 
 ## ⚠️ Disclaimer
 

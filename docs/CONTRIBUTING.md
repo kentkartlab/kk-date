@@ -26,7 +26,7 @@ Thank you for your interest in contributing to kk-date! This guide will help you
 1. Fork the repository on GitHub
 2. Clone your fork locally:
    ```bash
-   git clone https://github.com/your-username/kk-date.git
+   git clone https://github.com/kentkartlab/kk-date.git
    cd kk-date
    ```
 3. Add the original repository as upstream:
