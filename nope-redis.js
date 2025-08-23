@@ -75,16 +75,16 @@ function evictLRU() {
 }
 
 /**
- * set item to no-redis
+ * set item to no-redis (sync version for performance)
  *
  * @param {string} key
  * @param {*} value
  * @param {number} ttl
  * @returns {Boolean}
  */
-module.exports.setItemAsync = async (key, value, ttl = defaultTtl) => {
+module.exports.setItemSync = (key, value, ttl = defaultTtl) => {
 	try {
-		key = `${key}`;
+		const keyStr = `${key}`;
 		if (!memory.config.status || typeof ttl !== 'number') {
 			return false;
 		}
@@ -94,20 +94,32 @@ module.exports.setItemAsync = async (key, value, ttl = defaultTtl) => {
 			evictLRU();
 		}
 
-		memory.store[key] = {
+		memory.store[keyStr] = {
 			value: value,
 			hit: 0,
 			expires_at: Math.floor(new Date() / 1000) + Number.parseInt(ttl, 10),
 		};
 
 		// Update LRU tracking
-		memory.lru.set(key, Date.now());
+		memory.lru.set(keyStr, Date.now());
 
 		return true;
 	} catch (error) {
 		console.error('nope-redis -> Cant Set Error! ', error.message);
 		return false;
 	}
+};
+
+/**
+ * set item to no-redis (async version)
+ *
+ * @param {string} key
+ * @param {*} value
+ * @param {number} ttl
+ * @returns {Boolean}
+ */
+module.exports.setItemAsync = async (key, value, ttl = defaultTtl) => {
+	return module.exports.setItemSync(key, value, ttl);
 };
 
 /**
@@ -139,19 +151,19 @@ module.exports.itemStats = (key) => {
  * @returns {*}
  */
 module.exports.getItem = (key) => {
-	key = `${key}`;
+	const keyStr = `${key}`;
 	try {
 		if (!memory.config.status) {
 			return false;
 		}
-		if (memory.store[key]) {
-			memory.store[key].hit++;
+		if (memory.store[keyStr]) {
+			memory.store[keyStr].hit++;
 			memory.config.totalHits++;
 
 			// Update LRU tracking on access
-			memory.lru.set(key, Date.now());
+			memory.lru.set(keyStr, Date.now());
 
-			return memory.store[key].value;
+			return memory.store[keyStr].value;
 		}
 		return null;
 	} catch (error) {
@@ -168,13 +180,13 @@ module.exports.getItem = (key) => {
  */
 module.exports.deleteItem = (key) => {
 	try {
-		key = `${key}`;
+		const keyStr = `${key}`;
 		if (memory.config.status === false) {
 			return false;
 		}
-		if (memory.store[key]) {
-			delete memory.store[key];
-			memory.lru.delete(key);
+		if (memory.store[keyStr]) {
+			delete memory.store[keyStr];
+			memory.lru.delete(keyStr);
 		}
 		return true;
 	} catch (error) {

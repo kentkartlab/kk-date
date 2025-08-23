@@ -42,53 +42,64 @@ class KkDate {
 		let cached = false;
 		this.detected_format = null;
 		this.temp_config = {};
+
 		if (params.length === 0) {
 			this.date = new Date();
 		} else {
 			const date = params[0];
 			let forced_format_founded = false;
 			const check_instanceof_date = date instanceof Date;
-			cached = nopeRedis.getItem(check_instanceof_date ? null : date);
-			if (params[1] && !cached) {
-				if (params[1] === format_types['YYYY-DD-MM']) {
-					is_can_cache = true;
-					const [year, day, month] = date.split('-');
-					this.date = new Date(`${year}-${month}-${day} 00:00:00`);
-					forced_format_founded = true;
-					this.detected_format = 'YYYY-DD-MM';
-				} else if (params[1] === format_types['YYYY-MM-DD']) {
-					is_can_cache = true;
-					const [year, month, day] = date.split('-');
-					this.date = new Date(`${year}-${month}-${day} 00:00:00`);
-					forced_format_founded = true;
-					this.detected_format = 'YYYY-MM-DD';
+
+			// Fast path for simple cases that don't benefit from caching
+			if (Number.isInteger(date)) {
+				// Timestamp optimization - bypass cache for simple integer timestamps
+				const stringed_date_length = `${date}`.length;
+				if (stringed_date_length <= 10) {
+					this.date = new Date(date * 1000);
+				} else if (stringed_date_length > 10) {
+					this.date = new Date(date);
 				}
-				if (!forced_format_founded) {
-					if (!format_types_regex[params[1]]) {
-						throw new Error(`Unsupported Format! ${params[1]} !`);
+				this.detected_format = 'Xx';
+				is_can_cache = false; // Skip cache for simple timestamps
+			} else if (isKkDate(date)) {
+				// KkDate instance optimization
+				this.date = new Date(date.date.toUTCString());
+				this.detected_format = 'kkDate';
+				is_can_cache = false; // Skip cache for KkDate instances
+			} else if (check_instanceof_date) {
+				// Date instance optimization
+				this.date = new Date(date.getTime());
+				this.detected_format = 'Date';
+				is_can_cache = false; // Skip cache for Date instances
+			} else {
+				// Only use cache for complex string parsing
+				cached = nopeRedis.getItem(date);
+
+				if (params[1] && !cached) {
+					if (params[1] === format_types['YYYY-DD-MM']) {
+						is_can_cache = true;
+						const [year, day, month] = date.split('-');
+						this.date = new Date(`${year}-${month}-${day} 00:00:00`);
+						forced_format_founded = true;
+						this.detected_format = 'YYYY-DD-MM';
+					} else if (params[1] === format_types['YYYY-MM-DD']) {
+						is_can_cache = true;
+						const [year, month, day] = date.split('-');
+						this.date = new Date(`${year}-${month}-${day} 00:00:00`);
+						forced_format_founded = true;
+						this.detected_format = 'YYYY-MM-DD';
 					}
-					if (!format_types_regex[params[1]].test(params[0])) {
-						throw new Error(`Invalid format ! ${format_types[params[1]]} !`);
+					if (!forced_format_founded) {
+						if (!format_types_regex[params[1]]) {
+							throw new Error(`Unsupported Format! ${params[1]} !`);
+						}
+						if (!format_types_regex[params[1]].test(params[0])) {
+							throw new Error(`Invalid format ! ${format_types[params[1]]} !`);
+						}
 					}
 				}
-			}
-			if (!forced_format_founded && !cached) {
-				is_can_cache = false;
-				if (Number.isInteger(date)) {
-					const stringed_date_length = `${date}`.length;
-					if (stringed_date_length <= 10) {
-						this.date = new Date(date * 1000);
-					} else if (stringed_date_length > 10) {
-						this.date = new Date(date);
-					}
-					this.detected_format = 'Xx';
-				} else if (isKkDate(date)) {
-					this.date = new Date(date.date.toUTCString());
-					this.detected_format = 'kkDate';
-				} else if (check_instanceof_date) {
-					this.date = new Date(date.getTime());
-					this.detected_format = 'Date';
-				} else {
+
+				if (!forced_format_founded && !cached) {
 					is_can_cache = true;
 					if (
 						isValid(date, format_types['HH:mm:ss.SSS']) ||
@@ -380,7 +391,8 @@ class KkDate {
 			} else {
 				isInvalid(this.date);
 				if (is_can_cache) {
-					nopeRedis.setItemAsync(`${date}`, new Date(this.date.getTime()));
+					// Use sync cache set for better performance
+					nopeRedis.setItemSync(`${date}`, new Date(this.date.getTime()));
 				}
 			}
 		}
@@ -476,8 +488,9 @@ class KkDate {
 	 * @returns {boolean|Error}
 	 */
 	isBetween(start, end, unit = 'milliseconds') {
-		const starts = isKkDate(start) ? start.getTime() : new KkDate(start).getTime();
-		const ends = isKkDate(end) ? end.getTime() : new KkDate(end).getTime();
+		// Optimized: Use _getTimestamp to avoid creating new instances
+		const starts = this._getTimestamp(start);
+		const ends = this._getTimestamp(end);
 		const date_time = this.date.getTime();
 
 		if (unit === 'milliseconds') {
@@ -723,12 +736,14 @@ class KkDate {
 		const diffed = diff(this, end, type);
 		const rangeDates = [];
 		rangeDates.push(formatter(this, template));
+
+		// Optimized: Create a single KkDate instance and reuse it
+		const tempDate = new KkDate(this.date);
+		tempDate.temp_config = this.temp_config;
+
 		for (let index = 1; index < diffed.diffTime + 1; index++) {
-			const date = new Date(this.date.getTime());
-			date.setSeconds(this.date.getSeconds() + diffed.type_value * index);
-			const newKkDateInstance = new KkDate(date);
-			newKkDateInstance.temp_config = this.temp_config;
-			rangeDates.push(formatter(newKkDateInstance, template));
+			tempDate.date.setTime(this.date.getTime() + (diffed.type_value * index * 1000));
+			rangeDates.push(formatter(tempDate, template));
 		}
 		return rangeDates;
 	}
@@ -972,9 +987,9 @@ class KkDate {
 				this.date.setHours(23, 59, 59, 999);
 				break;
 			case 'months': {
-				const year = this.date.getFullYear();
+				// Optimized: Use setMonth with day 0 to get last day of previous month, then add 1 month
 				const month = this.date.getMonth();
-				this.date.setDate(new Date(year, month + 1, 0).getDate());
+				this.date.setMonth(month + 1, 0);
 				this.date.setHours(23, 59, 59, 999);
 				break;
 			}
@@ -1159,12 +1174,14 @@ function formatter(orj_this, template = null) {
 			return parseInt(orj_this.valueOfLocal(true) / 1000, 10);
 		}
 		case format_types.dddd: {
-			const formatter = dateTimeFormat(orj_this, template);
-			const cache_key = `${template}_${formatter.id}_${orj_this.date.getTime()}`;
+			// Optimized: Include locale in cache key for proper localization
+			const locale = orj_this.temp_config.locale || global_config.locale;
+			const cache_key = `${template}_${locale}_${orj_this.date.getTime()}`;
 			const cache = nopeRedis.getItem(cache_key);
 			if (cache) {
 				return cache;
 			}
+			const formatter = dateTimeFormat(orj_this, template);
 			const value = formatter.value.format(orj_this.date);
 			nopeRedis.setItemAsync(cache_key, value);
 			return value;
