@@ -67,17 +67,30 @@ function getTimezoneOffset(timezone) {
 		if (timezone_cache.has(timezone)) {
 			const { offset, timestamp } = timezone_cache.get(timezone);
 			if (new_date.getTime() - timestamp < cache_ttl) {
-				return offset; // Cache is avaible return from cache
+				return offset; // Cache is available return from cache
 			}
 		}
 
-		const resolver = new Intl.DateTimeFormat('en-US', { timeZone: timezone, timeZoneName: 'longOffset' }).formatToParts(new_date);
-		const offset = resolver.find((part) => part.type === 'timeZoneName');
-		const offsetValue = offset.value.split('GMT')[1];
+		// Optimized timezone resolution
+		const resolver = new Intl.DateTimeFormat('en-US', { 
+			timeZone: timezone, 
+			timeZoneName: 'longOffset' 
+		}).formatToParts(new_date);
+		
+		const offsetPart = resolver.find((part) => part.type === 'timeZoneName');
+		if (!offsetPart) {
+			throw new Error('Invalid timezone');
+		}
+		
+		const offsetValue = offsetPart.value.split('GMT')[1];
 		const [offsetHours, offsetMinutes = '0'] = offsetValue.split(':').map(Number);
 		const totalOffset = offsetHours * 3600 + offsetMinutes * 60;
+		
 		// save to cache
-		timezone_cache.set(timezone, { offset: totalOffset * 1000, timestamp: new_date.getTime() });
+		timezone_cache.set(timezone, { 
+			offset: totalOffset * 1000, 
+			timestamp: new_date.getTime() 
+		});
 		return totalOffset * 1000;
 	} catch {
 		throw Error('check timezone');

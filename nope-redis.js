@@ -8,6 +8,7 @@ let criticalError = 0;
 let KILL_SERVICE = false;
 const intervalSecond = 5;
 let runnerInterval = null;
+const MAX_CACHE_SIZE = 20000; // Maximum number of items in cache
 
 const memory = {
 	config: {
@@ -20,6 +21,8 @@ const memory = {
 		memoryStats: {},
 	},
 	store: {},
+	// LRU tracking
+	lru: new Map(), // key -> timestamp
 };
 
 /**
@@ -49,6 +52,29 @@ module.exports.config = (options = { defaultTtl }) => {
 };
 
 /**
+ * LRU eviction - remove least recently used items
+ */
+function evictLRU() {
+	if (Object.keys(memory.store).length <= MAX_CACHE_SIZE) {
+		return;
+	}
+
+	// Sort by access time (least recent first)
+	const sortedKeys = Array.from(memory.lru.entries())
+		.sort((a, b) => a[1] - b[1])
+		.map((entry) => entry[0]);
+
+	// Remove oldest 20% of items
+	const itemsToRemove = Math.floor(MAX_CACHE_SIZE * 0.2);
+	const keysToRemove = sortedKeys.slice(0, itemsToRemove);
+
+	keysToRemove.forEach((key) => {
+		delete memory.store[key];
+		memory.lru.delete(key);
+	});
+}
+
+/**
  * set item to no-redis
  *
  * @param {string} key
@@ -58,14 +84,24 @@ module.exports.config = (options = { defaultTtl }) => {
  */
 module.exports.setItemAsync = async (key, value, ttl = defaultTtl) => {
 	try {
-		if (memory.config.status === false || typeof ttl !== 'number') {
+		if (!memory.config.status || typeof ttl !== 'number') {
 			return false;
 		}
+
+		// Check if we need to evict items
+		if (Object.keys(memory.store).length >= MAX_CACHE_SIZE) {
+			evictLRU();
+		}
+
 		memory.store[key] = {
 			value: value,
 			hit: 0,
 			expires_at: Math.floor(new Date() / 1000) + Number.parseInt(ttl, 10),
 		};
+
+		// Update LRU tracking
+		memory.lru.set(key, Date.now());
+
 		return true;
 	} catch (error) {
 		console.error('nope-redis -> Cant Set Error! ', error.message);
@@ -103,12 +139,16 @@ module.exports.itemStats = (key) => {
  */
 module.exports.getItem = (key) => {
 	try {
-		if (memory.config.status === false) {
+		if (!memory.config.status) {
 			return false;
 		}
 		if (memory.store[key]) {
 			memory.store[key].hit++;
 			memory.config.totalHits++;
+
+			// Update LRU tracking on access
+			memory.lru.set(key, Date.now());
+
 			return memory.store[key].value;
 		}
 		return null;
@@ -131,6 +171,7 @@ module.exports.deleteItem = (key) => {
 		}
 		if (memory.store[`${key}`]) {
 			delete memory.store[`${key}`];
+			memory.lru.delete(key);
 		}
 		return true;
 	} catch (error) {
@@ -174,6 +215,8 @@ module.exports.stats = (config = { showKeys: true, showTotal: true, showSize: fa
 			criticalError,
 			defaultTtl,
 			totalHits: memory.config.totalHits,
+			cacheSize: Object.keys(memory.store).length,
+			maxCacheSize: MAX_CACHE_SIZE,
 		};
 		if (config.showTotal) {
 			result.total = Object.keys(memory.store).length;
@@ -211,6 +254,7 @@ function defaultMemory(withConfig = false) {
 			},
 		};
 		memory.store = {};
+		memory.lru.clear();
 		if (withConfig) {
 			memory.config = JSON.parse(JSON.stringify(defaultMemory.config));
 		}

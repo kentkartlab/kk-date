@@ -392,14 +392,32 @@ class KkDate {
 	}
 
 	/**
+	 * Optimized helper to get timestamp from various input types
+	 * @param {string|Date|KkDate} date - date/datetime/time
+	 * @returns {number}
+	 */
+	_getTimestamp(date) {
+		if (isKkDate(date)) {
+			return date.getTime();
+		}
+		if (date instanceof Date) {
+			return date.getTime();
+		}
+		if (Number.isInteger(date)) {
+			return date <= 10 ? date * 1000 : date;
+		}
+		// Only create KkDate instance for string inputs
+		return new KkDate(date).getTime();
+	}
+
+	/**
 	 * isBefore
 	 *
 	 * @param {string|Date|KkDate} date - date/datetime/time
 	 * @returns {boolean|Error}
 	 */
 	isBefore(date) {
-		const converted = isKkDate(date) ? date.getTime() : new KkDate(date).getTime();
-		return this.getTime() < converted;
+		return this.getTime() < this._getTimestamp(date);
 	}
 
 	/**
@@ -409,8 +427,7 @@ class KkDate {
 	 * @returns {boolean|Error}
 	 */
 	isSameOrBefore(date) {
-		const converted = isKkDate(date) ? date.getTime() : new KkDate(date).getTime();
-		return this.getTime() <= converted;
+		return this.getTime() <= this._getTimestamp(date);
 	}
 
 	/**
@@ -420,8 +437,7 @@ class KkDate {
 	 * @returns {boolean|Error}
 	 */
 	isAfter(date) {
-		const converted = isKkDate(date) ? date.getTime() : new KkDate(date).getTime();
-		return this.date.getTime() > converted;
+		return this.date.getTime() > this._getTimestamp(date);
 	}
 
 	/**
@@ -431,8 +447,7 @@ class KkDate {
 	 * @returns {boolean|Error}
 	 */
 	isSameOrAfter(date) {
-		const converted = isKkDate(date) ? date.getTime() : new KkDate(date).getTime();
-		return this.date.getTime() >= converted;
+		return this.date.getTime() >= this._getTimestamp(date);
 	}
 
 	/**
@@ -442,8 +457,7 @@ class KkDate {
 	 * @returns {boolean|Error}
 	 */
 	isSame(date) {
-		const converted = isKkDate(date) ? date.getTime() : new KkDate(date).getTime();
-		return this.date.getTime() === converted;
+		return this.date.getTime() === this._getTimestamp(date);
 	}
 
 	/**
