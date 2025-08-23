@@ -10,6 +10,8 @@ const {
 	timezone_cache,
 	timezone_check_cache,
 	timezone_abbreviation_cache,
+	target_timezone_cache,
+	long_timezone_cache,
 	global_config,
 } = require('./constants');
 
@@ -77,12 +79,17 @@ function getTimezoneOffset(timezone, date = new Date()) {
 		// Validate timezone
 		checkTimezone(timezone);
 
+		let formatter;
+		if (long_timezone_cache.has(timezone)) {
+			formatter = long_timezone_cache.get(timezone);
+		} else {
+			formatter = new Intl.DateTimeFormat('en-US', {
+				timeZone: timezone,
+				timeZoneName: 'longOffset',
+			});
+			long_timezone_cache.set(timezone, formatter);
+		}
 		// Get timezone offset using Intl.DateTimeFormat with timeZoneName
-		const formatter = new Intl.DateTimeFormat('en-US', {
-			timeZone: timezone,
-			timeZoneName: 'longOffset',
-		});
-
 		const parts = formatter.formatToParts(date);
 		const offsetPart = parts.find((part) => part.type === 'timeZoneName');
 
@@ -415,6 +422,37 @@ function duration(time, type) {
 function dateTimeFormat(orj_this, template) {
 	const tempLocale = orj_this.temp_config.locale;
 
+	// For timestamp inputs with configured timezone, use timezone-aware formatting
+	if (orj_this.detected_format === 'Xx' && global_config.timezone && global_config.timezone !== 'UTC') {
+		const locale = tempLocale || global_config.locale;
+		const timezone = global_config.timezone;
+		
+		if (template === format_types.dddd) {
+			return { 
+				value: new Intl.DateTimeFormat(locale, { weekday: 'long', timeZone: timezone }), 
+				id: `${locale}_${timezone}_dddd` 
+			};
+		}
+		if (template === format_types.ddd) {
+			return { 
+				value: new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: timezone }), 
+				id: `${locale}_${timezone}_ddd` 
+			};
+		}
+		if (template === format_types.MMMM) {
+			return { 
+				value: new Intl.DateTimeFormat(locale, { month: 'long', timeZone: timezone }), 
+				id: `${locale}_${timezone}_MMMM` 
+			};
+		}
+		if (template === format_types.MMM) {
+			return { 
+				value: new Intl.DateTimeFormat(locale, { month: 'short', timeZone: timezone }), 
+				id: `${locale}_${timezone}_MMM` 
+			};
+		}
+	}
+
 	if (tempLocale) {
 		return { value: cached_dateTimeFormat.temp[template][tempLocale], id: `${orj_this.temp_config.locale}_0` };
 	}
@@ -439,48 +477,116 @@ function dateTimeFormat(orj_this, template) {
  *
  * @param {Date} date
  * @param {Array} to
- * @param {object} [options={pad: true, isUTC: false}]
+ * @param {object} [options={pad: true, isUTC: false, detectedFormat: null}]
  * @returns {Object}
  */
 function converter(date, to, options = { pad: true }) {
 	const result = {};
 	const shouldPad = options.pad !== false; // Default to true if options.pad is not explicitly false
 	const isUTC = options.isUTC || false; // Use UTC methods for UTC dates
+	const detectedFormat = options.detectedFormat || null;
+	
+	// For timestamp inputs (Xx format), use timezone-aware formatting if global timezone is set
+	let shouldUseUTC = isUTC;
+	let useTimezoneFormatting = false;
+	let targetTimezone = null;
+	
+	if (detectedFormat === 'Xx' && global_config.timezone && global_config.timezone !== 'UTC') {
+		useTimezoneFormatting = true;
+		targetTimezone = global_config.timezone;
+		shouldUseUTC = false; // Don't use UTC methods, we'll use Intl formatting
+	} else if (detectedFormat !== 'Xx') {
+		shouldUseUTC = isUTC;
+	}
 
-	for (let index = 0; index < to.length; index++) {
-		switch (to[index]) {
-			case 'year':
-				result['year'] = isUTC ? date.getUTCFullYear() : date.getFullYear();
-				break;
-			case 'month': {
-				const month = isUTC ? date.getUTCMonth() + 1 : date.getMonth() + 1;
-				result['month'] = shouldPad ? String(month).padStart(2, '0') : month;
-				break;
+	// Use timezone-aware formatting for timestamps if configured
+	if (useTimezoneFormatting && targetTimezone) {
+		if (target_timezone_cache.has(targetTimezone)) {
+			formatter = target_timezone_cache.get(targetTimezone);
+		} else {
+			formatter = new Intl.DateTimeFormat('en-CA', {
+				timeZone: targetTimezone,
+				year: 'numeric',
+				month: '2-digit',
+				day: '2-digit',
+				hour: '2-digit',
+				minute: '2-digit',
+				second: '2-digit',
+				hour12: false
+			});
+			target_timezone_cache.set(targetTimezone, formatter);
+		}
+		
+		const parts = formatter.formatToParts(date);
+		const partsMap = {};
+		parts.forEach(part => {
+			partsMap[part.type] = part.value;
+		});
+		
+		for (let index = 0; index < to.length; index++) {
+			switch (to[index]) {
+				case 'year':
+					result['year'] = partsMap.year;
+					break;
+				case 'month':
+					result['month'] = shouldPad ? partsMap.month : parseInt(partsMap.month, 10);
+					break;
+				case 'day':
+					result['day'] = shouldPad ? partsMap.day : parseInt(partsMap.day, 10);
+					break;
+				case 'hours':
+					result['hours'] = shouldPad ? partsMap.hour : parseInt(partsMap.hour, 10);
+					break;
+				case 'minutes':
+					result['minutes'] = shouldPad ? partsMap.minute : parseInt(partsMap.minute, 10);
+					break;
+				case 'seconds':
+					result['seconds'] = shouldPad ? partsMap.second : parseInt(partsMap.second, 10);
+					break;
+				case 'milliseconds': {
+					const milliseconds = shouldUseUTC ? date.getUTCMilliseconds() : date.getMilliseconds();
+					result['milliseconds'] = shouldPad ? String(milliseconds).padStart(3, '0') : milliseconds;
+					break;
+				}
 			}
-			case 'day': {
-				const day = isUTC ? date.getUTCDate() : date.getDate();
-				result['day'] = shouldPad ? String(day).padStart(2, '0') : day;
-				break;
-			}
-			case 'hours': {
-				const hours = isUTC ? date.getUTCHours() : date.getHours();
-				result['hours'] = shouldPad ? String(hours).padStart(2, '0') : hours;
-				break;
-			}
-			case 'minutes': {
-				const minutes = isUTC ? date.getUTCMinutes() : date.getMinutes();
-				result['minutes'] = shouldPad ? String(minutes).padStart(2, '0') : minutes;
-				break;
-			}
-			case 'seconds': {
-				const seconds = isUTC ? date.getUTCSeconds() : date.getSeconds();
-				result['seconds'] = shouldPad ? String(seconds).padStart(2, '0') : seconds;
-				break;
-			}
-			case 'milliseconds': {
-				const milliseconds = isUTC ? date.getUTCMilliseconds() : date.getMilliseconds();
-				result['milliseconds'] = shouldPad ? String(milliseconds).padStart(3, '0') : milliseconds; // Pad milliseconds to 3 digits
-				break;
+		}
+	} else {
+		// Standard formatting
+		for (let index = 0; index < to.length; index++) {
+			switch (to[index]) {
+				case 'year':
+					result['year'] = shouldUseUTC ? date.getUTCFullYear() : date.getFullYear();
+					break;
+				case 'month': {
+					const month = shouldUseUTC ? date.getUTCMonth() + 1 : date.getMonth() + 1;
+					result['month'] = shouldPad ? String(month).padStart(2, '0') : month;
+					break;
+				}
+				case 'day': {
+					const day = shouldUseUTC ? date.getUTCDate() : date.getDate();
+					result['day'] = shouldPad ? String(day).padStart(2, '0') : day;
+					break;
+				}
+				case 'hours': {
+					const hours = shouldUseUTC ? date.getUTCHours() : date.getHours();
+					result['hours'] = shouldPad ? String(hours).padStart(2, '0') : hours;
+					break;
+				}
+				case 'minutes': {
+					const minutes = shouldUseUTC ? date.getUTCMinutes() : date.getMinutes();
+					result['minutes'] = shouldPad ? String(minutes).padStart(2, '0') : minutes;
+					break;
+				}
+				case 'seconds': {
+					const seconds = shouldUseUTC ? date.getUTCSeconds() : date.getSeconds();
+					result['seconds'] = shouldPad ? String(seconds).padStart(2, '0') : seconds;
+					break;
+				}
+				case 'milliseconds': {
+					const milliseconds = shouldUseUTC ? date.getUTCMilliseconds() : date.getMilliseconds();
+					result['milliseconds'] = shouldPad ? String(milliseconds).padStart(3, '0') : milliseconds; // Pad milliseconds to 3 digits
+					break;
+				}
 			}
 		}
 	}

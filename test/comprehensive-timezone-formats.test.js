@@ -2,8 +2,18 @@ const kk_date = require('../index');
 
 describe('Comprehensive Timezone Format Tests', () => {
 	// Test base UTC time for all scenarios
-	// Note: We need to account for system timezone when testing UTC formatting
+	// Set global timezone to UTC for consistent testing
 	const baseUtcTime = '2024-08-23T10:00:00.000Z'; // UTC 10:00
+	
+	beforeAll(() => {
+		// Set global timezone to UTC for consistent test results
+		kk_date.config({ timezone: 'UTC' });
+	});
+	
+	afterAll(() => {
+		// Reset to system timezone after tests
+		kk_date.config({ timezone: Intl.DateTimeFormat().resolvedOptions().timeZone });
+	});
 	
 	describe('Basic Date Formats with Timezone Conversion', () => {
 		test('YYYY-MM-DD format with timezone', () => {
@@ -95,10 +105,10 @@ describe('Comprehensive Timezone Format Tests', () => {
 			const nyDate = new kk_date(baseUtcTime).tz('America/New_York');
 			const malaysiaDate = new kk_date(baseUtcTime).tz('Asia/Kuala_Lumpur');
 			
-			// Account for system timezone (UTC+3)
-			expect(utcDate.format('DD.MM.YYYY HH:mm:ss')).toBe('23.08.2024 13:00:00');
-			expect(nyDate.format('DD.MM.YYYY HH:mm:ss')).toBe('23.08.2024 09:00:00');
-			expect(malaysiaDate.format('DD.MM.YYYY HH:mm:ss')).toBe('23.08.2024 21:00:00');
+			// With UTC global timezone
+			expect(utcDate.format('DD.MM.YYYY HH:mm:ss')).toBe('23.08.2024 10:00:00');
+			expect(nyDate.format('DD.MM.YYYY HH:mm:ss')).toBe('23.08.2024 06:00:00');
+			expect(malaysiaDate.format('DD.MM.YYYY HH:mm:ss')).toBe('23.08.2024 18:00:00');
 		});
 
 		test('DD-MM-YYYY HH:mm:ss format with timezone', () => {
@@ -106,10 +116,10 @@ describe('Comprehensive Timezone Format Tests', () => {
 			const nyDate = new kk_date(baseUtcTime).tz('America/New_York');
 			const malaysiaDate = new kk_date(baseUtcTime).tz('Asia/Kuala_Lumpur');
 			
-			// Account for system timezone (UTC+3)
-			expect(utcDate.format('DD-MM-YYYY HH:mm:ss')).toBe('23-08-2024 13:00:00');
-			expect(nyDate.format('DD-MM-YYYY HH:mm:ss')).toBe('23-08-2024 09:00:00');
-			expect(malaysiaDate.format('DD-MM-YYYY HH:mm:ss')).toBe('23-08-2024 21:00:00');
+			// With UTC global timezone
+			expect(utcDate.format('DD-MM-YYYY HH:mm:ss')).toBe('23-08-2024 10:00:00');
+			expect(nyDate.format('DD-MM-YYYY HH:mm:ss')).toBe('23-08-2024 06:00:00');
+			expect(malaysiaDate.format('DD-MM-YYYY HH:mm:ss')).toBe('23-08-2024 18:00:00');
 		});
 
 		test('YYYY-MM-DDTHH:mm:ss format with timezone', () => {
@@ -117,10 +127,10 @@ describe('Comprehensive Timezone Format Tests', () => {
 			const nyDate = new kk_date(baseUtcTime).tz('America/New_York');
 			const malaysiaDate = new kk_date(baseUtcTime).tz('Asia/Kuala_Lumpur');
 			
-			// Account for system timezone (UTC+3)
-			expect(utcDate.format('YYYY-MM-DDTHH:mm:ss')).toBe('2024-08-23T13:00:00');
-			expect(nyDate.format('YYYY-MM-DDTHH:mm:ss')).toBe('2024-08-23T09:00:00');
-			expect(malaysiaDate.format('YYYY-MM-DDTHH:mm:ss')).toBe('2024-08-23T21:00:00');
+			// With UTC global timezone
+			expect(utcDate.format('YYYY-MM-DDTHH:mm:ss')).toBe('2024-08-23T10:00:00');
+			expect(nyDate.format('YYYY-MM-DDTHH:mm:ss')).toBe('2024-08-23T06:00:00');
+			expect(malaysiaDate.format('YYYY-MM-DDTHH:mm:ss')).toBe('2024-08-23T18:00:00');
 		});
 	});
 
