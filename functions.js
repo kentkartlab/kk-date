@@ -9,6 +9,7 @@ const {
 	cached_dateTimeFormat,
 	timezone_cache,
 	timezone_check_cache,
+	timezone_abbreviation_cache,
 	global_config,
 } = require('./constants');
 
@@ -57,7 +58,7 @@ function isValidDayName(dayname) {
 
 /**
  * Enhanced timezone offset calculation with DST support
- * 
+ *
  * @param {string} timezone - IANA timezone identifier
  * @param {Date} date - Date for which to calculate offset (defaults to current date)
  * @returns {number} - Offset in milliseconds
@@ -79,22 +80,22 @@ function getTimezoneOffset(timezone, date = new Date()) {
 		// Get timezone offset using Intl.DateTimeFormat with timeZoneName
 		const formatter = new Intl.DateTimeFormat('en-US', {
 			timeZone: timezone,
-			timeZoneName: 'longOffset'
+			timeZoneName: 'longOffset',
 		});
-		
+
 		const parts = formatter.formatToParts(date);
-		const offsetPart = parts.find(part => part.type === 'timeZoneName');
-		
+		const offsetPart = parts.find((part) => part.type === 'timeZoneName');
+
 		if (!offsetPart) {
 			throw new Error('Could not determine timezone offset');
 		}
-		
+
 		// Parse offset like "GMT-05:00" or "GMT+08:00"
 		const offsetStr = offsetPart.value.replace('GMT', '');
 		const isNegative = offsetStr.startsWith('-');
 		const timeStr = offsetStr.replace(/[+-]/, '');
 		const [hours, minutes = '0'] = timeStr.split(':').map(Number);
-		
+
 		const totalMinutes = hours * 60 + minutes;
 		// For timezone conversion, we need the offset from UTC to the target timezone
 		// GMT-05:00 means the timezone is 5 hours behind UTC, so offset should be -5
@@ -104,18 +105,18 @@ function getTimezoneOffset(timezone, date = new Date()) {
 		// Cache the result
 		timezone_cache.set(cacheKey, {
 			offset: offsetMs,
-			timestamp: date.getTime()
+			timestamp: date.getTime(),
 		});
 
 		return offsetMs;
-	} catch (error) {
+	} catch {
 		throw new Error(`Invalid timezone: ${timezone}`);
 	}
 }
 
 /**
  * Check if timezone is valid
- * 
+ *
  * @param {string} timezone - IANA timezone identifier
  * @returns {boolean}
  */
@@ -135,7 +136,7 @@ function checkTimezone(timezone) {
 
 /**
  * Get timezone information including DST status
- * 
+ *
  * @param {string} timezone - IANA timezone identifier
  * @param {Date} date - Date for which to get info (defaults to current date)
  * @returns {object} - Timezone information
@@ -146,25 +147,30 @@ function getTimezoneInfo(timezone, date = new Date()) {
 
 		// Get current offset
 		const currentOffset = getTimezoneOffset(timezone, date);
-		
+
 		// Get offset for same date in winter (to detect DST)
 		const winterDate = new Date(date.getFullYear(), 0, 1); // January 1st
 		const winterOffset = getTimezoneOffset(timezone, winterDate);
-		
+
 		// Get offset for same date in summer (to detect DST)
 		const summerDate = new Date(date.getFullYear(), 6, 1); // July 1st
 		const summerOffset = getTimezoneOffset(timezone, summerDate);
 
 		// Determine if DST is active
 		const isDST = currentOffset !== winterOffset;
-		
+
+		let formatter;
+		if(timezone_abbreviation_cache.has(timezone)) {
+			formatter = timezone_abbreviation_cache.get(timezone);
+		} else {
+			formatter = new Intl.DateTimeFormat('en-US', {
+				timeZone: timezone,
+				timeZoneName: 'short',
+			});
+			timezone_abbreviation_cache.set(timezone, formatter);
+		}
 		// Get timezone abbreviation
-		const formatter = new Intl.DateTimeFormat('en-US', {
-			timeZone: timezone,
-			timeZoneName: 'short'
-		});
-		const abbreviation = formatter.formatToParts(date)
-			.find(part => part.type === 'timeZoneName')?.value || timezone;
+		const abbreviation = formatter.formatToParts(date).find((part) => part.type === 'timeZoneName')?.value || timezone;
 
 		return {
 			timezone,
@@ -172,7 +178,7 @@ function getTimezoneInfo(timezone, date = new Date()) {
 			isDST,
 			abbreviation,
 			standardOffset: winterOffset,
-			daylightOffset: summerOffset
+			daylightOffset: summerOffset,
 		};
 	} catch (error) {
 		throw new Error(`Failed to get timezone info for ${timezone}: ${error.message}`);
@@ -181,24 +187,24 @@ function getTimezoneInfo(timezone, date = new Date()) {
 
 /**
  * Enhanced timezone parsing with automatic DST detection
- * 
+ *
  * @param {KkDate} kkDate - KkDate instance
  * @param {boolean} is_init - Whether this is initial parsing
  * @returns {Date} - Parsed date with timezone conversion
  */
-function parseWithTimezone(kkDate, is_init = false) {
+function parseWithTimezone(kkDate) {
 	// If no timezone conversion needed, return original date
 	if (!kkDate.temp_config.timezone) {
 		return kkDate.date;
 	}
 
 	const targetTimezone = kkDate.temp_config.timezone;
-	
+
 	// Special handling for UTC - return original UTC time
 	if (targetTimezone === 'UTC') {
 		return kkDate.date;
 	}
-	
+
 	// For timezone conversion, we need to work with the original UTC time
 	// If this is an ISO8601 date, use the original UTC time
 	// Otherwise, use the current date's time
@@ -211,21 +217,21 @@ function parseWithTimezone(kkDate, is_init = false) {
 	} else {
 		baseTime = kkDate.date.getTime();
 	}
-	
+
 	// Get the offset of the target timezone
 	const targetOffset = getTimezoneOffset(targetTimezone, kkDate.date);
-	
+
 	// Create a new date by adjusting for the timezone offset
 	// The offset represents the difference between UTC and the target timezone
 	// We add the offset to convert from UTC to the target timezone
 	const adjustedTime = baseTime + targetOffset;
-	
+
 	return new Date(adjustedTime);
 }
 
 /**
  * Convert date to specific timezone
- * 
+ *
  * @param {Date} date - Date to convert
  * @param {string} targetTimezone - Target timezone
  * @param {string} sourceTimezone - Source timezone (optional, defaults to user timezone)
@@ -238,7 +244,7 @@ function convertToTimezone(date, targetTimezone, sourceTimezone = global_config.
 
 		const targetOffset = getTimezoneOffset(targetTimezone, date);
 		const sourceOffset = getTimezoneOffset(sourceTimezone, date);
-		
+
 		const timezoneDiff = targetOffset - sourceOffset;
 		return new Date(date.getTime() + timezoneDiff);
 	} catch (error) {
@@ -248,13 +254,12 @@ function convertToTimezone(date, targetTimezone, sourceTimezone = global_config.
 
 /**
  * Get all available timezones (if supported by the environment)
- * 
+ *
  * @returns {string[]} - Array of available timezone identifiers
  */
 function getAvailableTimezones() {
 	try {
 		// This is a fallback method - not all environments support this
-		const testDate = new Date();
 		const commonTimezones = [
 			'UTC',
 			'Europe/London',
@@ -269,10 +274,10 @@ function getAvailableTimezones() {
 			'Asia/Shanghai',
 			'Asia/Kolkata',
 			'Australia/Sydney',
-			'Australia/Melbourne'
+			'Australia/Melbourne',
 		];
 
-		return commonTimezones.filter(tz => {
+		return commonTimezones.filter((tz) => {
 			try {
 				checkTimezone(tz);
 				return true;
@@ -280,14 +285,14 @@ function getAvailableTimezones() {
 				return false;
 			}
 		});
-	} catch (error) {
+	} catch {
 		return ['UTC']; // Fallback to UTC only
 	}
 }
 
 /**
  * Check if a date is in DST for a given timezone
- * 
+ *
  * @param {string} timezone - IANA timezone identifier
  * @param {Date} date - Date to check (defaults to current date)
  * @returns {boolean} - True if DST is active
@@ -303,7 +308,7 @@ function isDST(timezone, date = new Date()) {
 
 /**
  * Get timezone abbreviation
- * 
+ *
  * @param {string} timezone - IANA timezone identifier
  * @param {Date} date - Date for abbreviation (defaults to current date)
  * @returns {string} - Timezone abbreviation
@@ -447,30 +452,36 @@ function converter(date, to, options = { pad: true }) {
 			case 'year':
 				result['year'] = isUTC ? date.getUTCFullYear() : date.getFullYear();
 				break;
-			case 'month':
+			case 'month': {
 				const month = isUTC ? date.getUTCMonth() + 1 : date.getMonth() + 1;
 				result['month'] = shouldPad ? String(month).padStart(2, '0') : month;
 				break;
-			case 'day':
+			}
+			case 'day': {
 				const day = isUTC ? date.getUTCDate() : date.getDate();
 				result['day'] = shouldPad ? String(day).padStart(2, '0') : day;
 				break;
-			case 'hours':
+			}
+			case 'hours': {
 				const hours = isUTC ? date.getUTCHours() : date.getHours();
 				result['hours'] = shouldPad ? String(hours).padStart(2, '0') : hours;
 				break;
-			case 'minutes':
+			}
+			case 'minutes': {
 				const minutes = isUTC ? date.getUTCMinutes() : date.getMinutes();
 				result['minutes'] = shouldPad ? String(minutes).padStart(2, '0') : minutes;
 				break;
-			case 'seconds':
+			}
+			case 'seconds': {
 				const seconds = isUTC ? date.getUTCSeconds() : date.getSeconds();
 				result['seconds'] = shouldPad ? String(seconds).padStart(2, '0') : seconds;
 				break;
-			case 'milliseconds':
+			}
+			case 'milliseconds': {
 				const milliseconds = isUTC ? date.getUTCMilliseconds() : date.getMilliseconds();
 				result['milliseconds'] = shouldPad ? String(milliseconds).padStart(3, '0') : milliseconds; // Pad milliseconds to 3 digits
 				break;
+			}
 		}
 	}
 	return result;
