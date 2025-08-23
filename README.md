@@ -149,11 +149,17 @@ date.config({
 
 ## 🌍 Browser Support
 
-- Chrome 60+
-- Firefox 55+
-- Safari 12+
-- Edge 79+
+- Chrome 60+ (basic functionality)
+- Firefox 55+ (basic functionality)
+- Safari 12+ (basic functionality)
+- Edge 79+ (basic functionality)
 - Internet Explorer 11+ (with polyfills)
+
+**Advanced Features:**
+- **Locale Configuration:** Chrome 74+, Firefox 75+, Safari 14.1+, Edge 79+
+- **Relative Time Formatting:** Chrome 71+, Firefox 65+, Safari 14.1+, Edge 79+ (with fallback)
+
+**Note:** Basic date operations work in older browsers, but locale configuration requires newer Intl APIs.
 
 ## 📊 Performance Benchmarks
 

@@ -699,9 +699,26 @@ try {
 
 The library works in all modern browsers and Node.js environments. For older browsers, consider using polyfills for:
 
-- `Intl.DateTimeFormat`
+- `Intl.DateTimeFormat` (IE 11+)
 - `Intl.DateTimeFormat.prototype.formatToParts`
 - `Array.prototype.find`
+
+**Browser Support Levels:**
+
+**Basic Functionality (Chrome 60+, Firefox 55+, Safari 12+, Edge 79+, IE 11+):**
+- Date construction and parsing
+- Basic formatting
+- Timezone conversions
+- Date manipulation
+- Comparison operations
+
+**Advanced Features:**
+- **Locale Configuration:** Chrome 74+, Firefox 75+, Safari 14.1+, Edge 79+ (requires `Intl.Locale`)
+- **Relative Time Formatting:** Chrome 71+, Firefox 65+, Safari 14.1+, Edge 79+ (requires `Intl.RelativeTimeFormat`, has fallback)
+
+**Graceful Degradation:**
+- Without `Intl.Locale`: Locale configuration fails, but basic functionality works
+- Without `Intl.RelativeTimeFormat`: Relative time uses fallback mechanism
 
 ## Migration from Other Libraries
 
