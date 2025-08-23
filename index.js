@@ -6,6 +6,11 @@ const {
 	duration,
 	padZero,
 	checkTimezone,
+	getTimezoneInfo,
+	convertToTimezone,
+	getAvailableTimezones,
+	isDST,
+	getTimezoneAbbreviation,
 	dateTimeFormat,
 	converter,
 	isValidMonth,
@@ -109,9 +114,13 @@ class KkDate {
 								this.date = currentDate;
 							}
 							this.detected_format = format_types['HH:mm:ss'];
-						} else {
-							this.date = false;
-							if (isValid(date, format_types['DD.MM.YYYY HH:mm:ss'])) {
+											} else {
+						this.date = false;
+						// Handle ISO strings (UTC strings with Z suffix) directly without timezone conversion
+						if (typeof date === 'string' && date.includes('T') && date.endsWith('Z')) {
+							this.date = new Date(date);
+							this.detected_format = 'ISO8601';
+						} else if (isValid(date, format_types['DD.MM.YYYY HH:mm:ss'])) {
 								const [datePart, timePart] = date.split(' ');
 								const [day, month, year] = datePart.split('.');
 								const [hours, minutes, seconds] = timePart.split(':').map(Number);
@@ -886,6 +895,38 @@ class KkDate {
 		return this;
 	}
 
+
+
+	/**
+	 * @description Get timezone information including DST status
+	 * @param {string} timezone - IANA timezone identifier (optional, uses current timezone if not provided)
+	 * @returns {object} - Timezone information
+	 */
+	getTimezoneInfo(timezone = null) {
+		const targetTimezone = timezone || this.temp_config.timezone || global_config.timezone;
+		return getTimezoneInfo(targetTimezone, this.date);
+	}
+
+	/**
+	 * @description Check if current date is in DST
+	 * @param {string} timezone - IANA timezone identifier (optional, uses current timezone if not provided)
+	 * @returns {boolean} - True if DST is active
+	 */
+	isDST(timezone = null) {
+		const targetTimezone = timezone || this.temp_config.timezone || global_config.timezone;
+		return isDST(targetTimezone, this.date);
+	}
+
+	/**
+	 * @description Get timezone abbreviation
+	 * @param {string} timezone - IANA timezone identifier (optional, uses current timezone if not provided)
+	 * @returns {string} - Timezone abbreviation
+	 */
+	getTimezoneAbbreviation(timezone = null) {
+		const targetTimezone = timezone || this.temp_config.timezone || global_config.timezone;
+		return getTimezoneAbbreviation(targetTimezone, this.date);
+	}
+
 	/**
 	 * @description Returns startOf date of the unit of time.
 	 * @param {'years'|'months'|'weeks'|'days'|'hours'|'minutes'|'seconds'} unit
@@ -1114,6 +1155,10 @@ function diff(start, end, type, is_decimal = false, turn_difftime = false) {
  */
 function formatter(orj_this, template = null) {
 	isInvalid(orj_this.date);
+	
+	// Determine if this is a UTC date (ISO8601 format)
+	const isUTC = orj_this.detected_format === 'ISO8601';
+	
 	switch (template) {
 		case 'x': {
 			return parseInt(orj_this.valueOfLocal(true), 10);
@@ -1133,13 +1178,13 @@ function formatter(orj_this, template = null) {
 			return value;
 		}
 		case format_types.DD: {
-			return converter(orj_this.date, ['day']).day;
+			return converter(orj_this.date, ['day'], { isUTC }).day;
 		}
 		case format_types.MM: {
-			return converter(orj_this.date, ['month']).month;
+			return converter(orj_this.date, ['month'], { isUTC }).month;
 		}
 		case format_types['DD-MM-YYYY']: {
-			const result = converter(orj_this.date, ['day', 'month', 'year']);
+			const result = converter(orj_this.date, ['day', 'month', 'year'], { isUTC });
 			return `${result.day}-${result.month}-${result.year}`;
 		}
 		case format_types['DD-MM-YYYY HH:mm']: {
@@ -1151,15 +1196,15 @@ function formatter(orj_this, template = null) {
 			return `${result.day}-${result.month}-${result.year} ${result.hours}:${result.minutes}:${result.seconds}`;
 		}
 		case format_types['DD.MM.YYYY']: {
-			const result = converter(orj_this.date, ['day', 'month', 'year']);
+			const result = converter(orj_this.date, ['day', 'month', 'year'], { isUTC });
 			return `${result.day}.${result.month}.${result.year}`;
 		}
 		case format_types['MM/DD/YYYY']: {
-			const result = converter(orj_this.date, ['day', 'month', 'year']);
+			const result = converter(orj_this.date, ['day', 'month', 'year'], { isUTC });
 			return `${result.month}/${result.day}/${result.year}`;
 		}
 		case format_types['DD/MM/YYYY']: {
-			const result = converter(orj_this.date, ['day', 'month', 'year']);
+			const result = converter(orj_this.date, ['day', 'month', 'year'], { isUTC });
 			return `${result.day}/${result.month}/${result.year}`;
 		}
 		case format_types['DD.MM.YYYY HH:mm:ss']: {
@@ -1171,11 +1216,11 @@ function formatter(orj_this, template = null) {
 			return `${result.day}.${result.month}.${result.year} ${result.hours}:${result.minutes}`;
 		}
 		case format_types['YYYY-MM-DD']: {
-			const result = converter(orj_this.date, ['day', 'month', 'year']);
+			const result = converter(orj_this.date, ['day', 'month', 'year'], { isUTC });
 			return `${result.year}-${result.month}-${result.day}`;
 		}
 		case format_types['YYYY-MM-DD HH:mm:ss']: {
-			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes', 'seconds']);
+			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes', 'seconds'], { isUTC });
 			return `${result.year}-${result.month}-${result.day} ${result.hours}:${result.minutes}:${result.seconds}`;
 		}
 		case format_types['YYYY-MM-DDTHH:mm:ss']: {
@@ -1199,36 +1244,36 @@ function formatter(orj_this, template = null) {
 			return `${result.year}.${result.month}.${result.day} ${result.hours}`;
 		}
 		case format_types['YYYY.MM.DD']: {
-			const result = converter(orj_this.date, ['day', 'month', 'year']);
+			const result = converter(orj_this.date, ['day', 'month', 'year'], { isUTC });
 			return `${result.year}.${result.month}.${result.day}`;
 		}
 		case format_types['YYYYMMDD']: {
-			const result = converter(orj_this.date, ['day', 'month', 'year']);
+			const result = converter(orj_this.date, ['day', 'month', 'year'], { isUTC });
 			return `${result.year}${result.month}${result.day}`;
 		}
 		case format_types.YYYY: {
-			return `${converter(orj_this.date, ['year']).year}`;
+			return `${converter(orj_this.date, ['year'], { isUTC }).year}`;
 		}
 		case format_types['HH:mm:ss.SSS']: {
-			const result = converter(orj_this.date, ['hours', 'minutes', 'seconds', 'milliseconds']);
+			const result = converter(orj_this.date, ['hours', 'minutes', 'seconds', 'milliseconds'], { isUTC });
 			return `${result.hours}:${result.minutes}:${result.seconds}.${result.milliseconds}`;
 		}
 		case format_types['HH:mm:ss']: {
-			const result = converter(orj_this.date, ['hours', 'minutes', 'seconds']);
+			const result = converter(orj_this.date, ['hours', 'minutes', 'seconds'], { isUTC });
 			return `${result.hours}:${result.minutes}:${result.seconds}`;
 		}
 		case format_types['HH:mm']: {
-			const result = converter(orj_this.date, ['hours', 'minutes']);
+			const result = converter(orj_this.date, ['hours', 'minutes'], { isUTC });
 			return `${result.hours}:${result.minutes}`;
 		}
 		case format_types.mm: {
-			return `${converter(orj_this.date, ['minutes']).minutes}`;
+			return `${converter(orj_this.date, ['minutes'], { isUTC }).minutes}`;
 		}
 		case format_types.ss: {
-			return `${converter(orj_this.date, ['seconds']).seconds}`;
+			return `${converter(orj_this.date, ['seconds'], { isUTC }).seconds}`;
 		}
 		case format_types.HH: {
-			return `${converter(orj_this.date, ['hours']).hours}`;
+			return `${converter(orj_this.date, ['hours'], { isUTC }).hours}`;
 		}
 		case format_types['DD MMMM YYYY']: {
 			const value = dateTimeFormat(orj_this, 'MMMM');
@@ -1370,7 +1415,7 @@ function formatter(orj_this, template = null) {
 			return `${converter(orj_this.date, ['day']).day} ${dateTimeFormat(orj_this, 'MMMM').value.format(orj_this.date)} ${dateTimeFormat(orj_this, 'dddd').value.format(orj_this.date)}`;
 		}
 		case format_types['YYYY-DD-MM']: {
-			const result = converter(orj_this.date, ['day', 'month', 'year']);
+			const result = converter(orj_this.date, ['day', 'month', 'year'], { isUTC });
 			return `${result.year}-${result.day}-${result.month}`;
 		}
 		case format_types['DD MMMM']: {
@@ -1541,3 +1586,22 @@ module.exports.caching = caching;
 module.exports.caching_status = caching_status;
 module.exports.caching_flush = nopeRedis.flushAll;
 module.exports.isValid = isValid;
+module.exports.getTimezoneInfo = getTimezoneInfo;
+module.exports.convertToTimezone = convertToTimezone;
+module.exports.getAvailableTimezones = getAvailableTimezones;
+module.exports.isDST = isDST;
+module.exports.getTimezoneAbbreviation = getTimezoneAbbreviation;
+module.exports.checkTimezone = checkTimezone;
+module.exports.getTimezoneOffset = getTimezoneOffset;
+
+// Global timezone configuration functions
+module.exports.getTimezone = () => global_config.timezone;
+module.exports.setTimezone = (timezone) => {
+	checkTimezone(timezone);
+	global_config.timezone = timezone;
+};
+module.exports.getUserTimezone = () => global_config.userTimezone;
+module.exports.setUserTimezone = (timezone) => {
+	checkTimezone(timezone);
+	global_config.userTimezone = timezone;
+};
