@@ -250,7 +250,7 @@ for (let i = 0; i < 100000; i++) {
     date.format('YYYY-MM-DD HH:mm:ss');
 }
 console.timeEnd('Moment.js Processing');
-// Result: ~2,222ms (45,000 ops/sec)
+// Result: ~2222ms (45,000 ops/sec)
 // Memory: 45.8 MB
 // DST: Manual configuration required
 ```
@@ -272,7 +272,7 @@ for (let i = 0; i < 100000; i++) {
     date.format('YYYY-MM-DD HH:mm:ss');
 }
 console.timeEnd('Day.js Processing');
-// Result: ~1,176ms (85,000 ops/sec)
+// Result: ~1176ms (85,000 ops/sec)
 // Memory: 28.3 MB
 // DST: Plugin required
 ```
@@ -302,7 +302,7 @@ console.timeEnd('kk-date Processing');
 | Library | Duration | Operations/sec | Memory | DST Support |
 |---------|----------|----------------|--------|-------------|
 | **kk-date** | **63ms** | **1,585,293** | **1.25 MB** | **Automatic** |
-| Day.js | 6,745ms | 14,826 | 28.3 MB | Plugin |
+| Day.js | 6745ms | 14,826 | 28.3 MB | Plugin |
 | Moment.js | 607ms | 164,624 | 45.8 MB | Manual |
 
 ### Why kk-date is Still the Better Choice
