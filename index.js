@@ -387,7 +387,7 @@ class KkDate {
 			}
 		}
 		this.temp_config.rtf = {};
-		this.date = parseWithTimezone(this, true);
+		this.date = parseWithTimezone(this);
 	}
 
 	/**

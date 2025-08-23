@@ -90,8 +90,7 @@ function getTimezoneOffset(timezone, date = new Date()) {
 			long_timezone_cache.set(timezone, formatter);
 		}
 		// Get timezone offset using Intl.DateTimeFormat with timeZoneName
-		const parts = formatter.formatToParts(date);
-		const offsetPart = parts.find((part) => part.type === 'timeZoneName');
+		const offsetPart = formatter.formatToParts(date).find((part) => part.type === 'timeZoneName');
 
 		if (!offsetPart) {
 			throw new Error('Could not determine timezone offset');
@@ -533,10 +532,10 @@ function converter(date, to, options = { pad: true }) {
 	
 	// Timezone-aware formatting only when absolutely necessary
 	const targetTimezone = global_config.timezone;
-	let formatter = target_timezone_cache.get(targetTimezone);
-	
-	if (!formatter) {
-		formatter = new Intl.DateTimeFormat('en-CA', {
+	let cache = target_timezone_cache.get(targetTimezone);
+	let in_result = {};
+	if (!cache) {
+		const formatter_value = new Intl.DateTimeFormat('en-CA', {
 			timeZone: targetTimezone,
 			year: 'numeric',
 			month: '2-digit',
@@ -546,19 +545,21 @@ function converter(date, to, options = { pad: true }) {
 			second: '2-digit',
 			hour12: false
 		});
-		target_timezone_cache.set(targetTimezone, formatter);
+			
+		// Single formatToParts call - cache the result
+		const parts = formatter_value;
+		const partsMap = {};
+		const partsLen = parts.length;
+		
+		// Optimized parts mapping
+		for (let i = 0; i < partsLen; i++) {
+			const part = parts[i];
+			partsMap[part.type] = part.value;
+		}
+		target_timezone_cache.set(targetTimezone, partsMap);
+		in_result = partsMap;
 	}
-	
-	// Single formatToParts call - cache the result
-	const parts = formatter.formatToParts(date);
-	const partsMap = {};
-	const partsLen = parts.length;
-	
-	// Optimized parts mapping
-	for (let i = 0; i < partsLen; i++) {
-		const part = parts[i];
-		partsMap[part.type] = part.value;
-	}
+
 	
 	// Process requested fields
 	const len = to.length;
@@ -566,22 +567,22 @@ function converter(date, to, options = { pad: true }) {
 		const field = to[i];
 		switch (field) {
 			case 'year':
-				result.year = partsMap.year;
+				result.year = in_result.year;
 				break;
 			case 'month':
-				result.month = shouldPad ? partsMap.month : parseInt(partsMap.month, 10);
+				result.month = shouldPad ? in_result.month : parseInt(in_result.month, 10);
 				break;
 			case 'day':
-				result.day = shouldPad ? partsMap.day : parseInt(partsMap.day, 10);
+				result.day = shouldPad ? in_result.day : parseInt(in_result.day, 10);
 				break;
 			case 'hours':
-				result.hours = shouldPad ? partsMap.hour : parseInt(partsMap.hour, 10);
+				result.hours = shouldPad ? in_result.hour : parseInt(in_result.hour, 10);
 				break;
 			case 'minutes':
-				result.minutes = shouldPad ? partsMap.minute : parseInt(partsMap.minute, 10);
+				result.minutes = shouldPad ? in_result.minute : parseInt(in_result.minute, 10);
 				break;
 			case 'seconds':
-				result.seconds = shouldPad ? partsMap.second : parseInt(partsMap.second, 10);
+				result.seconds = shouldPad ? in_result.second : parseInt(in_result.second, 10);
 				break;
 			case 'milliseconds': {
 				const ms = date.getMilliseconds();
