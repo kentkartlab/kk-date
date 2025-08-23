@@ -8,7 +8,7 @@ A blazing-fast JavaScript date library with intelligent caching, automatic DST d
 
 ## 🌟 Why Choose kk-date?
 
-- **⚡ Lightning Fast** - 49.1x faster timezone operations than alternatives
+- **⚡ Lightning Fast** - 267x faster timezone operations than alternatives
 - **🌍 Accurate Timezone Handling** - Consistent, reliable timezone conversions across all platforms
 - **🧠 Zero-Config DST** - Automatic Daylight Saving Time detection without manual intervention
 - **📊 Big Data Ready** - Optional Redis-like caching for handling millions of date operations
@@ -269,18 +269,18 @@ date.config({
 
 | Library | Memory Usage | Bundle Size | DST Support |
 |---------|-------------|-------------|-------------|
-| **kk-date** | **1.25 MB** | **15 KB** | **Built-in** |
-| Moment.js | 45.8 MB | 297 KB | Plugin required |
-| Day.js | 28.3 MB | 18.5 KB | Plugin required |
+| **kk-date** | **11.83 MB** | **15 KB** | **Built-in** |
+| Moment.js | 2.16 MB | 297 KB | Plugin required |
+| Day.js | -12.72 MB | 18.5 KB | Plugin required |
 
 ### Key Advantages
 
-- **⚡ 49.1x faster** timezone operations than Day.js
+- **⚡ 267x faster** timezone operations than Day.js
 - **🌍 Perfect timezone accuracy** across all platforms
 - **🧠 Zero-config DST** handling eliminates bugs
 - **📊 Big Data Ready** with optional Redis-like caching
 - **🏆 Production Proven** with 214 comprehensive tests
-- **💾 97% less memory** usage than alternatives
+- **💾 Moderate memory usage** with rich functionality
 
 ## 🤝 Contributing
 
