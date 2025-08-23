@@ -376,11 +376,11 @@ const date = new kk_date('2024-08-23 10:00:00'); // Friday
 
 // Week starts on Sunday (default)
 kk_date.config({ weekStartDay: 0 });
-console.log(date.startOf('week').format('YYYY-MM-DD')); // '2024-08-18' (Sunday)
+console.log(date.startOf('weeks').format('YYYY-MM-DD')); // '2024-08-18' (Sunday)
 
 // Week starts on Monday
 kk_date.config({ weekStartDay: 1 });
-console.log(date.startOf('week').format('YYYY-MM-DD')); // '2024-08-19' (Monday)
+console.log(date.startOf('weeks').format('YYYY-MM-DD')); // '2024-08-19' (Monday)
 ```
 
 ### Instance-Specific Week Start Day
@@ -390,7 +390,7 @@ console.log(date.startOf('week').format('YYYY-MM-DD')); // '2024-08-19' (Monday)
 const mondayWeek = new kk_date('2024-08-23 10:00:00');
 mondayWeek.config({ weekStartDay: 1 });
 
-console.log(mondayWeek.startOf('week').format('YYYY-MM-DD')); // '2024-08-19' (Monday)
+console.log(mondayWeek.startOf('weeks').format('YYYY-MM-DD')); // '2024-08-19' (Monday)
 ```
 
 ## Performance Configuration
@@ -613,7 +613,7 @@ console.log('Week start day:', kk_date.global_config?.weekStartDay || 0);
 
 // Test week calculations
 const date = new kk_date('2024-08-23 10:00:00');
-console.log('Start of week:', date.startOf('week').format('YYYY-MM-DD'));
+console.log('Start of week:', date.startOf('weeks').format('YYYY-MM-DD'));
 ```
 
 ### Configuration Reset

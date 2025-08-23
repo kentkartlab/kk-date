@@ -38,7 +38,7 @@ const nyTime = date.tz('America/New_York');
 console.log(nyTime.format('HH:mm')); // 06:30 (EDT - automatically detected)
 
 // Lightning-fast date manipulation
-const tomorrow = date.add(1, 'day');
+const tomorrow = date.add(1, 'days');
 console.log(tomorrow.format('YYYY-MM-DD')); // 2024-08-24
 ```
 
@@ -112,12 +112,12 @@ const date = new kk_date('2024-08-23 10:30:00');
 
 // Add/subtract time
 date.add(2, 'hours');                   // Add 2 hours
-date.add(-1, 'day');                    // Subtract 1 day
+date.add(-1, 'days');                   // Subtract 1 day
 date.add(3, 'months');                  // Add 3 months
 
 // Start/end of periods
-date.startOf('month');                  // Start of month
-date.endOf('week');                     // End of week
+date.startOf('months');                 // Start of month
+date.endOf('weeks');                    // End of week
 ```
 
 ### Comparison Operations
@@ -127,7 +127,7 @@ const date2 = new kk_date('2024-08-25');
 
 date1.isBefore(date2);                  // true
 date1.isAfter(date2);                   // false
-date1.isSame(date2, 'day');             // false
+date1.isSame(date2);                    // false
 date1.diff(date2, 'days');              // -2
 ```
 
@@ -189,6 +189,28 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - 🐛 **Issues**: [GitHub Issues](https://github.com/your-username/kk-date/issues)
 - 📖 **Documentation**: [Full Documentation](docs/)
 - 💬 **Discussions**: [GitHub Discussions](https://github.com/your-username/kk-date/discussions)
+
+## ⚠️ Disclaimer
+
+This software is provided "as is", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and noninfringement. Use of the kk-date package is at your own risk. The maintainers and contributors do not guarantee that the package will function without errors or produce accurate results in all scenarios. In no event shall the authors or contributors be held liable for any damages, losses, or issues arising from the use of this package.
+
+## 🚀 What's Next?
+
+We're constantly working to improve kk-date! Here are some exciting features we're planning:
+
+- **🌐 Web Workers Support** - Asynchronous date operations for better performance
+- **📦 Tree Shaking** - Bundle size optimization for production builds
+- **🔌 Plugin System** - Extensible architecture for custom functionality
+- **⚡ Template Compilation** - Pre-compiled format strings for even faster formatting
+- **🎯 Enhanced Caching** - More intelligent cache strategies for specific use cases
+
+## 💡 Pro Tips
+
+- **Enable caching** for applications with repeated timezone operations
+- **Use instance configuration** for date-specific settings
+- **Monitor cache statistics** in production for optimal performance
+- **Test DST transitions** thoroughly in your application
+- **Consider memory usage** for high-frequency operations
 
 ---
 

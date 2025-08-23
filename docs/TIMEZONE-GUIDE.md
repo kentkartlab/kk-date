@@ -110,8 +110,8 @@ const springForward = new kk_date('2024-03-10 02:00:00');
 const fallBack = new kk_date('2024-11-03 02:00:00');
 
 // Before and after spring forward
-const beforeSpring = springForward.add(-1, 'hour');
-const afterSpring = springForward.add(1, 'hour');
+const beforeSpring = springForward.add(-1, 'hours');
+const afterSpring = springForward.add(1, 'hours');
 
 console.log(beforeSpring.tz('America/New_York').format('HH:mm')); // '01:00' (EST)
 console.log(afterSpring.tz('America/New_York').format('HH:mm'));  // '03:00' (EDT)

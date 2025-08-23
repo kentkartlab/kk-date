@@ -149,6 +149,28 @@ date.add(30, 'minutes');               // Add 30 minutes
 
 **Note:** The `subtract()` method is not directly available. Use `add()` with negative values instead.
 
+#### `set(unit, value)`
+
+Sets a specific unit of time to the given value.
+
+**Parameters:**
+- `unit` (string) - Time unit ('years', 'months', 'days', 'hours', 'minutes', 'seconds')
+- `value` (number) - Value to set
+
+**Returns:** (KkDate) - Modified date instance
+
+**Examples:**
+```javascript
+const date = new kk_date('2024-08-23 10:30:45');
+
+date.set('years', 2025);               // Set year to 2025
+date.set('months', 0);                 // Set month to January (0-based)
+date.set('days', 1);                   // Set day to 1st
+date.set('hours', 0);                  // Set hour to 00
+date.set('minutes', 0);                // Set minutes to 00
+date.set('seconds', 0);                // Set seconds to 00
+```
+
 **Examples:**
 ```javascript
 const date = new kk_date('2024-08-23 10:30:00');
@@ -172,11 +194,11 @@ Sets the date to the start of the specified unit.
 ```javascript
 const date = new kk_date('2024-08-23 10:30:45');
 
-date.startOf('year');                  // 2024-01-01 00:00:00
-date.startOf('month');                 // 2024-08-01 00:00:00
-date.startOf('week');                  // 2024-08-19 00:00:00 (Monday)
-date.startOf('day');                   // 2024-08-23 00:00:00
-date.startOf('hour');                  // 2024-08-23 10:00:00
+date.startOf('years');                 // 2024-01-01 00:00:00
+date.startOf('months');                // 2024-08-01 00:00:00
+date.startOf('weeks');                 // 2024-08-19 00:00:00 (Monday)
+date.startOf('days');                  // 2024-08-23 00:00:00
+date.startOf('hours');                 // 2024-08-23 10:00:00
 ```
 
 #### `endOf(unit)`
@@ -192,11 +214,11 @@ Sets the date to the end of the specified unit.
 ```javascript
 const date = new kk_date('2024-08-23 10:30:45');
 
-date.endOf('year');                    // 2024-12-31 23:59:59.999
-date.endOf('month');                   // 2024-08-31 23:59:59.999
-date.endOf('week');                    // 2024-08-25 23:59:59.999 (Sunday)
-date.endOf('day');                     // 2024-08-23 23:59:59.999
-date.endOf('hour');                    // 2024-08-23 10:59:59.999
+date.endOf('years');                   // 2024-12-31 23:59:59.999
+date.endOf('months');                  // 2024-08-31 23:59:59.999
+date.endOf('weeks');                   // 2024-08-25 23:59:59.999 (Sunday)
+date.endOf('days');                    // 2024-08-23 23:59:59.999
+date.endOf('hours');                   // 2024-08-23 10:59:59.999
 ```
 
 ### Comparison Methods
@@ -274,7 +296,7 @@ const start = new kk_date('2024-08-20');
 const end = new kk_date('2024-08-25');
 
 date.isBetween(start, end);            // true
-date.isBetween(start, end, 'day');     // true
+date.isBetween(start, end, 'days');    // true
 ```
 
 #### `diff(date, unit, asFloat?)`

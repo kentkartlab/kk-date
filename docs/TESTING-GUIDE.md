@@ -340,7 +340,7 @@ describe('Edge Cases', () => {
     describe('Boundary Values', () => {
         test('should handle year boundaries', () => {
             const newYear = new kk_date('2024-12-31 23:59:59');
-            newYear.add(1, 'second');
+            newYear.add(1, 'seconds');
             expect(newYear.format('YYYY')).toBe('2025');
         });
 
@@ -478,7 +478,7 @@ describe('Memory Leak Tests', () => {
             date.tz('America/New_York');
             date.format('YYYY-MM-DD HH:mm:ss');
             date.add(1, 'days');
-            date.add(-1, 'hour');
+            date.add(-1, 'hours');
         }
         
         // Force garbage collection if available
