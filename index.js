@@ -47,14 +47,9 @@ class KkDate {
 		} else {
 			const date = params[0];
 			let forced_format_founded = false;
-			cached = nopeRedis.getItem(`${date}`);
+			const check_instanceof_date = date instanceof Date;
+			cached = nopeRedis.getItem(check_instanceof_date ? null : date);
 			if (params[1] && !cached) {
-				if (!format_types_regex[params[1]]) {
-					throw new Error(`Unsupported Format! ${params[1]} !`);
-				}
-				if (!format_types_regex[params[1]].test(params[0])) {
-					throw new Error(`Invalid format ! ${format_types[params[1]]} !`);
-				}
 				if (params[1] === format_types['YYYY-DD-MM']) {
 					is_can_cache = true;
 					const [year, day, month] = date.split('-');
@@ -67,6 +62,14 @@ class KkDate {
 					this.date = new Date(`${year}-${month}-${day} 00:00:00`);
 					forced_format_founded = true;
 					this.detected_format = 'YYYY-MM-DD';
+				}
+				if (!forced_format_founded) {
+					if (!format_types_regex[params[1]]) {
+						throw new Error(`Unsupported Format! ${params[1]} !`);
+					}
+					if (!format_types_regex[params[1]].test(params[0])) {
+						throw new Error(`Invalid format ! ${format_types[params[1]]} !`);
+					}
 				}
 			}
 			if (!forced_format_founded && !cached) {
@@ -82,7 +85,7 @@ class KkDate {
 				} else if (isKkDate(date)) {
 					this.date = new Date(date.date.toUTCString());
 					this.detected_format = 'kkDate';
-				} else if (date instanceof Date) {
+				} else if (check_instanceof_date) {
 					this.date = new Date(date.getTime());
 					this.detected_format = 'Date';
 				} else {
@@ -116,6 +119,14 @@ class KkDate {
 						if (typeof date === 'string' && date.includes('T') && date.endsWith('Z')) {
 							this.date = new Date(date);
 							this.detected_format = 'ISO8601';
+						} else if (isValid(date, format_types['YYYY-MM-DD'])) {
+							const [year, month, day] = date.split('-');
+							this.date = new Date(`${year}-${month}-${day} 00:00:00`);
+							this.detected_format = format_types['YYYY-MM-DD'];
+						} else if (isValid(date, format_types['YYYY-DD-MM'])) {
+							const [year, day, month] = date.split('-');
+							this.date = new Date(`${year}-${month}-${day} 00:00:00`);
+							this.detected_format = format_types['YYYY-DD-MM'];
 						} else if (isValid(date, format_types['DD.MM.YYYY HH:mm:ss'])) {
 							const [datePart, timePart] = date.split(' ');
 							const [day, month, year] = datePart.split('.');
@@ -314,14 +325,6 @@ class KkDate {
 							const month = isValidMonth(parts[1]);
 							this.date = new Date(`${currentYear}-${month}-${day} 00:00:00`);
 							this.detected_format = format_types['DD MMMM dddd'];
-						} else if (isValid(date, format_types['YYYY-MM-DD'])) {
-							const [year, month, day] = date.split('-');
-							this.date = new Date(`${year}-${month}-${day} 00:00:00`);
-							this.detected_format = format_types['YYYY-MM-DD'];
-						} else if (isValid(date, format_types['YYYY-DD-MM'])) {
-							const [year, day, month] = date.split('-');
-							this.date = new Date(`${year}-${month}-${day} 00:00:00`);
-							this.detected_format = format_types['YYYY-DD-MM'];
 						} else if (isValid(date, format_types['D MMMM YYYY'])) {
 							const parts = date.split(' '); // e.g., ['1', 'January', '2024'] or ['01', 'January', '2024']
 							const day = parts[0];
@@ -851,12 +854,8 @@ class KkDate {
 	 * @returns {boolean}
 	 */
 	isValid() {
-		try {
-			isInvalid(this.date);
-		} catch {
-			return false;
-		}
-		return true;
+		// Optimized validation: direct checks without try-catch overhead
+		return this.date && !Number.isNaN(this.date.valueOf());
 	}
 
 	/**
@@ -1482,20 +1481,23 @@ function formatter(orj_this, template = null) {
  * @returns {boolean}
  */
 function isValid(date_string, template) {
+	// Early return for special case
 	if (template === format_types.dddd) {
 		return true;
 	}
-	if (!format_types[template]) {
+
+	// Optimized validation: combine checks and eliminate unnecessary variable
+	const formatType = format_types[template];
+	if (!formatType) {
 		throw new Error('Invalid template !');
 	}
-	if (!format_types_regex[template]) {
+
+	const regex = format_types_regex[template];
+	if (!regex) {
 		throw new Error('Unsported template for validation !');
 	}
-	const regex = format_types_regex[template];
-	if (!regex.test(date_string)) {
-		return false;
-	}
-	return true;
+
+	return regex.test(date_string);
 }
 
 /**
@@ -1618,3 +1620,4 @@ module.exports.setUserTimezone = (timezone) => {
 	checkTimezone(timezone);
 	global_config.userTimezone = timezone;
 };
+

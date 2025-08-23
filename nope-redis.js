@@ -8,7 +8,7 @@ let criticalError = 0;
 let KILL_SERVICE = false;
 const intervalSecond = 5;
 let runnerInterval = null;
-const MAX_CACHE_SIZE = 20000; // Maximum number of items in cache
+const MAX_CACHE_SIZE = 10000; // Maximum number of items in cache
 
 const memory = {
 	config: {
@@ -84,6 +84,7 @@ function evictLRU() {
  */
 module.exports.setItemAsync = async (key, value, ttl = defaultTtl) => {
 	try {
+		key = `${key}`;
 		if (!memory.config.status || typeof ttl !== 'number') {
 			return false;
 		}
@@ -138,6 +139,7 @@ module.exports.itemStats = (key) => {
  * @returns {*}
  */
 module.exports.getItem = (key) => {
+	key = `${key}`;
 	try {
 		if (!memory.config.status) {
 			return false;
@@ -166,11 +168,12 @@ module.exports.getItem = (key) => {
  */
 module.exports.deleteItem = (key) => {
 	try {
+		key = `${key}`;
 		if (memory.config.status === false) {
 			return false;
 		}
-		if (memory.store[`${key}`]) {
-			delete memory.store[`${key}`];
+		if (memory.store[key]) {
+			delete memory.store[key];
 			memory.lru.delete(key);
 		}
 		return true;
