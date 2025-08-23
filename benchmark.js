@@ -6,7 +6,7 @@ const dayjs = require('dayjs');
 KkDate.caching({ status: true, defaultTtl: 3600 });
 
 // Helper function to measure execution time
-function measureExecutionTime(fn, iterations = 100000) {
+function measureExecutionTime(fn, iterations = 500000) {
 	const start = process.hrtime.bigint();
 	for (let i = 0; i < iterations; i++) {
 		fn();
@@ -157,7 +157,7 @@ testScenarios.forEach((scenario) => {
 	console.log('='.repeat(50));
 
 	scenario.tests.forEach((test) => {
-		const iterations = 100000;
+		const iterations = 500000;
 
 		// Measure kk-date
 		const kkDateTime = measureExecutionTime(() => {

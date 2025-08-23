@@ -244,6 +244,8 @@ const iso6391_languages = {
 const default_en_day_number = new Intl.DateTimeFormat('en', { day: 'numeric' });
 
 const timezone_cache = new Map();
+const timezone_check_cache = new Map();
+const timezone_abbreviation_cache = new Map();
 const cached_dateTimeFormat = {
 	dddd: new Intl.DateTimeFormat('en', {
 		weekday: 'long',
@@ -280,5 +282,7 @@ module.exports.iso6391_languages = iso6391_languages;
 module.exports.default_en_day_number = default_en_day_number;
 module.exports.format_types_regex = format_types_regex;
 module.exports.timezone_cache = timezone_cache;
+module.exports.timezone_check_cache = timezone_check_cache;
+module.exports.timezone_abbreviation_cache = timezone_abbreviation_cache;
 module.exports.cached_dateTimeFormat = cached_dateTimeFormat;
 module.exports.global_config = global_config;
