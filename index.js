@@ -1224,7 +1224,8 @@ function formatter(orj_this, template = null) {
 			return `${result.year}-${result.month}-${result.day} ${result.hours}:${result.minutes}:${result.seconds}`;
 		}
 		case format_types['YYYY-MM-DDTHH:mm:ss']: {
-			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes', 'seconds'], { isUTC, detectedFormat: orj_this.detected_format });
+			// ISO format - use UTC
+			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes', 'seconds'], { isUTC: true, detectedFormat: orj_this.detected_format });
 			return `${result.year}-${result.month}-${result.day}T${result.hours}:${result.minutes}:${result.seconds}`;
 		}
 		case format_types['YYYY.MM.DD HH:mm:ss']: {
