@@ -68,6 +68,7 @@ function evictLRU() {
 	const itemsToRemove = Math.floor(MAX_CACHE_SIZE * 0.2);
 	const keysToRemove = sortedKeys.slice(0, itemsToRemove);
 
+	// biome-ignore lint/complexity/noForEach: <explanation>
 	keysToRemove.forEach((key) => {
 		delete memory.store[key];
 		memory.lru.delete(key);
@@ -151,6 +152,7 @@ module.exports.itemStats = (key) => {
  * @returns {*}
  */
 module.exports.getItem = (key) => {
+	if (!key) return null;
 	const keyStr = `${key}`;
 	try {
 		if (!memory.config.status) {
