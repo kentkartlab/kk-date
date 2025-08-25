@@ -15,7 +15,15 @@ const {
 	converter,
 	isValidMonth,
 } = require('./functions');
-const { cached_dateTimeFormat, format_types, timeInMilliseconds, format_types_regex, global_config, format_types_cache, format_types_regex_cache } = require('./constants');
+const {
+	cached_dateTimeFormat,
+	format_types,
+	timeInMilliseconds,
+	format_types_regex,
+	global_config,
+	format_types_cache,
+	format_types_regex_cache,
+} = require('./constants');
 
 nopeRedis.config({ defaultTtl: 1300 });
 
@@ -117,8 +125,10 @@ class KkDate {
 						if (milliseconds) {
 							this.date.setMilliseconds(milliseconds);
 							this.detected_format = format_types['HH:mm:ss.SSS'];
-						} else {
+						} else if (seconds) {
 							this.detected_format = format_types['HH:mm:ss'];
+						} else {
+							this.detected_format = format_types['HH:mm'];
 						}
 					} else {
 						this.date = false;
