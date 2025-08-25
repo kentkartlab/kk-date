@@ -47,7 +47,7 @@ class KkDate {
 		} else {
 			const date = params[0];
 			let forced_format_founded = false;
-			cached = nopeRedis.getItem((date instanceof Date || Number.isInteger(date)) ? null : `${date}`);
+			cached = nopeRedis.getItem(date instanceof Date || Number.isInteger(date) ? null : `${date}`);
 			if (params[1] && !cached) {
 				if (!format_types_regex[params[1]]) {
 					throw new Error(`Unsupported Format! ${params[1]} !`);
@@ -1522,8 +1522,7 @@ function isValid(date_string, template) {
 	if (!format_types_regex[template]) {
 		throw new Error('Unsported template for validation !');
 	}
-	const regex = format_types_regex[template];
-	if (!regex.test(date_string)) {
+	if (!format_types_regex[template].test(date_string)) {
 		return false;
 	}
 	return true;
