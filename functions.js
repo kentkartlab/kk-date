@@ -166,7 +166,7 @@ function getTimezoneInfo(timezone, date = new Date()) {
 		const isDST = currentOffset !== winterOffset;
 
 		let formatter;
-		if(timezone_abbreviation_cache.has(timezone)) {
+		if (timezone_abbreviation_cache.has(timezone)) {
 			formatter = timezone_abbreviation_cache.get(timezone);
 		} else {
 			formatter = new Intl.DateTimeFormat('en-US', {
@@ -425,29 +425,29 @@ function dateTimeFormat(orj_this, template) {
 	if (orj_this.detected_format === 'Xx' && global_config.timezone && global_config.timezone !== 'UTC') {
 		const locale = tempLocale || global_config.locale;
 		const timezone = global_config.timezone;
-		
+
 		if (template === format_types.dddd) {
-			return { 
-				value: new Intl.DateTimeFormat(locale, { weekday: 'long', timeZone: timezone }), 
-				id: `${locale}_${timezone}_dddd` 
+			return {
+				value: new Intl.DateTimeFormat(locale, { weekday: 'long', timeZone: timezone }),
+				id: `${locale}_${timezone}_dddd`,
 			};
 		}
 		if (template === format_types.ddd) {
-			return { 
-				value: new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: timezone }), 
-				id: `${locale}_${timezone}_ddd` 
+			return {
+				value: new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: timezone }),
+				id: `${locale}_${timezone}_ddd`,
 			};
 		}
 		if (template === format_types.MMMM) {
-			return { 
-				value: new Intl.DateTimeFormat(locale, { month: 'long', timeZone: timezone }), 
-				id: `${locale}_${timezone}_MMMM` 
+			return {
+				value: new Intl.DateTimeFormat(locale, { month: 'long', timeZone: timezone }),
+				id: `${locale}_${timezone}_MMMM`,
 			};
 		}
 		if (template === format_types.MMM) {
-			return { 
-				value: new Intl.DateTimeFormat(locale, { month: 'short', timeZone: timezone }), 
-				id: `${locale}_${timezone}_MMM` 
+			return {
+				value: new Intl.DateTimeFormat(locale, { month: 'short', timeZone: timezone }),
+				id: `${locale}_${timezone}_MMM`,
 			};
 		}
 	}
@@ -484,7 +484,7 @@ function converter(date, to, options = { pad: true }) {
 	const shouldPad = options.pad !== false;
 	const isUTC = options.isUTC || false;
 	const detectedFormat = options.detectedFormat || null;
-	
+
 	// Fast path: Use direct Date methods for most cases
 	if (detectedFormat !== 'Xx' || !global_config.timezone || global_config.timezone === 'UTC') {
 		// Standard formatting - much faster
@@ -529,7 +529,7 @@ function converter(date, to, options = { pad: true }) {
 		}
 		return result;
 	}
-	
+
 	// Timezone-aware formatting only when absolutely necessary
 	const targetTimezone = global_config.timezone;
 	let cache = target_timezone_cache.get(targetTimezone);
@@ -543,14 +543,14 @@ function converter(date, to, options = { pad: true }) {
 			hour: '2-digit',
 			minute: '2-digit',
 			second: '2-digit',
-			hour12: false
+			hour12: false,
 		});
-			
+
 		// Single formatToParts call - cache the result
-		const parts = formatter_value;
+		const parts = formatter_value.formatToParts(date);
 		const partsMap = {};
 		const partsLen = parts.length;
-		
+
 		// Optimized parts mapping
 		for (let i = 0; i < partsLen; i++) {
 			const part = parts[i];
@@ -560,7 +560,6 @@ function converter(date, to, options = { pad: true }) {
 		in_result = partsMap;
 	}
 
-	
 	// Process requested fields
 	const len = to.length;
 	for (let i = 0; i < len; i++) {
@@ -591,7 +590,7 @@ function converter(date, to, options = { pad: true }) {
 			}
 		}
 	}
-	
+
 	return result;
 }
 
