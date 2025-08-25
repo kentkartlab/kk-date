@@ -74,7 +74,7 @@ const testScenarios = [
 				dayjs: () => dayjs('2024-01-15'),
 			},
 			{
-				name: 'String DateTime',
+				name: 'String DateTime (YYYY-MM-DD HH:mm:ss)',
 				kkDate: () => new KkDate('2024-01-15 14:30:45'),
 				moment: () => momentTimezone('2024-01-15 14:30:45'),
 				dayjs: () => dayjs('2024-01-15 14:30:45'),
@@ -84,6 +84,174 @@ const testScenarios = [
 				kkDate: () => new KkDate(1705311045000),
 				moment: () => momentTimezone(1705311045000),
 				dayjs: () => dayjs(1705311045000),
+			},
+			{
+				name: 'DD.MM.YYYY Format',
+				kkDate: () => new KkDate('15.01.2024'),
+				moment: () => momentTimezone('15.01.2024', 'DD.MM.YYYY'),
+				dayjs: () => dayjs('15.01.2024', 'DD.MM.YYYY'),
+			},
+			{
+				name: 'DD.MM.YYYY HH:mm:ss Format',
+				kkDate: () => new KkDate('15.01.2024 14:30:45'),
+				moment: () => momentTimezone('15.01.2024 14:30:45', 'DD.MM.YYYY HH:mm:ss'),
+				dayjs: () => dayjs('15.01.2024 14:30:45', 'DD.MM.YYYY HH:mm:ss'),
+			},
+			{
+				name: 'DD-MM-YYYY Format',
+				kkDate: () => new KkDate('15-01-2024'),
+				moment: () => momentTimezone('15-01-2024', 'DD-MM-YYYY'),
+				dayjs: () => dayjs('15-01-2024', 'DD-MM-YYYY'),
+			},
+			{
+				name: 'DD-MM-YYYY HH:mm:ss Format',
+				kkDate: () => new KkDate('15-01-2024 14:30:45'),
+				moment: () => momentTimezone('15-01-2024 14:30:45', 'DD-MM-YYYY HH:mm:ss'),
+				dayjs: () => dayjs('15-01-2024 14:30:45', 'DD-MM-YYYY HH:mm:ss'),
+			},
+			{
+				name: 'YYYY.MM.DD Format',
+				kkDate: () => new KkDate('2024.01.15'),
+				moment: () => momentTimezone('2024.01.15', 'YYYY.MM.DD'),
+				dayjs: () => dayjs('2024.01.15', 'YYYY.MM.DD'),
+			},
+			{
+				name: 'YYYY.MM.DD HH:mm:ss Format',
+				kkDate: () => new KkDate('2024.01.15 14:30:45'),
+				moment: () => momentTimezone('2024.01.15 14:30:45', 'YYYY.MM.DD HH:mm:ss'),
+				dayjs: () => dayjs('2024.01.15 14:30:45', 'YYYY.MM.DD HH:mm:ss'),
+			},
+			{
+				name: 'YYYYMMDD Format',
+				kkDate: () => new KkDate('20240115'),
+				moment: () => momentTimezone('20240115', 'YYYYMMDD'),
+				dayjs: () => dayjs('20240115', 'YYYYMMDD'),
+			},
+			{
+				name: 'DD MMMM YYYY Format',
+				kkDate: () => new KkDate('15 January 2024'),
+				moment: () => momentTimezone('15 January 2024', 'DD MMMM YYYY'),
+				dayjs: () => dayjs('15 January 2024', 'DD MMMM YYYY'),
+			},
+			{
+				name: 'Do MMMM YYYY Format',
+				kkDate: () => new KkDate('15th January 2024'),
+				moment: () => momentTimezone('15th January 2024', 'Do MMMM YYYY'),
+				dayjs: () => dayjs('15th January 2024', 'Do MMMM YYYY'),
+			},
+			{
+				name: 'DD MMMM dddd Format',
+				kkDate: () => new KkDate('15 January Monday'),
+				moment: () => momentTimezone('15 January Monday', 'DD MMMM dddd'),
+				dayjs: () => dayjs('15 January Monday', 'DD MMMM dddd'),
+			},
+			{
+				name: 'dddd, DD MMMM YYYY Format',
+				kkDate: () => new KkDate('Monday, 15 January 2024'),
+				moment: () => momentTimezone('Monday, 15 January 2024', 'dddd, DD MMMM YYYY'),
+				dayjs: () => dayjs('Monday, 15 January 2024', 'dddd, DD MMMM YYYY'),
+			},
+			{
+				name: 'YYYY-MM Format',
+				kkDate: () => new KkDate('2024-01'),
+				moment: () => momentTimezone('2024-01', 'YYYY-MM'),
+				dayjs: () => dayjs('2024-01', 'YYYY-MM'),
+			},
+			{
+				name: 'YYYY-DD-MM Format',
+				kkDate: () => new KkDate('2024-15-01'),
+				moment: () => momentTimezone('2024-15-01', 'YYYY-DD-MM'),
+				dayjs: () => dayjs('2024-15-01', 'YYYY-DD-MM'),
+			},
+			{
+				name: 'D MMMM YYYY Format',
+				kkDate: () => new KkDate('15 January 2024'),
+				moment: () => momentTimezone('15 January 2024', 'D MMMM YYYY'),
+				dayjs: () => dayjs('15 January 2024', 'D MMMM YYYY'),
+			},
+			{
+				name: 'YYYY MMM DD Format',
+				kkDate: () => new KkDate('2024 Jan 15'),
+				moment: () => momentTimezone('2024 Jan 15', 'YYYY MMM DD'),
+				dayjs: () => dayjs('2024 Jan 15', 'YYYY MMM DD'),
+			},
+			{
+				name: 'Do MMM YYYY Format',
+				kkDate: () => new KkDate('15th Jan 2024'),
+				moment: () => momentTimezone('15th Jan 2024', 'Do MMM YYYY'),
+				dayjs: () => dayjs('15th Jan 2024', 'Do MMM YYYY'),
+			},
+			{
+				name: 'HH:mm:ss Format',
+				kkDate: () => new KkDate('14:30:45'),
+				moment: () => momentTimezone('14:30:45', 'HH:mm:ss'),
+				dayjs: () => dayjs('14:30:45', 'HH:mm:ss'),
+			},
+			{
+				name: 'HH:mm:ss.SSS Format',
+				kkDate: () => new KkDate('14:30:45.123'),
+				moment: () => momentTimezone('14:30:45.123', 'HH:mm:ss.SSS'),
+				dayjs: () => dayjs('14:30:45.123', 'HH:mm:ss.SSS'),
+			},
+			{
+				name: 'HH:mm Format',
+				kkDate: () => new KkDate('14:30'),
+				moment: () => momentTimezone('14:30', 'HH:mm'),
+				dayjs: () => dayjs('14:30', 'HH:mm'),
+			},
+			{
+				name: 'hh:mm Format',
+				kkDate: () => new KkDate('02:30 PM'),
+				moment: () => momentTimezone('02:30 PM', 'hh:mm A'),
+				dayjs: () => dayjs('02:30 PM', 'hh:mm A'),
+			},
+			{
+				name: 'ISO 8601 String',
+				kkDate: () => new KkDate('2024-01-15T14:30:45.123Z'),
+				moment: () => momentTimezone('2024-01-15T14:30:45.123Z'),
+				dayjs: () => dayjs('2024-01-15T14:30:45.123Z'),
+			},
+			{
+				name: 'ISO 8601 with Timezone',
+				kkDate: () => new KkDate('2024-01-15T14:30:45+03:00'),
+				moment: () => momentTimezone('2024-01-15T14:30:45+03:00'),
+				dayjs: () => dayjs('2024-01-15T14:30:45+03:00'),
+			},
+			{
+				name: 'Unix Timestamp (seconds)',
+				kkDate: () => new KkDate(1705311045),
+				moment: () => momentTimezone.unix(1705311045),
+				dayjs: () => dayjs.unix(1705311045),
+			},
+			{
+				name: 'Unix Timestamp (milliseconds)',
+				kkDate: () => new KkDate(1705311045000),
+				moment: () => momentTimezone(1705311045000),
+				dayjs: () => dayjs(1705311045000),
+			},
+			{
+				name: 'DD MMMM Format',
+				kkDate: () => new KkDate('15 January'),
+				moment: () => momentTimezone('15 January', 'DD MMMM'),
+				dayjs: () => dayjs('15 January', 'DD MMMM'),
+			},
+			{
+				name: 'MMMM YYYY Format',
+				kkDate: () => new KkDate('January 2024'),
+				moment: () => momentTimezone('January 2024', 'MMMM YYYY'),
+				dayjs: () => dayjs('January 2024', 'MMMM YYYY'),
+			},
+			{
+				name: 'DD MMM YYYY Format',
+				kkDate: () => new KkDate('15 Jan 2024'),
+				moment: () => momentTimezone('15 Jan 2024', 'DD MMM YYYY'),
+				dayjs: () => dayjs('15 Jan 2024', 'DD MMM YYYY'),
+			},
+			{
+				name: 'DD MMMM dddd, YYYY Format',
+				kkDate: () => new KkDate('15 January Monday, 2024'),
+				moment: () => momentTimezone('15 January Monday, 2024', 'DD MMMM dddd, YYYY'),
+				dayjs: () => dayjs('15 January Monday, 2024', 'DD MMMM dddd, YYYY'),
 			},
 		],
 	},
@@ -341,6 +509,7 @@ let totalKkDateTime = 0;
 let totalMomentTime = 0;
 let totalDayjsTime = 0;
 let totalLuxonTime = 0;
+let totalLuxonTest = 0;
 let testCount = 0;
 
 // biome-ignore lint/complexity/noForEach: <explanation>
@@ -377,6 +546,7 @@ testScenarios.forEach((scenario) => {
 				const setup = test.setup ? test.setup() : null;
 				return test.luxon(setup);
 			}, iterations);
+			totalLuxonTest++
 		}
 
 		// Calculate operations per second
@@ -387,7 +557,7 @@ testScenarios.forEach((scenario) => {
 
 		// Calculate improvements
 		const competitors = [momentTime, dayjsTime];
-		if (test.luxon) competitors.push(luxonTime);
+		if (test.luxon) { competitors.push(luxonTime); }
 		const avgOtherTime = competitors.reduce((a, b) => a + b, 0) / competitors.length;
 		const improvement = (((avgOtherTime - kkDateTime) / avgOtherTime) * 100).toFixed(2);
 
@@ -403,7 +573,7 @@ testScenarios.forEach((scenario) => {
 		totalKkDateTime += kkDateTime;
 		totalMomentTime += momentTime;
 		totalDayjsTime += dayjsTime;
-		if (test.luxon) totalLuxonTime += luxonTime;
+		if (test.luxon) { totalLuxonTime += luxonTime; }
 		testCount++;
 	});
 });
@@ -416,7 +586,7 @@ console.log('='.repeat(60));
 const avgKkDateTime = totalKkDateTime / testCount;
 const avgMomentTime = totalMomentTime / testCount;
 const avgDayjsTime = totalDayjsTime / testCount;
-const avgLuxonTime = totalLuxonTime / testCount;
+const avgLuxonTime = totalLuxonTime / totalLuxonTest;
 const avgOtherTime = (avgMomentTime + avgDayjsTime + avgLuxonTime) / 3;
 const overallImprovement = (((avgOtherTime - avgKkDateTime) / avgOtherTime) * 100).toFixed(2);
 
@@ -470,43 +640,53 @@ const memoryTest = () => {
 
 memoryTest();
 
-// Cache performance test
+// Cache performance test for all scenarios
 console.log('\n⚡ CACHE PERFORMANCE TEST');
 console.log('='.repeat(60));
 
-const cacheTest = () => {
+const cacheTestAllScenarios = () => {
 	const iterations = 100000;
+	let totalNoCacheTime = 0;
+	let totalWithCacheTime = 0;
+	let scenarioCount = 0;
 
-	// Test without cache
-	KkDate.caching({ status: false });
-	const startTimeNoCache = process.hrtime.bigint();
-	for (let i = 0; i < iterations; i++) {
-		const date = new KkDate('2024-08-23 10:00:00');
-		date.tz('America/New_York');
+	// Test each scenario without and with cache
+	for (const scenario of testScenarios) {
+		for (const test of scenario.tests) {
+			// Test without cache
+			KkDate.caching({ status: false });
+			const startTimeNoCache = process.hrtime.bigint();
+			for (let i = 0; i < iterations; i++) {
+				test.kkDate();
+			}
+			const endTimeNoCache = process.hrtime.bigint();
+			const timeNoCache = Number(endTimeNoCache - startTimeNoCache) / 1_000_000;
+
+			// Test with cache
+			KkDate.caching({ status: true, defaultTtl: 3600 });
+			const startTimeWithCache = process.hrtime.bigint();
+			for (let i = 0; i < iterations; i++) {
+				test.kkDate();
+			}
+			const endTimeWithCache = process.hrtime.bigint();
+			const timeWithCache = Number(endTimeWithCache - startTimeWithCache) / 1_000_000;
+
+			totalNoCacheTime += timeNoCache;
+			totalWithCacheTime += timeWithCache;
+			scenarioCount++;
+		}
 	}
-	const endTimeNoCache = process.hrtime.bigint();
-	const timeNoCache = Number(endTimeNoCache - startTimeNoCache) / 1_000_000;
-	const opsNoCache = calculateOpsPerSec(timeNoCache, iterations);
 
-	// Test with cache
-	KkDate.caching({ status: true, defaultTtl: 3600 });
-	const startTimeWithCache = process.hrtime.bigint();
-	for (let i = 0; i < iterations; i++) {
-		const date = new KkDate('2024-08-23 10:00:00');
-		date.tz('America/New_York');
-	}
-	const endTimeWithCache = process.hrtime.bigint();
-	const timeWithCache = Number(endTimeWithCache - startTimeWithCache) / 1_000_000;
-	const opsWithCache = calculateOpsPerSec(timeWithCache, iterations);
+	const avgNoCacheTime = totalNoCacheTime / scenarioCount;
+	const avgWithCacheTime = totalWithCacheTime / scenarioCount;
+	const cacheImprovement = (((avgNoCacheTime - avgWithCacheTime) / avgNoCacheTime) * 100).toFixed(2);
 
-	const cacheImprovement = (((timeNoCache - timeWithCache) / timeNoCache) * 100).toFixed(2);
-
-	console.log(`Without cache: ${timeNoCache.toFixed(3)}ms (${opsNoCache.toLocaleString()} ops/sec)`);
-	console.log(`With cache:    ${timeWithCache.toFixed(3)}ms (${opsWithCache.toLocaleString()} ops/sec)`);
-	console.log(`Cache impact:  ${cacheImprovement}% performance improvement`);
+	console.log(`Average without cache: ${avgNoCacheTime.toFixed(3)}ms`);
+	console.log(`Average with cache:    ${avgWithCacheTime.toFixed(3)}ms`);
+	console.log(`Cache impact:          ${cacheImprovement}% performance improvement`);
 };
 
-cacheTest();
+cacheTestAllScenarios();
 
 // Cache statistics
 const cacheStats = KkDate.caching_status();
@@ -523,3 +703,4 @@ console.log(`Heap Used: ${(memUsage.heapUsed / 1024 / 1024).toFixed(2)} MB`);
 console.log(`Heap Total: ${(memUsage.heapTotal / 1024 / 1024).toFixed(2)} MB`);
 
 console.log('\n✨ Benchmark completed!');
+KkDate.caching({ status: false })
