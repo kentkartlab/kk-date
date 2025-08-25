@@ -19,6 +19,7 @@ const memory = {
 		totalHits: 0,
 		nextMemoryStatsTime: 0,
 		memoryStats: {},
+		totalKeys: 0,
 	},
 	store: {},
 	// LRU tracking
@@ -55,7 +56,7 @@ module.exports.config = (options = { defaultTtl }) => {
  * LRU eviction - remove least recently used items
  */
 function evictLRU() {
-	if (Object.keys(memory.store).length <= MAX_CACHE_SIZE) {
+	if (memory.config.totalKeys <= MAX_CACHE_SIZE) {
 		return;
 	}
 
@@ -72,6 +73,7 @@ function evictLRU() {
 	keysToRemove.forEach((key) => {
 		delete memory.store[key];
 		memory.lru.delete(key);
+		memory.config.totalKeys--;
 	});
 }
 
@@ -91,7 +93,7 @@ module.exports.setItemSync = (key, value, ttl = defaultTtl) => {
 		}
 
 		// Check if we need to evict items
-		if (Object.keys(memory.store).length >= MAX_CACHE_SIZE) {
+		if (memory.config.totalKeys > MAX_CACHE_SIZE) {
 			evictLRU();
 		}
 
@@ -100,9 +102,9 @@ module.exports.setItemSync = (key, value, ttl = defaultTtl) => {
 			hit: 0,
 			expires_at: Math.floor(new Date() / 1000) + Number.parseInt(ttl, 10),
 		};
-
 		// Update LRU tracking
 		memory.lru.set(keyStr, Date.now());
+		memory.config.totalKeys++;
 
 		return true;
 	} catch (error) {
@@ -189,6 +191,7 @@ module.exports.deleteItem = (key) => {
 		if (memory.store[keyStr]) {
 			delete memory.store[keyStr];
 			memory.lru.delete(keyStr);
+			memory.config.totalKeys--;
 		}
 		return true;
 	} catch (error) {
@@ -268,6 +271,7 @@ function defaultMemory(withConfig = false) {
 				nextMemoryStatsTime: 0,
 				status: false,
 				memoryStats: {},
+				totalKeys: 0,
 			},
 		};
 		memory.store = {};
@@ -342,6 +346,7 @@ function killer() {
 	for (const property in memory.store) {
 		if (memory.store[`${property}`].expires_at < Math.floor(new Date() / 1000)) {
 			delete memory.store[`${property}`];
+			memory.config.totalKeys--;
 		}
 	}
 	memory.config.killerIsFinished = true;
