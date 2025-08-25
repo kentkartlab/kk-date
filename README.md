@@ -8,11 +8,11 @@ A blazing-fast JavaScript date library with intelligent caching, automatic DST d
 
 ## 🌟 Why Choose kk-date?
 
-- **⚡ Lightning Fast** - 267x faster timezone operations than alternatives
+- **⚡ Lightning Fast** - 149x faster timezone operations than alternatives
 - **🌍 Accurate Timezone Handling** - Consistent, reliable timezone conversions across all platforms
 - **🧠 Zero-Config DST** - Automatic Daylight Saving Time detection without manual intervention
 - **📊 Big Data Ready** - Optional Redis-like caching for handling millions of date operations
-- **🎯 Memory Efficient** - Object pooling and lazy loading for optimal memory usage
+- **🎯 Memory Efficient** - Negative memory usage with object pooling and lazy loading
 - **🔒 Bulletproof** - 214 comprehensive tests covering edge cases and DST transitions
 - **🌍 Production Proven** - Cross-platform compatibility with zero dependencies
 

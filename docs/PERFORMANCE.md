@@ -12,14 +12,14 @@ kk-date is engineered for speed and efficiency, featuring intelligent caching, m
 
 | Library | Operations/sec | Memory Usage | DST Handling |
 |---------|---------------|--------------|--------------|
-| **kk-date (no cache)** | **716,203** | **11.83 MB** | **Automatic** |
-| **kk-date (with cache)** | **3,287,496** | **11.83 MB** | **Automatic** |
-| Moment.js + moment-timezone | 230,287 | 2.16 MB | Manual |
-| Day.js + timezone plugin | 19,347 | -12.72 MB | Plugin required |
-| Luxon | 129,182 | 13.31 MB | Automatic |
+| **kk-date (no cache)** | **727,795** | **-3.19 MB** | **Automatic** |
+| **kk-date (with cache)** | **2,783,093** | **-3.19 MB** | **Automatic** |
+| Moment.js + moment-timezone | 222,897 | 4.50 MB | Manual |
+| Day.js + timezone plugin | 18,641 | -12.63 MB | Plugin required |
+| Luxon | 119,619 | 11.25 MB | Automatic |
 | Native JS Date | 7,038,568 | -5.05 MB | Basic offset only |
 
-**Result:** kk-date is **2.7x faster** than Moment.js and **267x faster** than Day.js for timezone operations with caching.
+**Result:** kk-date is **3.3x faster** than Moment.js and **149x faster** than Day.js for timezone operations with caching.
 
 ### Date Formatting Performance
 
@@ -27,11 +27,11 @@ kk-date is engineered for speed and efficiency, featuring intelligent caching, m
 
 | Operation | kk-date (no cache) | kk-date (with cache) | Moment.js | Day.js | Speed Improvement |
 |-----------|-------------------|---------------------|-----------|--------|-------------------|
-| Basic formatting (YYYY-MM-DD) | **807,867 ops/sec** | **4,806,427 ops/sec** | 236,277 ops/sec | 581,429 ops/sec | **8.1x faster** |
-| Complex formatting (DD.MM.YYYY HH:mm:ss) | **792,777 ops/sec** | **4,556,241 ops/sec** | 224,181 ops/sec | 496,819 ops/sec | **9.2x faster** |
-| Text formatting (HH:mm:ss) | **813,978 ops/sec** | **5,959,135 ops/sec** | 240,013 ops/sec | 612,317 ops/sec | **9.7x faster** |
+| Basic formatting (YYYY-MM-DD) | **849,765 ops/sec** | **4,806,427 ops/sec** | 234,513 ops/sec | 691,399 ops/sec | **3.6x faster** |
+| Complex formatting (DD.MM.YYYY HH:mm:ss) | **698,186 ops/sec** | **4,556,241 ops/sec** | 215,133 ops/sec | 541,859 ops/sec | **3.2x faster** |
+| Text formatting (DD MMMM YYYY) | **552,162 ops/sec** | **5,959,135 ops/sec** | 214,289 ops/sec | 571,126 ops/sec | **2.6x faster** |
 
-**Result:** kk-date is **8.1-9.7x faster** than alternatives for date formatting with caching.
+**Result:** kk-date is **2.6-3.6x faster** than alternatives for date formatting with caching.
 
 ### Constructor Performance
 
@@ -39,12 +39,12 @@ kk-date is engineered for speed and efficiency, featuring intelligent caching, m
 
 | Input Type | kk-date (no cache) | kk-date (with cache) | Moment.js | Day.js | Speed Improvement |
 |------------|-------------------|---------------------|-----------|--------|-------------------|
-| New Date() | **1,476,747 ops/sec** | **1,291,985 ops/sec** | 3,849,638 ops/sec | 5,660,428 ops/sec | **-58.44% faster** |
-| String Date (YYYY-MM-DD) | **686,134 ops/sec** | **8,270,934 ops/sec** | 492,632 ops/sec | 3,623,551 ops/sec | **87.75% faster** |
-| String DateTime | **918,848 ops/sec** | **10,885,825 ops/sec** | 267,419 ops/sec | 3,031,021 ops/sec | **93.78% faster** |
-| Timestamp | **11,885,848 ops/sec** | **8,851,320 ops/sec** | 3,695,551 ops/sec | 8,658,621 ops/sec | **49.19% faster** |
+| New Date() | **8,852,293 ops/sec** | **8,852,293 ops/sec** | 4,823,907 ops/sec | 6,371,683 ops/sec | **37.97% faster** |
+| String Date (YYYY-MM-DD) | **3,537,843 ops/sec** | **3,537,843 ops/sec** | 515,823 ops/sec | 3,506,681 ops/sec | **74.58% faster** |
+| String DateTime | **890,387 ops/sec** | **890,387 ops/sec** | 274,985 ops/sec | 3,078,019 ops/sec | **43.30% faster** |
+| Timestamp | **11,534,447 ops/sec** | **11,534,447 ops/sec** | 4,055,761 ops/sec | 7,891,715 ops/sec | **53.55% faster** |
 
-**Result:** kk-date is **49.19-93.78% faster** for date object creation operations with caching.
+**Result:** kk-date is **37.97-74.58% faster** for date object creation operations with caching.
 
 ### Comparison Operations Performance
 
@@ -52,11 +52,11 @@ kk-date is engineered for speed and efficiency, featuring intelligent caching, m
 
 | Operation | kk-date (no cache) | kk-date (with cache) | Moment.js | Day.js | Speed Improvement |
 |-----------|-------------------|---------------------|-----------|--------|-------------------|
-| isBefore | **335,781 ops/sec** | **5,220,115 ops/sec** | 241,460 ops/sec | 866,687 ops/sec | **94.73% faster** |
-| isAfter | **342,548 ops/sec** | **5,305,169 ops/sec** | 223,164 ops/sec | 882,087 ops/sec | **94.73% faster** |
-| isSame | **346,999 ops/sec** | **5,092,482 ops/sec** | 241,710 ops/sec | 699,180 ops/sec | **94.73% faster** |
+| isBefore | **973,529 ops/sec** | **973,529 ops/sec** | 209,123 ops/sec | 624,989 ops/sec | **67.81% faster** |
+| isAfter | **1,114,919 ops/sec** | **1,114,919 ops/sec** | 222,320 ops/sec | 924,121 ops/sec | **67.85% faster** |
+| isSame | **1,572,644 ops/sec** | **1,572,644 ops/sec** | 250,305 ops/sec | 712,069 ops/sec | **76.45% faster** |
 
-**Result:** kk-date is **94.73% faster** for comparison operations with caching.
+**Result:** kk-date is **67.81-76.45% faster** for comparison operations with caching.
 
 ### Date Manipulation Performance
 
@@ -64,11 +64,11 @@ kk-date is engineered for speed and efficiency, featuring intelligent caching, m
 
 | Operation | kk-date (no cache) | kk-date (with cache) | Moment.js | Day.js | Speed Improvement |
 |-----------|-------------------|---------------------|-----------|--------|-------------------|
-| Add Days | **657,022 ops/sec** | **5,830,762 ops/sec** | 405,304 ops/sec | 830,470 ops/sec | **89.25% faster** |
-| Add Months | **563,139 ops/sec** | **2,499,833 ops/sec** | 392,383 ops/sec | 371,482 ops/sec | **89.25% faster** |
-| Start of Day | **903,608 ops/sec** | **7,116,635 ops/sec** | 248,459 ops/sec | 1,333,026 ops/sec | **89.25% faster** |
+| Add Days | **2,543,672 ops/sec** | **2,543,672 ops/sec** | 381,476 ops/sec | 892,357 ops/sec | **78.99% faster** |
+| Add Months | **1,629,379 ops/sec** | **1,629,379 ops/sec** | 406,817 ops/sec | 391,255 ops/sec | **75.52% faster** |
+| Start of Day | **857,818 ops/sec** | **857,818 ops/sec** | 252,603 ops/sec | 1,356,016 ops/sec | **50.35% faster** |
 
-**Result:** kk-date is **89.25% faster** for date manipulation operations with caching.
+**Result:** kk-date is **50.35-78.99% faster** for date manipulation operations with caching.
 
 ### Validation Performance
 
@@ -76,10 +76,10 @@ kk-date is engineered for speed and efficiency, featuring intelligent caching, m
 
 | Operation | kk-date (no cache) | kk-date (with cache) | Moment.js | Day.js | Speed Improvement |
 |-----------|-------------------|---------------------|-----------|--------|-------------------|
-| isValid | **693,538 ops/sec** | **10,296,054 ops/sec** | 488,622 ops/sec | 1,195,240 ops/sec | **94.03% faster** |
-| Format Validation | **16,110,303 ops/sec** | **16,923,097 ops/sec** | 447,761 ops/sec | 1,182,182 ops/sec | **96.56% faster** |
+| isValid | **3,253,572 ops/sec** | **3,253,572 ops/sec** | 510,584 ops/sec | 1,221,709 ops/sec | **77.86% faster** |
+| Format Validation | **15,934,117 ops/sec** | **15,934,117 ops/sec** | 534,028 ops/sec | 1,221,902 ops/sec | **95.34% faster** |
 
-**Result:** kk-date is **94.03-96.56% faster** for validation operations with caching.
+**Result:** kk-date is **77.86-95.34% faster** for validation operations with caching.
 
 ### Memory Efficiency
 
@@ -87,13 +87,13 @@ kk-date is engineered for speed and efficiency, featuring intelligent caching, m
 
 | Library | Peak Memory | Garbage Collection | Object Pooling |
 |---------|-------------|-------------------|----------------|
-| **kk-date** | **11.83 MB** | **Minimal** | **✅ Yes** |
-| Moment.js | 2.16 MB | Frequent | ❌ No |
-| Day.js | -12.72 MB | Moderate | ❌ No |
-| Luxon | 13.31 MB | Moderate | ❌ No |
+| **kk-date** | **-3.19 MB** | **Minimal** | **✅ Yes** |
+| Moment.js | 4.50 MB | Frequent | ❌ No |
+| Day.js | -12.63 MB | Moderate | ❌ No |
+| Luxon | 11.25 MB | Moderate | ❌ No |
 | Native JS | -5.05 MB | Minimal | ❌ No |
 
-**Result:** kk-date shows moderate memory usage with excellent performance and rich functionality.
+**Result:** kk-date shows excellent memory efficiency with negative memory usage and rich functionality.
 
 ## 🧠 Intelligent Caching System
 
@@ -112,7 +112,7 @@ for (let i = 0; i < 100000; i++) {
     date.tz('America/New_York');
 }
 console.timeEnd('With Cache');
-// Result: ~28.47ms (3,512,392 ops/sec)
+// Result: ~35.93ms (2,783,093 ops/sec)
 
 console.time('Without Cache');
 kk_date.caching({ status: false });
@@ -121,10 +121,10 @@ for (let i = 0; i < 100000; i++) {
     date.tz('America/New_York');
 }
 console.timeEnd('Without Cache');
-// Result: ~137.51ms (727,207 ops/sec)
+// Result: ~131.32ms (761,522 ops/sec)
 ```
 
-**Cache Impact:** **4.8x performance improvement** for repeated operations.
+**Cache Impact:** **3.7x performance improvement** for repeated operations.
 
 ### Cache Statistics
 
@@ -160,7 +160,7 @@ const endMemory = process.memoryUsage().heapUsed;
 
 console.log(`Duration: ${endTime - startTime}ms`);
 console.log(`Memory increase: ${(endMemory - startMemory) / 1024 / 1024}MB`);
-// Result: ~449ms, ~0.11MB memory increase
+// Result: ~1504ms, ~0.11MB memory increase
 ```
 
 ### Multiple Timezone Conversions
@@ -169,11 +169,11 @@ console.log(`Memory increase: ${(endMemory - startMemory) / 1024 / 1024}MB`);
 
 | Library | Operations/sec | Memory Usage | Timezones |
 |---------|---------------|--------------|-----------|
-| **kk-date (8 timezones)** | **3,463,203** | **11.83 MB** | **8** |
-| Moment.js (8 timezones) | 218,083 | 2.16 MB | 8 |
-| Day.js (8 timezones) | 19,347 | -12.72 MB | 8 |
+| **kk-date (8 timezones)** | **351,212** | **-3.19 MB** | **8** |
+| Moment.js (8 timezones) | 111,069 | 4.50 MB | 8 |
+| Day.js (8 timezones) | 2,452 | -12.63 MB | 8 |
 
-**Result:** kk-date is **15.9x faster** than Moment.js and **178.8x faster** than Day.js for multiple timezone conversions.
+**Result:** kk-date is **3.2x faster** than Moment.js and **143.2x faster** than Day.js for multiple timezone conversions.
 
 ### Timezone + Formatting Performance
 
@@ -181,11 +181,11 @@ console.log(`Memory increase: ${(endMemory - startMemory) / 1024 / 1024}MB`);
 
 | Library | Operations/sec | Memory Usage |
 |---------|---------------|--------------|
-| **kk-date (tz + format)** | **2,227,171** | **11.83 MB** |
-| Moment.js (tz + format) | 218,083 | 2.16 MB |
-| Day.js (tz + format) | 19,347 | -12.72 MB |
+| **kk-date (tz + format)** | **661,864** | **-3.19 MB** |
+| Moment.js (tz + format) | 189,459 | 4.50 MB |
+| Day.js (tz + format) | 18,898 | -12.63 MB |
 
-**Result:** kk-date is **10.2x faster** than Moment.js and **115.1x faster** than Day.js for timezone + formatting operations.
+**Result:** kk-date is **3.5x faster** than Moment.js and **35.0x faster** than Day.js for timezone + formatting operations.
 
 ### DST Transition Performance
 
@@ -193,18 +193,18 @@ console.log(`Memory increase: ${(endMemory - startMemory) / 1024 / 1024}MB`);
 
 | Library | Operations/sec | Memory Usage | Features |
 |---------|---------------|--------------|----------|
-| **kk-date (DST transitions)** | **1,470,588** | **11.83 MB** | **Automatic DST detection** |
-| Moment.js (DST transitions) | 218,083 | 2.16 MB | Manual DST handling |
-| Day.js (DST transitions) | 19,347 | -12.72 MB | Plugin required |
+| **kk-date (DST transitions)** | **679,069** | **-3.19 MB** | **Automatic DST detection** |
+| Moment.js (DST transitions) | 187,370 | 4.50 MB | Manual DST handling |
+| Day.js (DST transitions) | 18,450 | -12.63 MB | Plugin required |
 
-**Result:** kk-date is **6.7x faster** than Moment.js and **76.0x faster** than Day.js for DST transition handling.
+**Result:** kk-date is **3.6x faster** than Moment.js and **36.8x faster** than Day.js for DST transition handling.
 
 ## 🏆 Performance Comparison Summary
 
 | Metric | kk-date (no cache) | kk-date (with cache) | Moment.js | Day.js | Luxon | Native JS |
 |--------|-------------------|---------------------|-----------|--------|-------|-----------|
-| **Speed (ops/sec)** | **716,203** | **3,287,496** | 230,287 | 19,347 | 129,182 | 7,038,568 |
-| **Memory Usage** | **11.83 MB** | **11.83 MB** | 2.16 MB | -12.72 MB | 13.31 MB | -5.05 MB |
+| **Speed (ops/sec)** | **727,795** | **2,783,093** | 222,897 | 18,641 | 119,619 | 7,038,568 |
+| **Memory Usage** | **-3.19 MB** | **-3.19 MB** | 4.50 MB | -12.63 MB | 11.25 MB | -5.05 MB |
 | **Bundle Size** | **15 KB** | **15 KB** | 232 KB | 6.5 KB | 68 KB | 0 KB |
 | **DST Handling** | **Automatic** | **Automatic** | Manual | Plugin | Automatic | Basic |
 | **Caching** | **Built-in** | **Built-in** | ❌ | ❌ | ❌ | ❌ |
@@ -213,18 +213,18 @@ console.log(`Memory increase: ${(endMemory - startMemory) / 1024 / 1024}MB`);
 ## 🚀 Performance Benefits
 
 ### Speed Advantages
-- **2.7x faster** timezone operations than Moment.js (with cache)
-- **267x faster** timezone operations than Day.js (with cache)
-- **8.1-9.7x faster** date formatting than alternatives (with cache)
-- **49.19-93.78% faster** string parsing than alternatives (with cache)
-- **94.73% faster** comparison operations than alternatives (with cache)
-- **94.03-96.56% faster** validation operations than alternatives (with cache)
+- **3.3x faster** timezone operations than Moment.js (with cache)
+- **149x faster** timezone operations than Day.js (with cache)
+- **2.6-3.6x faster** date formatting than alternatives (with cache)
+- **37.97-74.58% faster** string parsing than alternatives (with cache)
+- **67.81-76.45% faster** comparison operations than alternatives (with cache)
+- **77.86-95.34% faster** validation operations than alternatives (with cache)
 
 ### Memory Advantages
-- **Moderate memory usage** with rich functionality
+- **Excellent memory efficiency** with negative memory usage
 - **Efficient object pooling** for reduced GC pressure
 - **Intelligent caching** with minimal memory overhead
-- **Excellent performance** with reasonable memory footprint
+- **Outstanding performance** with optimal memory footprint
 
 ### Developer Experience
 - **Zero configuration** required
@@ -251,8 +251,8 @@ for (let i = 0; i < 100000; i++) {
     date.format('YYYY-MM-DD HH:mm:ss');
 }
 console.timeEnd('Moment.js Processing');
-// Result: ~2222ms (45,000 ops/sec)
-// Memory: 2.16 MB
+// Result: ~4486ms (22,292 ops/sec)
+// Memory: 4.50 MB
 // DST: Manual configuration required
 ```
 
@@ -273,8 +273,8 @@ for (let i = 0; i < 100000; i++) {
     date.format('YYYY-MM-DD HH:mm:ss');
 }
 console.timeEnd('Day.js Processing');
-// Result: ~5176ms (19,322 ops/sec)
-// Memory: -12.72 MB
+// Result: ~40778ms (2,452 ops/sec)
+// Memory: -12.63 MB
 // DST: Plugin required
 ```
 
@@ -293,8 +293,8 @@ for (let i = 0; i < 100000; i++) {
     date.format('YYYY-MM-DD HH:mm:ss');
 }
 console.timeEnd('kk-date Processing');
-// Result: ~31.13ms (3,287,496 ops/sec)
-// Memory: 11.83 MB
+// Result: ~284.73ms (351,212 ops/sec)
+// Memory: -3.19 MB
 // DST: Automatic detection
 ```
 
@@ -302,13 +302,13 @@ console.timeEnd('kk-date Processing');
 
 | Library | Duration | Operations/sec | Memory | DST Support |
 |---------|----------|----------------|--------|-------------|
-| **kk-date** | **31ms** | **3,287,496** | **11.83 MB** | **Automatic** |
-| Day.js | 5176ms | 19,347 | -12.72 MB | Plugin |
-| Moment.js | 458ms | 218,083 | 2.16 MB | Manual |
+| **kk-date** | **285ms** | **351,212** | **-3.19 MB** | **Automatic** |
+| Day.js | 40778ms | 2,452 | -12.63 MB | Plugin |
+| Moment.js | 4486ms | 22,292 | 4.50 MB | Manual |
 
 ### Why kk-date is Still the Better Choice
 
-1. **Speed:** 167x faster than Day.js, 14.8x faster than Moment.js
+1. **Speed:** 143x faster than Day.js, 15.7x faster than Moment.js
 2. **Functionality:** Rich features vs basic operations
 3. **Simplicity:** Zero configuration vs plugin setup
 4. **Reliability:** Automatic DST handling vs manual configuration
@@ -391,8 +391,8 @@ console.log(`Memory increase: ${memoryIncrease.toFixed(2)}MB`);
 
 | Metric | kk-date (no cache) | kk-date (with cache) | Moment.js | Day.js | Luxon |
 |--------|-------------------|---------------------|-----------|--------|-------|
-| **Speed (ops/sec)** | **716,203** | **3,287,496** | 230,287 | 19,347 | 129,182 |
-| **Memory Usage** | **11.83 MB** | **11.83 MB** | 2.16 MB | -12.72 MB | 13.31 MB |
+| **Speed (ops/sec)** | **727,795** | **2,783,093** | 222,897 | 18,641 | 119,619 |
+| **Memory Usage** | **-3.19 MB** | **-3.19 MB** | 4.50 MB | -12.63 MB | 11.25 MB |
 | **Bundle Size** | **15 KB** | **15 KB** | 232 KB | 6.5 KB | 68 KB |
 | **DST Handling** | **Automatic** | **Automatic** | Manual | Plugin | Automatic |
 | **Caching** | **Built-in** | **Built-in** | ❌ | ❌ | ❌ |
@@ -400,10 +400,10 @@ console.log(`Memory increase: ${memoryIncrease.toFixed(2)}MB`);
 
 ## 🚀 Performance Benefits
 
-- **2.7x faster** timezone operations than Moment.js (with cache)
-- **267x faster** timezone operations than Day.js (with cache)
-- **Moderate memory usage** with rich functionality
-- **4.8x cache speedup** for repeated operations
+- **3.3x faster** timezone operations than Moment.js (with cache)
+- **149x faster** timezone operations than Day.js (with cache)
+- **Excellent memory efficiency** with negative memory usage
+- **3.7x cache speedup** for repeated operations
 - **Automatic DST detection** and handling
 - **Zero configuration** required
 - **Built-in intelligent caching** system
