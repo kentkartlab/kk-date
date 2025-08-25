@@ -24,6 +24,7 @@ describe('Cross-Platform Timezone Compatibility Tests', () => {
 
 			// Should be in Node.js environment for tests
 			expect(isNode).toBeTruthy();
+			expect(isBrowser).toBeFalsy();
 		});
 	});
 

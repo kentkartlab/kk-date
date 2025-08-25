@@ -23,7 +23,7 @@ describe('KkDate Enhanced Timezone Tests', () => {
 			expect(() => {
 				kk_date.config({ timezone: 'Invalid/Timezone' });
 			}).toThrow('Invalid timezone: Invalid/Timezone');
-			
+
 			expect(() => {
 				new kk_date(`${test_date} ${test_time}`).tz('Invalid/Timezone');
 			}).toThrow('Invalid timezone: Invalid/Timezone');
@@ -63,7 +63,7 @@ describe('KkDate Enhanced Timezone Tests', () => {
 			// Test DST detection for known dates
 			const winterDate = new kk_date('2024-01-15 12:00:00').tz('America/New_York').isDST();
 			const summerDate = new kk_date('2024-07-15 12:00:00').tz('America/New_York').isDST();
-			
+
 			expect(winterDate).toBe(false);
 			expect(summerDate).toBe(true);
 		});
@@ -72,7 +72,7 @@ describe('KkDate Enhanced Timezone Tests', () => {
 			// Test DST detection for different seasons
 			const springDate = new kk_date('2024-04-15 12:00:00').tz('America/New_York').isDST();
 			const fallDate = new kk_date('2024-10-15 12:00:00').tz('America/New_York').isDST();
-			
+
 			expect(springDate).toBe(true);
 			expect(fallDate).toBe(true);
 		});
@@ -88,7 +88,7 @@ describe('KkDate Enhanced Timezone Tests', () => {
 		test('should get complete timezone information', () => {
 			const date = new kk_date('2024-07-15 12:00:00');
 			const info = date.tz('America/New_York').getTimezoneInfo();
-			
+
 			expect(info).toHaveProperty('timezone', 'America/New_York');
 			expect(info).toHaveProperty('offset');
 			expect(info).toHaveProperty('isDST');
@@ -103,14 +103,14 @@ describe('KkDate Enhanced Timezone Tests', () => {
 		test('should get timezone abbreviation', () => {
 			const date = new kk_date('2024-07-15 12:00:00');
 			const abbreviation = date.tz('America/New_York').getTimezoneAbbreviation();
-			
+
 			expect(abbreviation).toBe('EDT'); // Eastern Daylight Time
 		});
 
 		test('should get standard time abbreviation', () => {
 			const date = new kk_date('2024-01-15 12:00:00');
 			const abbreviation = date.tz('America/New_York').getTimezoneAbbreviation();
-			
+
 			expect(abbreviation).toBe('EST'); // Eastern Standard Time
 		});
 	});
@@ -125,75 +125,71 @@ describe('KkDate Enhanced Timezone Tests', () => {
 				'America/New_York',
 				'America/Los_Angeles',
 				'Asia/Tokyo',
-				'Australia/Sydney'
+				'Australia/Sydney',
 			];
 
 			const testDate = new kk_date('2024-07-15 12:00:00');
 
-			testTimezones.forEach(timezone => {
+			for (const timezone of testTimezones) {
 				expect(() => {
 					const converted = testDate.tz(timezone);
 					expect(converted.isValid()).toBe(true);
-					
+
 					const info = converted.getTimezoneInfo();
 					expect(info.timezone).toBe(timezone);
 					expect(typeof info.offset).toBe('number');
 				}).not.toThrow();
-			});
+			}
 		});
 
 		test('should handle edge case timezones', () => {
 			const edgeTimezones = [
 				'Pacific/Kiritimati', // UTC+14
-				'Pacific/Niue',       // UTC-11
-				'Asia/Kolkata',        // UTC+5:30
-				'Asia/Kathmandu'       // UTC+5:45
+				'Pacific/Niue', // UTC-11
+				'Asia/Kolkata', // UTC+5:30
+				'Asia/Kathmandu', // UTC+5:45
 			];
 
 			const testDate = new kk_date('2024-07-15 12:00:00');
 
-			edgeTimezones.forEach(timezone => {
+			for (const timezone of edgeTimezones) {
 				expect(() => {
 					const converted = testDate.tz(timezone);
 					expect(converted.isValid()).toBe(true);
 				}).not.toThrow();
-			});
+			}
 		});
 	});
 
 	describe('Timezone Conversion Accuracy', () => {
 		test('should convert between timezones accurately', () => {
 			const originalDate = new kk_date('2024-07-15 12:00:00');
-			
+
 			// Convert to different timezone
 			const converted = originalDate.tz('America/Los_Angeles');
-			
+
 			// Convert back to original timezone
 			const backConverted = converted.tz('Europe/Istanbul');
-			
+
 			// Should be the same time
-			expect(originalDate.format('YYYY-MM-DD HH:mm:ss')).toBe(
-				backConverted.format('YYYY-MM-DD HH:mm:ss')
-			);
+			expect(originalDate.format('YYYY-MM-DD HH:mm:ss')).toBe(backConverted.format('YYYY-MM-DD HH:mm:ss'));
 		});
 
 		test('should handle UTC conversion correctly', () => {
 			const localDate = new kk_date('2024-07-15 12:00:00');
 			const utcDate = localDate.tz('UTC');
-			
+
 			// Convert back to local timezone
 			const backToLocal = utcDate.tz(originalTimezone);
-			
-			expect(localDate.format('YYYY-MM-DD HH:mm:ss')).toBe(
-				backToLocal.format('YYYY-MM-DD HH:mm:ss')
-			);
+
+			expect(localDate.format('YYYY-MM-DD HH:mm:ss')).toBe(backToLocal.format('YYYY-MM-DD HH:mm:ss'));
 		});
 	});
 
 	describe('Global Timezone Functions', () => {
 		test('should get available timezones', () => {
 			const timezones = kk_date.getAvailableTimezones();
-			
+
 			expect(Array.isArray(timezones)).toBe(true);
 			expect(timezones.length).toBeGreaterThan(0);
 			expect(timezones).toContain('UTC');
@@ -207,14 +203,14 @@ describe('KkDate Enhanced Timezone Tests', () => {
 		test('should convert dates between timezones globally', () => {
 			const date = new Date('2024-07-15T12:00:00Z');
 			const converted = kk_date.convertToTimezone(date, 'America/New_York', 'UTC');
-			
+
 			expect(converted instanceof Date).toBe(true);
 			expect(converted.getTime()).not.toBe(date.getTime());
 		});
 
 		test('should get timezone info globally', () => {
 			const info = kk_date.getTimezoneInfo('America/New_York');
-			
+
 			expect(info).toHaveProperty('timezone', 'America/New_York');
 			expect(info).toHaveProperty('offset');
 			expect(info).toHaveProperty('isDST');
@@ -224,10 +220,10 @@ describe('KkDate Enhanced Timezone Tests', () => {
 		test('should check DST globally', () => {
 			const summerDate = new Date('2024-07-15T12:00:00Z');
 			const winterDate = new Date('2024-01-15T12:00:00Z');
-			
+
 			const summerDST = kk_date.isDST('America/New_York', summerDate);
 			const winterDST = kk_date.isDST('America/New_York', winterDate);
-			
+
 			expect(summerDST).toBe(true);
 			expect(winterDST).toBe(false);
 		});
@@ -270,7 +266,7 @@ describe('KkDate Enhanced Timezone Tests', () => {
 		test('should handle year transitions with timezone', () => {
 			const date = new kk_date('2024-12-31 23:59:59');
 			const newYear = date.add(1, 'seconds').tz('America/New_York');
-			
+
 			// The result depends on the timezone conversion
 			expect(newYear.isValid()).toBe(true);
 		});
@@ -278,7 +274,7 @@ describe('KkDate Enhanced Timezone Tests', () => {
 		test('should handle month transitions with timezone', () => {
 			const date = new kk_date('2024-01-31 23:59:59');
 			const nextMonth = date.add(1, 'seconds').tz('Europe/London');
-			
+
 			// The result depends on the timezone conversion
 			expect(nextMonth.isValid()).toBe(true);
 		});
@@ -287,7 +283,7 @@ describe('KkDate Enhanced Timezone Tests', () => {
 	describe('Error Handling and Edge Cases', () => {
 		test('should handle null/undefined timezone gracefully', () => {
 			const date = new kk_date('2024-07-15 12:00:00');
-			
+
 			expect(() => date.getTimezoneInfo(null)).not.toThrow();
 			expect(() => date.isDST(null)).not.toThrow();
 			expect(() => date.getTimezoneAbbreviation(null)).not.toThrow();
@@ -311,17 +307,17 @@ describe('KkDate Enhanced Timezone Tests', () => {
 	describe('Performance and Caching', () => {
 		test('should cache timezone calculations', () => {
 			const date = new kk_date('2024-07-15 12:00:00');
-			
+
 			// First call should cache
 			const start1 = performance.now();
 			const info1 = date.tz('America/New_York').getTimezoneInfo();
 			const time1 = performance.now() - start1;
-			
+
 			// Second call should be faster (cached)
 			const start2 = performance.now();
 			const info2 = date.tz('America/New_York').getTimezoneInfo();
 			const time2 = performance.now() - start2;
-			
+
 			expect(info1).toEqual(info2);
 			// Cache performance may vary, so we just check that both calls succeed
 			expect(time1).toBeGreaterThan(0);
