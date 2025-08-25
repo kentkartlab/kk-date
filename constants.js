@@ -123,7 +123,15 @@ const format_types_regex = {
 	'DD MMMM': /^(0?[1-9]|[12][0-9]|3[01]) \p{L}+$/u,
 };
 
+const format_types_cache = new Map();
+for (const key in format_types) {
+	format_types_cache.set(key, format_types[key]);
+}
 
+const format_types_regex_cache = new Map();
+for (const key in format_types_regex) {
+	format_types_regex_cache.set(key, format_types_regex[key]);
+}
 
 const month_numbers = {
 	1: 'January',
@@ -280,6 +288,8 @@ const global_config = {
 module.exports.cache_ttl = cache_ttl;
 module.exports.timeInMilliseconds = timeInMilliseconds;
 module.exports.format_types = format_types;
+module.exports.format_types_cache = format_types_cache;
+module.exports.format_types_regex_cache = format_types_regex_cache;
 module.exports.month_numbers = month_numbers;
 module.exports.day_numbers = day_numbers;
 module.exports.iso6391_languages = iso6391_languages;
