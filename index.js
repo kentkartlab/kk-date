@@ -107,9 +107,23 @@ class KkDate {
 						isValid(date, format_types['hh:mm:ss']) ||
 						isValid(date, format_types['hh:mm:ss.SSS'])
 					) {
-						const [hours, minutes, seconds] = date.split(':').map((n) => parseInt(n, 10));
+						let [hours, minutes, seconds] = date.split(':').map((n) => parseInt(n, 10));
 						const milliseconds = parseInt(date.split('.')[1] || 0, 10);
-						const finalSeconds = Number.isNaN(seconds) || !seconds ? 0 : seconds;
+						const seconds_isNaN = Number.isNaN(seconds);
+						const finalSeconds = seconds_isNaN || !seconds ? 0 : seconds;
+						const ampm = date.split(' ')[1];
+						if (ampm) {
+							if (ampm === 'AM') {
+								if (hours === 12) {
+									hours = 0;
+								}
+							}
+							if (ampm === 'PM') {
+								if (hours !== 12) {
+									hours += 12;
+								}
+							}
+						}
 						if (hours >= 24) {
 							const extraDays = Math.floor(hours / 24);
 							const remainingHours = hours % 24;
@@ -124,9 +138,19 @@ class KkDate {
 						}
 						if (milliseconds) {
 							this.date.setMilliseconds(milliseconds);
-							this.detected_format = format_types['HH:mm:ss.SSS'];
-						} else if (seconds) {
-							this.detected_format = format_types['HH:mm:ss'];
+							if (ampm) {
+								this.detected_format = format_types['hh:mm:ss.SSS'];
+							} else {
+								this.detected_format = format_types['HH:mm:ss.SSS'];
+							}
+						} else if (seconds && !seconds_isNaN) {
+							if (ampm) {
+								this.detected_format = format_types['hh:mm:ss'];
+							} else {
+								this.detected_format = format_types['HH:mm:ss'];
+							}
+						} else if (ampm && seconds_isNaN) {
+							this.detected_format = format_types['hh:mm'];
 						} else {
 							this.detected_format = format_types['HH:mm'];
 						}
@@ -1324,6 +1348,33 @@ function formatter(orj_this, template = null) {
 		}
 		case format_types['HH']: {
 			return `${converter(orj_this.date, ['hours'], { isUTC, detectedFormat: orj_this.detected_format }).hours}`;
+		}
+		case format_types['hh:mm:ss']: {
+			const result = converter(orj_this.date, ['hours', 'minutes', 'seconds'], { isUTC, detectedFormat: orj_this.detected_format });
+			let hours = parseInt(result.hours, 10);
+			const ampm = hours >= 12 ? 'PM' : 'AM';
+			hours = hours % 12;
+			if (hours === 0) hours = 12;
+			const formattedHours = hours < 10 ? `0${hours}` : String(hours);
+			return `${formattedHours}:${result.minutes}:${result.seconds} ${ampm}`;
+		}
+		case format_types['hh:mm']: {
+			const result = converter(orj_this.date, ['hours', 'minutes'], { isUTC, detectedFormat: orj_this.detected_format });
+			let hours = parseInt(result.hours, 10);
+			const ampm = hours >= 12 ? 'PM' : 'AM';
+			hours = hours % 12;
+			if (hours === 0) hours = 12;
+			const formattedHours = hours < 10 ? `0${hours}` : String(hours);
+			return `${formattedHours}:${result.minutes} ${ampm}`;
+		}
+		case format_types['hh:mm:ss.SSS']: {
+			const result = converter(orj_this.date, ['hours', 'minutes', 'seconds', 'milliseconds'], { isUTC, detectedFormat: orj_this.detected_format });
+			let hours = parseInt(result.hours, 10);
+			const ampm = hours >= 12 ? 'PM' : 'AM';
+			hours = hours % 12;
+			if (hours === 0) hours = 12;
+			const formattedHours = hours < 10 ? `0${hours}` : String(hours);
+			return `${formattedHours}:${result.minutes}:${result.seconds}.${result.milliseconds} ${ampm}`;
 		}
 		case format_types['DD MMMM YYYY']: {
 			const value = dateTimeFormat(orj_this, 'MMMM');

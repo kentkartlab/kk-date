@@ -62,18 +62,31 @@ describe('Time Formatting and Parsing Tests', () => {
 
 	describe('12-Hour Time Format (hh:mm:ss)', () => {
 		test('AM/PM formatting', () => {
-			// kk_date AM/PM formatını desteklemiyor
-			expect(() => new kk_date('00:00:00').format('hh:mm:ss A')).toThrow();
+			// Test 12-hour formatting with AM/PM
+			expect(new kk_date('2024-08-19 00:00:00').format('hh:mm:ss')).toBe('12:00:00 AM');
+			expect(new kk_date('2024-08-19 12:00:00').format('hh:mm:ss')).toBe('12:00:00 PM');
+			expect(new kk_date('2024-08-19 14:30:45').format('hh:mm:ss')).toBe('02:30:45 PM');
+			expect(new kk_date('2024-08-19 02:30:45').format('hh:mm:ss')).toBe('02:30:45 AM');
 		});
 
 		test('12-hour time parsing', () => {
-			// kk_date AM/PM formatını desteklemiyor ama hata fırlatmıyor
-			expect(new kk_date('12:00:00 AM').format('HH:mm:ss')).toBe('12:00:00');
+			expect(new kk_date('12:00:00 AM').format('HH:mm:ss')).toBe('00:00:00');
+			expect(new kk_date('12:00:00 PM').format('HH:mm:ss')).toBe('12:00:00');
 		});
 
 		test('12-hour time with milliseconds', () => {
-			// kk_date AM/PM formatını desteklemiyor
-			expect(() => new kk_date('12:30:45.123 AM')).toThrow();
+			// Test 12-hour formatting with milliseconds
+			expect(new kk_date('2024-08-19 14:30:45.123').format('hh:mm:ss.SSS')).toBe('02:30:45.123 PM');
+			expect(new kk_date('2024-08-19 02:30:45.999').format('hh:mm:ss.SSS')).toBe('02:30:45.999 AM');
+			expect(new kk_date('2024-08-19 00:00:00.001').format('hh:mm:ss.SSS')).toBe('12:00:00.001 AM');
+		});
+
+		test('12-hour format without seconds', () => {
+			// Test hh:mm format
+			expect(new kk_date('2024-08-19 14:30:45').format('hh:mm')).toBe('02:30 PM');
+			expect(new kk_date('2024-08-19 02:30:45').format('hh:mm')).toBe('02:30 AM');
+			expect(new kk_date('2024-08-19 00:00:00').format('hh:mm')).toBe('12:00 AM');
+			expect(new kk_date('2024-08-19 12:00:00').format('hh:mm')).toBe('12:00 PM');
 		});
 	});
 

@@ -252,8 +252,9 @@ describe('Time Operations Tests', () => {
 			expect(time.format('HH:mm:ss')).toBe('12:30:45');
 			expect(time.format('HH:mm')).toBe('12:30');
 			expect(time.format('HH:mm:ss.SSS')).toBe('12:30:45.000');
-			// kk_date AM/PM formatını desteklemiyor
-			expect(() => time.format('hh:mm:ss A')).toThrow();
+			// Test 12-hour format with AM/PM
+			expect(time.format('hh:mm:ss')).toBe('12:30:45 PM');
+			expect(time.format('hh:mm')).toBe('12:30 PM');
 		});
 
 		test('format time with custom separator', () => {

@@ -72,20 +72,27 @@ describe('Time Parsing Tests', () => {
 
 	describe('12-Hour Time Parsing', () => {
 		test('parse 12-hour format with AM/PM', () => {
-			// kk_date AM/PM formatını desteklemiyor
-			expect(new kk_date('12:00:00 AM').format('HH:mm:ss')).toBe('12:00:00');
+			// Test parsing of 12-hour format and output formatting
+			expect(new kk_date('12:00:00 AM').format('hh:mm:ss')).toBe('12:00:00 AM');
+			expect(new kk_date('12:00:00 PM').format('hh:mm:ss')).toBe('12:00:00 PM');
+			expect(new kk_date('01:30:45 AM').format('hh:mm:ss')).toBe('01:30:45 AM');
+			expect(new kk_date('01:30:45 PM').format('hh:mm:ss')).toBe('01:30:45 PM');
+			expect(new kk_date('11:59:59 PM').format('hh:mm:ss')).toBe('11:59:59 PM');
+
+			// Test conversion to 24-hour format
+			expect(new kk_date('12:00:00 AM').format('HH:mm:ss')).toBe('00:00:00');
 			expect(new kk_date('12:00:00 PM').format('HH:mm:ss')).toBe('12:00:00');
 			expect(new kk_date('01:30:45 AM').format('HH:mm:ss')).toBe('01:30:45');
-			expect(new kk_date('01:30:45 PM').format('HH:mm:ss')).toBe('01:30:45');
-			expect(new kk_date('11:59:59 PM').format('HH:mm:ss')).toBe('11:59:59');
+			expect(new kk_date('01:30:45 PM').format('HH:mm:ss')).toBe('13:30:45');
+			expect(new kk_date('11:59:59 PM').format('HH:mm:ss')).toBe('23:59:59');
 		});
 
 		test('parse 12-hour format with milliseconds', () => {
-			// kk_date AM/PM formatını desteklemiyor
-			expect(() => new kk_date('12:30:45.123 AM')).toThrow();
-			expect(() => new kk_date('12:30:45.123 PM')).toThrow();
-			expect(() => new kk_date('01:30:45.999 AM')).toThrow();
-			expect(() => new kk_date('01:30:45.999 PM')).toThrow();
+			// Test parsing of 12-hour format with milliseconds
+			expect(new kk_date('12:30:45.123 AM').format('hh:mm:ss.SSS')).toBe('12:30:45.123 AM');
+			expect(new kk_date('12:30:45.123 PM').format('hh:mm:ss.SSS')).toBe('12:30:45.123 PM');
+			expect(new kk_date('01:30:45.999 AM').format('hh:mm:ss.SSS')).toBe('01:30:45.999 AM');
+			expect(new kk_date('01:30:45.999 PM').format('hh:mm:ss.SSS')).toBe('01:30:45.999 PM');
 		});
 	});
 
