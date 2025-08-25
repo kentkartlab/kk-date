@@ -138,6 +138,7 @@ describe('format', () => {
 		// Test parsing (defaults to current year)
 		expect(new kk_date('15 January Tuesday').format('YYYY-MM-DD')).toBe(`${currentYear}-01-15`);
 		expect(new kk_date('31 December Sunday').format('YYYY-MM-DD')).toBe(`${currentYear}-12-31`);
+		expect(new kk_date('15th January 2024').format('YYYY-MM-DD')).toBe('2024-01-15');
 	});
 
 	test('DD MMMM dddd (different lang.)', () => {

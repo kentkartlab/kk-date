@@ -187,7 +187,7 @@ describe('Time Formatting and Parsing Tests', () => {
 
             expect(time1.detected_format).toBe('HH:mm:ss');
             expect(time2.detected_format).toBe('HH:mm:ss.SSS'); // kk_date milliseconds'ı ayrı format olarak algılamıyor
-            expect(time3.detected_format).toBe('HH:mm:ss'); // kk_date HH:mm formatını HH:mm:ss olarak algılıyor
+            expect(time3.detected_format).toBe('HH:mm'); // kk_date HH:mm formatını doğru algılıyor
         });
     });
 

@@ -245,7 +245,7 @@ describe('Time Parsing Tests', () => {
 
             expect(time1.detected_format).toBe('HH:mm:ss');
             expect(time2.detected_format).toBe('HH:mm:ss.SSS'); // kk_date milliseconds'ı ayrı format olarak algılamıyor
-            expect(time3.detected_format).toBe('HH:mm:ss');
+            expect(time3.detected_format).toBe('HH:mm');
         });
     });
 
