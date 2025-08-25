@@ -497,32 +497,32 @@ function converter(date, to, options = { pad: true }) {
 					break;
 				case 'month': {
 					const month = (isUTC ? date.getUTCMonth() : date.getMonth()) + 1;
-					result.month = shouldPad ? (month < 10 ? '0' + month : String(month)) : month;
+					result.month = shouldPad ? (month < 10 ? `0${month}` : String(month)) : month;
 					break;
 				}
 				case 'day': {
 					const day = isUTC ? date.getUTCDate() : date.getDate();
-					result.day = shouldPad ? (day < 10 ? '0' + day : String(day)) : day;
+					result.day = shouldPad ? (day < 10 ? `0${day}` : String(day)) : day;
 					break;
 				}
 				case 'hours': {
 					const hours = isUTC ? date.getUTCHours() : date.getHours();
-					result.hours = shouldPad ? (hours < 10 ? '0' + hours : String(hours)) : hours;
+					result.hours = shouldPad ? (hours < 10 ? `0${hours}` : String(hours)) : hours;
 					break;
 				}
 				case 'minutes': {
 					const minutes = isUTC ? date.getUTCMinutes() : date.getMinutes();
-					result.minutes = shouldPad ? (minutes < 10 ? '0' + minutes : String(minutes)) : minutes;
+					result.minutes = shouldPad ? (minutes < 10 ? `0${minutes}` : String(minutes)) : minutes;
 					break;
 				}
 				case 'seconds': {
 					const seconds = isUTC ? date.getUTCSeconds() : date.getSeconds();
-					result.seconds = shouldPad ? (seconds < 10 ? '0' + seconds : String(seconds)) : seconds;
+					result.seconds = shouldPad ? (seconds < 10 ? `0${seconds}` : String(seconds)) : seconds;
 					break;
 				}
 				case 'milliseconds': {
 					const ms = isUTC ? date.getUTCMilliseconds() : date.getMilliseconds();
-					result.milliseconds = shouldPad ? (ms < 100 ? (ms < 10 ? '00' + ms : '0' + ms) : String(ms)) : ms;
+					result.milliseconds = shouldPad ? (ms < 100 ? (ms < 10 ? `00${ms}` : `0${ms}`) : String(ms)) : ms;
 					break;
 				}
 			}
@@ -532,7 +532,7 @@ function converter(date, to, options = { pad: true }) {
 
 	// Timezone-aware formatting only when absolutely necessary
 	const targetTimezone = global_config.timezone;
-	let cache = target_timezone_cache.get(targetTimezone);
+	const cache = target_timezone_cache.get(targetTimezone);
 	let in_result = {};
 	if (!cache) {
 		const formatter_value = new Intl.DateTimeFormat('en-CA', {
@@ -558,6 +558,8 @@ function converter(date, to, options = { pad: true }) {
 		}
 		target_timezone_cache.set(targetTimezone, partsMap);
 		in_result = partsMap;
+	} else {
+		in_result = cache;
 	}
 
 	// Process requested fields
@@ -585,7 +587,7 @@ function converter(date, to, options = { pad: true }) {
 				break;
 			case 'milliseconds': {
 				const ms = date.getMilliseconds();
-				result.milliseconds = shouldPad ? (ms < 100 ? (ms < 10 ? '00' + ms : '0' + ms) : String(ms)) : ms;
+				result.milliseconds = shouldPad ? (ms < 100 ? (ms < 10 ? `00${ms}` : `0${ms}`) : String(ms)) : ms;
 				break;
 			}
 		}
