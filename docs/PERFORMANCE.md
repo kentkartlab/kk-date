@@ -48,10 +48,10 @@ function benchmarkTimezoneConversions() {
     
     console.time('Timezone Conversions');
     for (let i = 0; i < iterations; i++) {
-        const date = new kk_date(testDate);
-        const nyTime = date.tz('America/New_York');
-        const tokyoTime = date.tz('Asia/Tokyo');
-        const londonTime = date.tz('Europe/London');
+        // Each conversion should use a separate instance to avoid side effects
+        const nyTime = new kk_date(testDate).tz('America/New_York');
+        const tokyoTime = new kk_date(testDate).tz('Asia/Tokyo');
+        const londonTime = new kk_date(testDate).tz('Europe/London');
     }
     console.timeEnd('Timezone Conversions');
 }
@@ -78,10 +78,11 @@ function benchmarkFormatting() {
     
     console.time('Date Formatting');
     for (let i = 0; i < iterations; i++) {
-        date.format('YYYY-MM-DD HH:mm:ss');
-        date.format('DD.MM.YYYY');
-        date.format('DD MMMM YYYY');
-        date.format('dddd, DD MMMM YYYY HH:mm');
+        const testDate = new kk_date('2024-08-23 10:30:45');
+        testDate.format('YYYY-MM-DD HH:mm:ss');
+        testDate.format('DD.MM.YYYY');
+        testDate.format('DD MMMM YYYY');
+        testDate.format('dddd, DD MMMM YYYY HH:mm');
     }
     console.timeEnd('Date Formatting');
 }
@@ -139,6 +140,7 @@ function benchmarkManipulation() {
     console.time('Date Manipulation');
     for (let i = 0; i < iterations; i++) {
         const testDate = new kk_date('2024-08-23 10:00:00');
+        // Note: These operations mutate the same instance sequentially
         testDate.add(1, 'days');
         testDate.add(1, 'months');
         testDate.startOf('days');
@@ -171,6 +173,7 @@ function benchmarkComparisons() {
     
     console.time('Comparison Operations');
     for (let i = 0; i < iterations; i++) {
+        // These comparison operations don't modify the instances
         date1.isBefore(date2);
         date2.isAfter(date1);
         date1.isSame(date1);
@@ -284,22 +287,24 @@ function formatDate(date) {
 ### 4. Optimize Timezone Operations
 
 ```javascript
-// ❌ Inefficient: Multiple timezone conversions
-function getTimesInMultipleZones(date) {
+// ❌ Inefficient: Multiple timezone conversions mutating the same instance
+function getTimesInMultipleZones(dateStr) {
+    // This approach mutates the same date instance multiple times
+    const date = new kk_date(dateStr);
     return {
-        ny: date.tz('America/New_York').format('HH:mm'),
-        london: date.tz('Europe/London').format('HH:mm'),
-        tokyo: date.tz('Asia/Tokyo').format('HH:mm')
+        ny: new kk_date(dateStr).tz('America/New_York').format('HH:mm'),
+        london: new kk_date(dateStr).tz('Europe/London').format('HH:mm'),
+        tokyo: new kk_date(dateStr).tz('Asia/Tokyo').format('HH:mm')
     };
 }
 
-// ✅ Efficient: Batch timezone operations
-function getTimesInMultipleZonesFast(date) {
+// ✅ Efficient: Batch timezone operations with separate instances
+function getTimesInMultipleZonesFast(dateStr) {
     const timezones = ['America/New_York', 'Europe/London', 'Asia/Tokyo'];
     const results = {};
     
     timezones.forEach(tz => {
-        const converted = date.tz(tz);
+        const converted = new kk_date(dateStr).tz(tz);
         results[tz.split('/')[1].toLowerCase()] = converted.format('HH:mm');
     });
     
@@ -404,8 +409,8 @@ function configureKkDate() {
     // Pre-warm common operations
     const warmupDate = new kk_date();
     warmupDate.format('YYYY-MM-DD');
-    warmupDate.tz('America/New_York');
-    warmupDate.add(1, 'days');
+    new kk_date().tz('America/New_York');
+    new kk_date().add(1, 'days');
     
     console.log('kk-date configured for optimal performance');
 }

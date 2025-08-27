@@ -97,11 +97,11 @@ Formats the date according to the specified template.
 ```javascript
 const date = new kk_date('2024-08-23 10:30:45');
 
-date.format('YYYY-MM-DD HH:mm:ss');     // '2024-08-23 10:30:45'
-date.format('DD.MM.YYYY');              // '23.08.2024'
-date.format('DD MMMM YYYY');            // '23 August 2024'
-date.format('HH:mm');                   // '10:30'
-date.format('YYYY-MM-DDTHH:mm:ss');     // '2024-08-23T10:30:45'
+console.log(date.format('YYYY-MM-DD HH:mm:ss'));     // '2024-08-23 10:30:45'
+console.log(date.format('DD.MM.YYYY'));              // '23.08.2024'
+console.log(date.format('DD MMMM YYYY'));            // '23 August 2024'
+console.log(date.format('HH:mm'));                   // '10:30'
+console.log(date.format('YYYY-MM-DDTHH:mm:ss'));     // '2024-08-23T10:30:45'
 ```
 
 **Available Templates:**
@@ -153,13 +153,20 @@ Adds the specified amount of time to the date.
 
 **Examples:**
 ```javascript
+// Each operation creates a new modified instance
 const date = new kk_date('2024-08-23 10:30:00');
 
-date.add(1, 'days');                   // Add 1 day
-date.add(2, 'hours');                  // Add 2 hours
-date.add(3, 'months');                 // Add 3 months
-date.add(30, 'minutes');               // Add 30 minutes
-date.add(-1, 'days');                  // Subtract 1 day (negative values supported)
+date.add(1, 'days');                   // Add 1 day: 2024-08-24 10:30:00
+
+const date2 = new kk_date('2024-08-23 10:30:00');
+date2.add(2, 'hours');                 // Add 2 hours: 2024-08-23 12:30:00
+
+const date3 = new kk_date('2024-08-23 10:30:00');
+date3.add(3, 'months');                // Add 3 months: 2024-11-23 10:30:00
+
+// Negative values for subtraction
+const date4 = new kk_date('2024-08-23 10:30:00');
+date4.add(-1, 'days');                 // Subtract 1 day: 2024-08-22 10:30:00
 ```
 
 
@@ -175,24 +182,28 @@ Sets a specific unit of time to the given value.
 
 **Examples:**
 ```javascript
+// Each set operation modifies the instance
 const date = new kk_date('2024-08-23 10:30:45');
 
-date.set('years', 2025);               // Set year to 2025
-date.set('months', 0);                 // Set month to January (0-based)
-date.set('days', 1);                   // Set day to 1st
-date.set('hours', 0);                  // Set hour to 00
-date.set('minutes', 0);                // Set minutes to 00
-date.set('seconds', 0);                // Set seconds to 00
+date.set('years', 2025);               // Set year to 2025: 2025-08-23 10:30:45
+date.set('months', 0);                 // Set month to January: 2025-01-23 10:30:45
+date.set('days', 1);                   // Set day to 1st: 2025-01-01 10:30:45
+date.set('hours', 0);                  // Set hour to 00: 2025-01-01 00:30:45
+date.set('minutes', 0);                // Set minutes to 00: 2025-01-01 00:00:45
+date.set('seconds', 0);                // Set seconds to 00: 2025-01-01 00:00:00
 ```
 
 **Examples:**
 ```javascript
-const date = new kk_date('2024-08-23 10:30:00');
+// Subtraction using negative amounts - each operation on separate instances
+const date1 = new kk_date('2024-08-23 10:30:00');
+date1.add(-1, 'days');                 // Subtract 1 day: 2024-08-22 10:30:00
 
-// Use negative amount with add() method
-date.add(-1, 'days');                  // Subtract 1 day
-date.add(-2, 'hours');                 // Subtract 2 hours
-date.add(-1, 'weeks');                 // Subtract 1 week
+const date2 = new kk_date('2024-08-23 10:30:00');
+date2.add(-2, 'hours');                // Subtract 2 hours: 2024-08-23 08:30:00
+
+const date3 = new kk_date('2024-08-23 10:30:00');
+date3.add(-1, 'weeks');                // Subtract 1 week: 2024-08-16 10:30:00
 ```
 
 #### `startOf(unit)`
@@ -206,13 +217,21 @@ Sets the date to the start of the specified unit.
 
 **Examples:**
 ```javascript
-const date = new kk_date('2024-08-23 10:30:45');
+// Each startOf operation modifies the instance sequentially
+const date1 = new kk_date('2024-08-23 10:30:45');
+date1.startOf('years');                // 2024-01-01 00:00:00
 
-date.startOf('years');                 // 2024-01-01 00:00:00
-date.startOf('months');                // 2024-08-01 00:00:00
-date.startOf('weeks');                 // 2024-08-19 00:00:00 (Monday)
-date.startOf('days');                  // 2024-08-23 00:00:00
-date.startOf('hours');                 // 2024-08-23 10:00:00
+const date2 = new kk_date('2024-08-23 10:30:45');
+date2.startOf('months');               // 2024-08-01 00:00:00
+
+const date3 = new kk_date('2024-08-23 10:30:45');
+date3.startOf('weeks');                // 2024-08-19 00:00:00 (Monday)
+
+const date4 = new kk_date('2024-08-23 10:30:45');
+date4.startOf('days');                 // 2024-08-23 00:00:00
+
+const date5 = new kk_date('2024-08-23 10:30:45');
+date5.startOf('hours');                // 2024-08-23 10:00:00
 ```
 
 #### `endOf(unit)`
@@ -226,13 +245,21 @@ Sets the date to the end of the specified unit.
 
 **Examples:**
 ```javascript
-const date = new kk_date('2024-08-23 10:30:45');
+// Each endOf operation modifies the instance sequentially
+const date1 = new kk_date('2024-08-23 10:30:45');
+date1.endOf('years');                  // 2024-12-31 23:59:59.999
 
-date.endOf('years');                   // 2024-12-31 23:59:59.999
-date.endOf('months');                  // 2024-08-31 23:59:59.999
-date.endOf('weeks');                   // 2024-08-25 23:59:59.999 (Sunday)
-date.endOf('days');                    // 2024-08-23 23:59:59.999
-date.endOf('hours');                   // 2024-08-23 10:59:59.999
+const date2 = new kk_date('2024-08-23 10:30:45');
+date2.endOf('months');                 // 2024-08-31 23:59:59.999
+
+const date3 = new kk_date('2024-08-23 10:30:45');
+date3.endOf('weeks');                  // 2024-08-25 23:59:59.999 (Sunday)
+
+const date4 = new kk_date('2024-08-23 10:30:45');
+date4.endOf('days');                   // 2024-08-23 23:59:59.999
+
+const date5 = new kk_date('2024-08-23 10:30:45');
+date5.endOf('hours');                  // 2024-08-23 10:59:59.999
 ```
 
 ### Comparison Methods
@@ -348,11 +375,10 @@ Converts the date to the specified timezone.
 
 **Examples:**
 ```javascript
-const date = new kk_date('2024-08-23 10:00:00');
-
-const nyTime = date.tz('America/New_York');
-const tokyoTime = date.tz('Asia/Tokyo');
-const londonTime = date.tz('Europe/London');
+// Each timezone conversion should use a separate instance
+const nyTime = new kk_date('2024-08-23 10:00:00').tz('America/New_York');
+const tokyoTime = new kk_date('2024-08-23 10:00:00').tz('Asia/Tokyo');
+const londonTime = new kk_date('2024-08-23 10:00:00').tz('Europe/London');
 
 console.log(nyTime.format('HH:mm'));    // '06:00' (EDT)
 console.log(tokyoTime.format('HH:mm')); // '19:00' (JST)
