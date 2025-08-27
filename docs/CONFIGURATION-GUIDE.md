@@ -60,9 +60,8 @@ kk_date.config({ locale: 'en' });
 kk_date.config({ locale: 'tr' });
 kk_date.config({ locale: 'de' });
 
-// Get current locale (access global config)
-const currentLocale = kk_date.global_config?.locale || 'en';
-console.log(currentLocale); // 'en'
+// Note: Direct access to global_config is not available
+// Use specific methods to check current configuration
 ```
 
 ### Setting Week Start Day
@@ -72,9 +71,8 @@ console.log(currentLocale); // 'en'
 kk_date.config({ weekStartDay: 0 }); // Sunday (default)
 kk_date.config({ weekStartDay: 1 }); // Monday
 
-// Get week start day (access global config)
-const weekStartDay = kk_date.global_config?.weekStartDay || 0;
-console.log(weekStartDay); // 0 or 1
+// Note: Direct access to global_config is not available
+// Use configuration methods to check current settings
 ```
 
 ### Complete Global Configuration Example
@@ -189,8 +187,8 @@ You can check the current configuration at any time:
 ```javascript
 // Check global configuration
 console.log('Global timezone:', kk_date.getTimezone());
-console.log('Global locale:', kk_date.global_config?.locale || 'en');
-console.log('Global week start day:', kk_date.global_config?.weekStartDay || 0);
+console.log('User timezone:', kk_date.getUserTimezone());
+// Note: Direct access to locale and weekStartDay is not available
 
 // Check instance configuration
 const date = new kk_date('2024-08-23 10:00:00');
@@ -284,8 +282,9 @@ const tenantConfigs = {
 
 function createTenantDate(dateString, tenantId) {
     const config = tenantConfigs[tenantId];
-    return new kk_date(dateString);
-            date.config({timezone: config.timezone});
+    const date = new kk_date(dateString);
+    date.config({timezone: config.timezone});
+    return date;
 }
 
 const tenant1Date = createTenantDate('2024-08-23 10:00:00', 'tenant1');
@@ -313,7 +312,7 @@ console.log(date.format('DD MMMM YYYY')); // '23 August 2024'
 ```javascript
 // Create instance with specific locale
 const trDate = new kk_date('2024-08-23 10:00:00');
-            date.config({locale: 'tr'});
+trDate.config({locale: 'tr'});
 
 console.log(trDate.format('DD MMMM YYYY')); // '23 Ağustos 2024'
 ```
@@ -518,17 +517,11 @@ function validateConfiguration() {
         errors.push('Invalid timezone configuration');
     }
     
-    try {
-        // Check if locale is accessible through global config
-        const locale = kk_date.global_config?.locale || 'en';
-    } catch (error) {
-        errors.push('Invalid locale configuration');
-    }
+    // Note: Direct locale validation is not available
+    // Locale validation would need to be done during actual formatting operations
     
-    const weekStartDay = kk_date.global_config?.weekStartDay || 0;
-    if (weekStartDay !== 0 && weekStartDay !== 1) {
-        errors.push('Invalid week start day configuration');
-    }
+    // Note: Direct weekStartDay validation is not available
+    // Week start day validation would need to be done during actual operations
     
     return errors;
 }
@@ -593,8 +586,8 @@ console.log('Instance timezone:', date.temp_config.timezone);
 **Solution**: Ensure locale is supported and properly set.
 
 ```javascript
-// Check current locale
-console.log('Current locale:', kk_date.global_config?.locale || 'en');
+// Note: Direct locale access is not available
+// Locale can only be checked through formatting operations
 
 // Test locale formatting
 const date = new kk_date('2024-08-23 10:00:00');
@@ -608,8 +601,8 @@ console.log(date.format('DD MMMM YYYY'));
 **Solution**: Verify week start day configuration.
 
 ```javascript
-// Check week start day
-console.log('Week start day:', kk_date.global_config?.weekStartDay || 0);
+// Note: Direct week start day access is not available
+// Week start day can only be checked through startOf operations
 
 // Test week calculations
 const date = new kk_date('2024-08-23 10:00:00');

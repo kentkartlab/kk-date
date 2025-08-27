@@ -17,13 +17,13 @@ Complete reference for all kk-date methods, properties, and configuration option
 
 ## Constructor
 
-### `new kk_date(input, options?)`
+### `new kk_date(date?, date_format?)`
 
 Creates a new kk-date instance.
 
 **Parameters:**
-- `input` (string|Date|number) - Date input to parse
-- `options` (object, optional) - Configuration options
+- `date` (string|Date|kk_date|number, optional) - Date input to parse. If omitted, uses current date
+- `date_format` (string, optional) - Format to use for parsing ('YYYY-MM-DD' or 'YYYY-DD-MM')
 
 **Supported Input Formats:**
 ```javascript
@@ -39,11 +39,19 @@ new kk_date('08/23/2024 10:30:00')
 // Date objects
 new kk_date(new Date())
 
-// Timestamps
-new kk_date(1724407200000)
+// kk_date objects
+new kk_date(existingKkDate)
+
+// Timestamps (Unix seconds or milliseconds)
+new kk_date(1724407200)    // Unix timestamp (seconds)
+new kk_date(1724407200000) // JavaScript timestamp (milliseconds)
+
+// With explicit format
+new kk_date('2024-23-08', 'YYYY-DD-MM')
+new kk_date('2024-08-23', 'YYYY-MM-DD')
 ```
 
-**Options:**
+**Configuration (after creation):**
 ```javascript
 const date = new kk_date('2024-08-23');
 date.config({
@@ -61,6 +69,12 @@ const date = new kk_date('2024-08-23 10:30:00');
 // With timezone
 const nyDate = new kk_date('2024-08-23 10:30:00');
 nyDate.config({ timezone: 'America/New_York' });
+
+// Current date
+const now = new kk_date();
+
+// With format specification
+const formatted = new kk_date('2024-23-08', 'YYYY-DD-MM');
 
 // ISO string
 const utcDate = new kk_date('2024-08-23T10:30:00.000Z');
@@ -122,7 +136,7 @@ Returns ISO 8601 string representation.
 
 ```javascript
 const date = new kk_date('2024-08-23 10:30:00');
-console.log(date.toISOString()); // '2024-08-23T10:30:00.000Z'
+console.log(date.toISOString()); // '2024-08-23T07:30:00.000Z' (adjusted to UTC)
 ```
 
 ### Manipulation Methods
@@ -133,7 +147,7 @@ Adds the specified amount of time to the date.
 
 **Parameters:**
 - `amount` (number) - Amount to add
-- `unit` (string) - Time unit ('years', 'months', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'milliseconds')
+- `unit` (string) - Time unit ('years', 'months', 'days', 'hours', 'minutes', 'seconds')
 
 **Returns:** (KkDate) - Modified date instance
 
@@ -145,9 +159,9 @@ date.add(1, 'days');                   // Add 1 day
 date.add(2, 'hours');                  // Add 2 hours
 date.add(3, 'months');                 // Add 3 months
 date.add(30, 'minutes');               // Add 30 minutes
+date.add(-1, 'days');                  // Subtract 1 day (negative values supported)
 ```
 
-**Note:** The `subtract()` method is not directly available. Use `add()` with negative values instead.
 
 #### `set(unit, value)`
 
@@ -446,12 +460,78 @@ const date = new kk_date('2024-08-23 10:00:00');
 console.log(date.valueOf()); // 1724407200000
 ```
 
+#### `format_c(separator, ...templates)`
+
+Advanced formatting method that allows multiple templates with custom separator.
+
+**Parameters:**
+- `separator` (string, optional) - Separator between formatted parts (default: ' ')
+- `...templates` (string[]) - Format templates to apply
+
+**Returns:** (string) - Formatted string
+
+**Examples:**
+```javascript
+const date = new kk_date('2024-08-23 10:30:45');
+
+date.format_c(' ', 'YYYY-MM-DD', 'HH:mm:ss'); // '2024-08-23 10:30:45'
+date.format_c('T', 'YYYY-MM-DD', 'HH:mm:ss');  // '2024-08-23T10:30:45'
+date.format_c('-', 'DD', 'MM', 'YYYY');        // '23-08-2024'
+```
+
+#### `diff_range(startDate, endDate, unit?)`
+
+Calculates the difference between a date range.
+
+**Parameters:**
+- `startDate` (kk_date|Date|string) - Start date
+- `endDate` (kk_date|Date|string) - End date  
+- `unit` (string, optional) - Unit for difference calculation
+
+**Returns:** (number|object) - Range difference
+
+**Examples:**
+```javascript
+const date = new kk_date('2024-08-23');
+const start = new kk_date('2024-08-20');
+const end = new kk_date('2024-08-25');
+
+date.diff_range(start, end, 'days'); // Range difference calculation
+```
+
+#### `valueOfLocal()`
+
+Returns the local timestamp value.
+
+**Returns:** (number) - Local timestamp
+
+**Examples:**
+```javascript
+const date = new kk_date('2024-08-23 10:00:00');
+console.log(date.valueOfLocal()); // Local timestamp
+```
+
+#### `duration(input?)`
+
+Creates or returns duration information.
+
+**Parameters:**
+- `input` (any, optional) - Duration input
+
+**Returns:** (object) - Duration object
+
+**Examples:**
+```javascript
+const date = new kk_date('2024-08-23 10:00:00');
+const duration = date.duration(); // Duration information
+```
+
 **Note:** The `clone()` method is not directly available. Create a new instance with the original date instead.
 
 **Examples:**
 ```javascript
 const original = new kk_date('2024-08-23 10:00:00');
-const copy = new kk_date(original.getDate());
+const copy = new kk_date(original.date);
 
 original.add(1, 'days');
 console.log(copy.format('YYYY-MM-DD')); // '2024-08-23' (unchanged)
@@ -461,59 +541,77 @@ console.log(copy.format('YYYY-MM-DD')); // '2024-08-23' (unchanged)
 
 ### Configuration Methods
 
-#### `kk_date.setTimezone(timezone)`
+#### `setTimezone(timezone)`
 
 Sets the global default timezone.
+
+**Note:** This is a module-level export, not a class static method.
 
 **Parameters:**
 - `timezone` (string) - IANA timezone identifier
 
 **Examples:**
 ```javascript
+const kk_date = require('kk-date');
+
 kk_date.setTimezone('UTC');
 kk_date.setTimezone('America/New_York');
 kk_date.setTimezone('Europe/London');
 ```
 
-#### `kk_date.getTimezone()`
+#### `getTimezone()`
 
 Gets the global default timezone.
+
+**Note:** This is a module-level export, not a class static method.
 
 **Returns:** (string) - Current timezone
 
 **Examples:**
 ```javascript
+const kk_date = require('kk-date');
+
 const currentTimezone = kk_date.getTimezone();
 console.log(currentTimezone); // 'UTC'
 ```
 
-#### `kk_date.setUserTimezone(timezone)`
+#### `setUserTimezone(timezone)`
 
 Sets the user's preferred timezone.
+
+**Note:** This is a module-level export, not a class static method.
 
 **Parameters:**
 - `timezone` (string) - IANA timezone identifier
 
 **Examples:**
 ```javascript
+const kk_date = require('kk-date');
+
 kk_date.setUserTimezone('America/New_York');
 ```
 
-#### `kk_date.getUserTimezone()`
+#### `getUserTimezone()`
 
 Gets the user's preferred timezone.
+
+**Note:** This is a module-level export, not a class static method.
 
 **Returns:** (string) - User timezone
 
 **Examples:**
 ```javascript
+const kk_date = require('kk-date');
+
 const userTimezone = kk_date.getUserTimezone();
 console.log(userTimezone); // 'America/New_York'
 ```
 
-#### `kk_date.config(options)`
+#### `config(options)`
 
 Sets global configuration including locale, timezone, and week start day.
+
+**Note:** This is a module-level export, not a class static method.
 
 **Parameters:**
 - `options` (object) - Configuration options
@@ -523,6 +621,8 @@ Sets global configuration including locale, timezone, and week start day.
 
 **Examples:**
 ```javascript
+const kk_date = require('kk-date');
+
 // Set locale
 kk_date.config({ locale: 'en' });
 kk_date.config({ locale: 'tr' });
@@ -548,25 +648,34 @@ kk_date.config({
 
 ### Utility Methods
 
-#### `kk_date.isValid(input)`
+#### `isValid(input, format?)`
 
 Checks if a date input is valid.
 
+**Note:** This is a module-level export, not a class static method.
+
 **Parameters:**
 - `input` (any) - Input to validate
+- `format` (string, optional) - Format to validate against ('YYYY-MM-DD', 'YYYY-DD-MM', etc.)
 
 **Returns:** (boolean) - True if valid
 
 **Examples:**
 ```javascript
+const kk_date = require('kk-date');
+
 kk_date.isValid('2024-08-23');        // true
 kk_date.isValid('invalid');            // false
 kk_date.isValid(new Date());           // true
+kk_date.isValid('2024-23-08', 'YYYY-DD-MM'); // true
+kk_date.isValid('2024-23-08', 'YYYY-MM-DD'); // false
 ```
 
-#### `kk_date.getTimezoneOffset(timezone, date?)`
+#### `getTimezoneOffset(timezone, date?)`
 
 Gets the timezone offset in milliseconds.
+
+**Note:** This is a module-level export, not a class static method.
 
 **Parameters:**
 - `timezone` (string) - IANA timezone identifier
@@ -576,18 +685,24 @@ Gets the timezone offset in milliseconds.
 
 **Examples:**
 ```javascript
+const kk_date = require('kk-date');
+
 const offset = kk_date.getTimezoneOffset('America/New_York');
 console.log(offset / (60 * 60 * 1000)); // -4 (EDT)
 ```
 
-#### `kk_date.getAvailableTimezones()`
+#### `getAvailableTimezones()`
 
 Gets all available timezones.
+
+**Note:** This is a module-level export, not a class static method.
 
 **Returns:** (string[]) - Array of timezone identifiers
 
 **Examples:**
 ```javascript
+const kk_date = require('kk-date');
+
 const timezones = kk_date.getAvailableTimezones();
 console.log(timezones);
 // ['UTC', 'Europe/London', 'America/New_York', ...]
@@ -639,16 +754,20 @@ console.log(date.detected_format); // 'ISO8601'
 The library uses a global configuration object that can be modified:
 
 ```javascript
-// Access global config
-console.log(kk_date.global_config);
+// Note: global_config is not directly accessible as a property.
+// Use the configuration methods to set and get values:
 
-// Global config properties
-{
+const kk_date = require('kk-date');
+
+kk_date.config({ 
     timezone: 'UTC',           // Default timezone
-    userTimezone: 'UTC',       // User timezone
     locale: 'en',              // Default locale
     weekStartDay: 0            // Week start day (0 = Sunday)
-}
+});
+
+// Get specific values:
+const timezone = kk_date.getTimezone();
+const userTimezone = kk_date.getUserTimezone();
 ```
 
 ### Instance Configuration

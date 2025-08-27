@@ -62,7 +62,7 @@ console.log(londonTime.format('HH:mm')); // '11:00' (BST)
 ```javascript
 // Create date with specific timezone
 const date = new kk_date('2024-08-23 10:00:00');
-            date.config({timezone: 'America/New_York'});
+date.config({timezone: 'America/New_York'});
 
 console.log(date.format('HH:mm')); // '10:00' (interpreted as NY time)
 ```
@@ -255,7 +255,7 @@ kk_date.setUserTimezone('America/New_York');
 
 // Use user timezone for display
 const serverTime = new kk_date('2024-08-23 15:00:00');
-            date.config({timezone: 'UTC'});
+serverTime.config({timezone: 'UTC'});
 
 const userTime = serverTime.tz(kk_date.getUserTimezone());
 console.log('Time for user:', userTime.format('HH:mm')); // '11:00'
@@ -270,7 +270,7 @@ const userTimezone = 'America/Chicago';
 
 // Parse user input in their timezone
 const userDate = new kk_date(userInput);
-            date.config({timezone: userTimezone});
+userDate.config({timezone: userTimezone});
 
 // Convert to UTC for storage
 const utcDate = userDate.tz('UTC');
@@ -282,7 +282,7 @@ console.log('Store in database:', utcDate.toISOString()); // '2024-08-23T19:30:0
 ```javascript
 // Server time in UTC
 const serverTime = new kk_date('2024-08-23 15:00:00');
-            date.config({timezone: 'UTC'});
+serverTime.config({timezone: 'UTC'});
 
 // Convert to client's timezone for API response
 const clientTimezone = 'Europe/London';
@@ -300,7 +300,7 @@ const apiResponse = {
 ```javascript
 // Event at 2 PM in organizer's timezone
 const eventTime = new kk_date('2024-08-23 14:00:00');
-            date.config({timezone: 'America/New_York'});
+eventTime.config({timezone: 'America/New_York'});
 
 // Convert for different attendees
 const attendees = [
@@ -325,7 +325,7 @@ attendees.forEach(attendee => {
 ```javascript
 // ❌ Don't store local times
 const localTime = new kk_date('2024-08-23 14:00:00');
-            date.config({timezone: 'America/New_York'});
+localTime.config({timezone: 'America/New_York'});
 
 // ✅ Store in UTC
 const utcTime = localTime.tz('UTC');

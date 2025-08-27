@@ -36,13 +36,13 @@ console.log(formatted); // '2024-08-23 10:30:45'
 | Template | Description | Example |
 |----------|-------------|---------|
 | `YYYY` | 4-digit year | `2024` |
-| `YY` | 2-digit year | `24` |
+
+**Note:** `YY` (2-digit year) template is not available in this implementation.
 
 ```javascript
 const date = new kk_date('2024-08-23 10:30:45');
 
 date.format('YYYY'); // '2024'
-date.format('YY');   // '24'
 ```
 
 ### Month Templates
@@ -50,15 +50,15 @@ date.format('YY');   // '24'
 | Template | Description | Example |
 |----------|-------------|---------|
 | `MM` | 2-digit month (01-12) | `08` |
-| `M` | Month number (1-12) | `8` |
 | `MMMM` | Full month name | `August` |
 | `MMM` | Short month name | `Aug` |
+
+**Note:** `M` (single digit month) template is not available in this implementation.
 
 ```javascript
 const date = new kk_date('2024-08-23 10:30:45');
 
 date.format('MM');    // '08'
-date.format('M');     // '8'
 date.format('MMMM');  // 'August'
 date.format('MMM');   // 'Aug'
 ```
@@ -68,15 +68,15 @@ date.format('MMM');   // 'Aug'
 | Template | Description | Example |
 |----------|-------------|---------|
 | `DD` | 2-digit day (01-31) | `23` |
-| `D` | Day number (1-31) | `23` |
-| `Do` | Day with ordinal suffix | `23rd` |
+
+**Note:** `D` (single digit day) and `Do` (day with ordinal suffix) templates are not available as standalone templates in this implementation. However, `Do` is available in specific format combinations like `'Do MMMM YYYY'`.
 
 ```javascript
 const date = new kk_date('2024-08-23 10:30:45');
 
 date.format('DD'); // '23'
-date.format('D');  // '23'
-date.format('Do'); // '23rd'
+// For ordinal day, use combined formats:
+date.format('Do MMMM YYYY'); // '23rd August 2024'
 ```
 
 ### Hour Templates
@@ -84,17 +84,15 @@ date.format('Do'); // '23rd'
 | Template | Description | Example |
 |----------|-------------|---------|
 | `HH` | 2-digit hour (00-23) | `10` |
-| `H` | Hour number (0-23) | `10` |
-| `hh` | 2-digit hour (01-12) | `10` |
-| `h` | Hour number (1-12) | `10` |
+
+**Note:** `H` (single digit hour), `hh`, and `h` (12-hour format) templates are not available as standalone templates. However, `hh` is available in time format combinations like `'hh:mm'` and `'hh:mm:ss'`.
 
 ```javascript
 const date = new kk_date('2024-08-23 22:30:45');
 
 date.format('HH'); // '22'
-date.format('H');  // '22'
-date.format('hh'); // '10'
-date.format('h');  // '10'
+// For 12-hour format, use combined formats:
+date.format('hh:mm'); // '10:30' (12-hour format with AM/PM)
 ```
 
 ### Minute Templates
@@ -102,13 +100,13 @@ date.format('h');  // '10'
 | Template | Description | Example |
 |----------|-------------|---------|
 | `mm` | 2-digit minute (00-59) | `30` |
-| `m` | Minute number (0-59) | `30` |
+
+**Note:** `m` (single digit minute) template is not available as a standalone template.
 
 ```javascript
 const date = new kk_date('2024-08-23 10:30:45');
 
 date.format('mm'); // '30'
-date.format('m');  // '30'
 ```
 
 ### Second Templates
@@ -116,13 +114,13 @@ date.format('m');  // '30'
 | Template | Description | Example |
 |----------|-------------|---------|
 | `ss` | 2-digit second (00-59) | `45` |
-| `s` | Second number (0-59) | `45` |
+
+**Note:** `s` (single digit second) template is not available as a standalone template.
 
 ```javascript
 const date = new kk_date('2024-08-23 10:30:45');
 
 date.format('ss'); // '45'
-date.format('s');  // '45'
 ```
 
 ### Millisecond Templates
@@ -131,10 +129,13 @@ date.format('s');  // '45'
 |----------|-------------|---------|
 | `SSS` | 3-digit millisecond (000-999) | `123` |
 
+**Note:** `SSS` is only available in time format combinations like `'HH:mm:ss.SSS'`.
+
 ```javascript
 const date = new kk_date('2024-08-23 10:30:45.123');
 
-date.format('SSS'); // '123'
+// SSS is not available as standalone, use in combinations:
+date.format('HH:mm:ss.SSS'); // '10:30:45.123'
 ```
 
 ### Weekday Templates
@@ -268,7 +269,8 @@ date.format('hh:mm:ss.SSS'); // '10:30:45.123'
 | `HH` | Hour only (24-hour) | `10` |
 | `mm` | Minute only | `30` |
 | `ss` | Second only | `45` |
-| `SSS` | Millisecond only | `123` |
+
+**Note:** Individual time components are available as standalone templates except for `SSS` which requires combined formats.
 
 ```javascript
 const date = new kk_date('2024-08-23 10:30:45.123');
@@ -276,7 +278,8 @@ const date = new kk_date('2024-08-23 10:30:45.123');
 date.format('HH');  // '10'
 date.format('mm');  // '30'
 date.format('ss');  // '45'
-date.format('SSS'); // '123'
+// For milliseconds, use combined format:
+date.format('HH:mm:ss.SSS'); // '10:30:45.123'
 ```
 
 ## DateTime Format Templates

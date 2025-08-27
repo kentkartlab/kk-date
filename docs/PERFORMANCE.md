@@ -2,408 +2,572 @@
 
 ## 🚀 Performance Overview
 
-kk-date is engineered for speed and efficiency, featuring intelligent caching, memory optimization, and zero-config DST handling. This guide showcases real-world performance benchmarks and optimization strategies.
+kk-date is designed for speed and efficiency, featuring intelligent caching, memory optimization, and automatic DST handling. This guide covers performance optimization strategies and provides guidance for benchmarking your specific use cases.
 
-## ⚡ Speed Benchmarks
+**Important Note:** Performance can vary significantly based on your environment, Node.js version, operating system, and specific use patterns. The benchmarks and optimizations described here are general guidelines. For accurate performance metrics relevant to your application, please run benchmarks in your target environment.
+
+## ⚡ Performance Features
+
+### Intelligent Caching System
+
+kk-date uses an intelligent caching system (`nope-redis.js`) to optimize performance:
+
+- **Timezone Offset Caching**: Caches timezone calculations with TTL to avoid repeated computations
+- **Format Pattern Caching**: Caches compiled format patterns for faster formatting
+- **Locale Data Caching**: Pre-computes and caches month/day names for different locales
+- **Automatic Cleanup**: Removes expired cache entries to prevent memory leaks
+
+```javascript
+const kk_date = require('kk-date');
+
+// Enable caching for better performance
+kk_date.caching({ status: true, defaultTtl: 3600 });
+
+// Check cache statistics
+const stats = kk_date.caching_status();
+console.log('Cache hit rate:', stats.hitRate);
+console.log('Cache size:', stats.size);
+```
 
 ### Timezone Conversion Performance
 
-**Test Setup:** 100,000 timezone conversions between UTC and major timezones
+**Key Optimization Features:**
 
-| Library | Operations/sec | Memory Usage | DST Handling |
-|---------|---------------|--------------|--------------|
-| **kk-date (no cache)** | **727,795** | **-3.19 MB** | **Automatic** |
-| **kk-date (with cache)** | **2,783,093** | **-3.19 MB** | **Automatic** |
-| Moment.js + moment-timezone | 222,897 | 4.50 MB | Manual |
-| Day.js + timezone plugin | 18,641 | -12.63 MB | Plugin required |
-| Luxon | 119,619 | 11.25 MB | Automatic |
-| Native JS Date | 7,038,568 | -5.05 MB | Basic offset only |
+- **Lazy Loading**: Timezone data is loaded only when needed
+- **Efficient Algorithms**: Optimized date calculation algorithms
+- **Memory Management**: Automatic cleanup of cached data
+- **DST Handling**: Built-in DST calculations without external lookups
 
-**Result:** kk-date is **3.3x faster** than Moment.js and **149x faster** than Day.js for timezone operations with caching.
+**Benchmark Example:**
+```javascript
+const kk_date = require('kk-date');
+
+function benchmarkTimezoneConversions() {
+    const iterations = 10000;
+    const testDate = '2024-08-23 10:00:00';
+    
+    console.time('Timezone Conversions');
+    for (let i = 0; i < iterations; i++) {
+        const date = new kk_date(testDate);
+        const nyTime = date.tz('America/New_York');
+        const tokyoTime = date.tz('Asia/Tokyo');
+        const londonTime = date.tz('Europe/London');
+    }
+    console.timeEnd('Timezone Conversions');
+}
+
+benchmarkTimezoneConversions();
+```
 
 ### Date Formatting Performance
 
-**Test Setup:** 100,000 date formatting operations with various formats
+**Optimization Features:**
 
-| Operation | kk-date (no cache) | kk-date (with cache) | Moment.js | Day.js | Speed Improvement |
-|-----------|-------------------|---------------------|-----------|--------|-------------------|
-| Basic formatting (YYYY-MM-DD) | **849,765 ops/sec** | **4,806,427 ops/sec** | 234,513 ops/sec | 691,399 ops/sec | **3.6x faster** |
-| Complex formatting (DD.MM.YYYY HH:mm:ss) | **698,186 ops/sec** | **4,556,241 ops/sec** | 215,133 ops/sec | 541,859 ops/sec | **3.2x faster** |
-| Text formatting (DD MMMM YYYY) | **552,162 ops/sec** | **5,959,135 ops/sec** | 214,289 ops/sec | 571,126 ops/sec | **2.6x faster** |
+- **Template Caching**: Common format patterns are pre-compiled and cached
+- **Efficient String Building**: Optimized string concatenation methods
+- **Locale Caching**: Month and day names are pre-computed for supported locales
+- **Pattern Reuse**: Regex patterns are cached and reused across operations
 
-**Result:** kk-date is **2.6-3.6x faster** than alternatives for date formatting with caching.
+**Benchmark Example:**
+```javascript
+const kk_date = require('kk-date');
+
+function benchmarkFormatting() {
+    const date = new kk_date('2024-08-23 10:30:45');
+    const iterations = 10000;
+    
+    console.time('Date Formatting');
+    for (let i = 0; i < iterations; i++) {
+        date.format('YYYY-MM-DD HH:mm:ss');
+        date.format('DD.MM.YYYY');
+        date.format('DD MMMM YYYY');
+        date.format('dddd, DD MMMM YYYY HH:mm');
+    }
+    console.timeEnd('Date Formatting');
+}
+
+benchmarkFormatting();
+```
 
 ### Constructor Performance
 
-**Test Setup:** 500,000 date object creations
+**Optimization Features:**
 
-| Input Type | kk-date (no cache) | kk-date (with cache) | Moment.js | Day.js | Speed Improvement |
-|------------|-------------------|---------------------|-----------|--------|-------------------|
-| New Date() | **8,852,293 ops/sec** | **8,852,293 ops/sec** | 4,823,907 ops/sec | 6,371,683 ops/sec | **37.97% faster** |
-| String Date (YYYY-MM-DD) | **3,537,843 ops/sec** | **3,537,843 ops/sec** | 515,823 ops/sec | 3,506,681 ops/sec | **74.58% faster** |
-| String DateTime | **890,387 ops/sec** | **890,387 ops/sec** | 274,985 ops/sec | 3,078,019 ops/sec | **43.30% faster** |
-| Timestamp | **11,534,447 ops/sec** | **11,534,447 ops/sec** | 4,055,761 ops/sec | 7,891,715 ops/sec | **53.55% faster** |
+- **Format Detection**: Automatic format detection with result caching
+- **Input Validation**: Efficient validation using pre-compiled regex patterns
+- **Object Reuse**: Internal object pooling where applicable
+- **Type Optimization**: Fast-path handling for different input types
 
-**Result:** kk-date is **37.97-74.58% faster** for date object creation operations with caching.
+**Benchmark Example:**
+```javascript
+const kk_date = require('kk-date');
 
-### Comparison Operations Performance
+function benchmarkConstructor() {
+    const iterations = 10000;
+    
+    console.time('Constructor Performance');
+    for (let i = 0; i < iterations; i++) {
+        new kk_date(); // Current date
+        new kk_date('2024-08-23'); // String parsing
+        new kk_date(Date.now()); // Timestamp
+        new kk_date(new Date()); // Date object
+        new kk_date('2024-08-23 10:30:45'); // DateTime string
+    }
+    console.timeEnd('Constructor Performance');
+}
 
-**Test Setup:** 500,000 comparison operations
-
-| Operation | kk-date (no cache) | kk-date (with cache) | Moment.js | Day.js | Speed Improvement |
-|-----------|-------------------|---------------------|-----------|--------|-------------------|
-| isBefore | **973,529 ops/sec** | **973,529 ops/sec** | 209,123 ops/sec | 624,989 ops/sec | **67.81% faster** |
-| isAfter | **1,114,919 ops/sec** | **1,114,919 ops/sec** | 222,320 ops/sec | 924,121 ops/sec | **67.85% faster** |
-| isSame | **1,572,644 ops/sec** | **1,572,644 ops/sec** | 250,305 ops/sec | 712,069 ops/sec | **76.45% faster** |
-
-**Result:** kk-date is **67.81-76.45% faster** for comparison operations with caching.
+benchmarkConstructor();
+```
 
 ### Date Manipulation Performance
 
-**Test Setup:** 500,000 manipulation operations
+**Optimization Features:**
 
-| Operation | kk-date (no cache) | kk-date (with cache) | Moment.js | Day.js | Speed Improvement |
-|-----------|-------------------|---------------------|-----------|--------|-------------------|
-| Add Days | **2,543,672 ops/sec** | **2,543,672 ops/sec** | 381,476 ops/sec | 892,357 ops/sec | **78.99% faster** |
-| Add Months | **1,629,379 ops/sec** | **1,629,379 ops/sec** | 406,817 ops/sec | 391,255 ops/sec | **75.52% faster** |
-| Start of Day | **857,818 ops/sec** | **857,818 ops/sec** | 252,603 ops/sec | 1,356,016 ops/sec | **50.35% faster** |
+- **Millisecond-Based Operations**: Direct manipulation of underlying timestamp
+- **Efficient Month Calculations**: Optimized algorithms for month/year arithmetic
+- **In-Place Modifications**: Modifies existing objects rather than creating new ones
+- **Batch Operations**: Optimized handling of multiple operations
 
-**Result:** kk-date is **50.35-78.99% faster** for date manipulation operations with caching.
+**Benchmark Example:**
+```javascript
+const kk_date = require('kk-date');
+
+function benchmarkManipulation() {
+    const date = new kk_date('2024-08-23 10:00:00');
+    const iterations = 10000;
+    
+    console.time('Date Manipulation');
+    for (let i = 0; i < iterations; i++) {
+        const testDate = new kk_date('2024-08-23 10:00:00');
+        testDate.add(1, 'days');
+        testDate.add(1, 'months');
+        testDate.startOf('days');
+        testDate.endOf('days');
+    }
+    console.timeEnd('Date Manipulation');
+}
+
+benchmarkManipulation();
+```
+
+### Comparison Operations
+
+**Optimization Features:**
+
+- **Direct Timestamp Comparison**: Uses underlying timestamp values for faster comparisons
+- **Type Coercion**: Efficient type conversion for different input types
+- **Early Returns**: Optimization shortcuts for obvious cases
+- **Batch Comparison**: Optimized handling when comparing multiple dates
+
+**Benchmark Example:**
+```javascript
+const kk_date = require('kk-date');
+
+function benchmarkComparisons() {
+    const date1 = new kk_date('2024-08-23 10:00:00');
+    const date2 = new kk_date('2024-08-23 15:00:00');
+    const date3 = new kk_date('2024-08-25 10:00:00');
+    const iterations = 10000;
+    
+    console.time('Comparison Operations');
+    for (let i = 0; i < iterations; i++) {
+        date1.isBefore(date2);
+        date2.isAfter(date1);
+        date1.isSame(date1);
+        date1.diff(date3, 'days');
+    }
+    console.timeEnd('Comparison Operations');
+}
+
+benchmarkComparisons();
+```
 
 ### Validation Performance
 
-**Test Setup:** 500,000 validation operations
+**Optimization Features:**
 
-| Operation | kk-date (no cache) | kk-date (with cache) | Moment.js | Day.js | Speed Improvement |
-|-----------|-------------------|---------------------|-----------|--------|-------------------|
-| isValid | **3,253,572 ops/sec** | **3,253,572 ops/sec** | 510,584 ops/sec | 1,221,709 ops/sec | **77.86% faster** |
-| Format Validation | **15,934,117 ops/sec** | **15,934,117 ops/sec** | 534,028 ops/sec | 1,221,902 ops/sec | **95.34% faster** |
+- **Regex Caching**: Validation patterns are pre-compiled and cached
+- **Early Validation**: Quick rejection of obviously invalid inputs
+- **Type Checking**: Efficient type detection and validation
+- **Format-Specific Validation**: Tailored validation for different input formats
 
-**Result:** kk-date is **77.86-95.34% faster** for validation operations with caching.
+**Benchmark Example:**
+```javascript
+const kk_date = require('kk-date');
 
-### Memory Efficiency
+function benchmarkValidation() {
+    const iterations = 10000;
+    const validInputs = ['2024-08-23', '2024-08-23 10:30:45', new Date()];
+    const invalidInputs = ['invalid-date', '2024-13-45', null];
+    
+    console.time('Validation Operations');
+    for (let i = 0; i < iterations; i++) {
+        // Test valid inputs
+        validInputs.forEach(input => {
+            kk_date.isValid(input);
+            try {
+                new kk_date(input).isValid();
+            } catch (e) {}
+        });
+        
+        // Test invalid inputs
+        invalidInputs.forEach(input => {
+            kk_date.isValid(input);
+            try {
+                new kk_date(input).isValid();
+            } catch (e) {}
+        });
+    }
+    console.timeEnd('Validation Operations');
+}
 
-**Test Setup:** Creating 100,000 date instances
+benchmarkValidation();
+```
 
-| Library | Peak Memory | Garbage Collection | Object Pooling |
-|---------|-------------|-------------------|----------------|
-| **kk-date** | **-3.19 MB** | **Minimal** | **✅ Yes** |
-| Moment.js | 4.50 MB | Frequent | ❌ No |
-| Day.js | -12.63 MB | Moderate | ❌ No |
-| Luxon | 11.25 MB | Moderate | ❌ No |
-| Native JS | -5.05 MB | Minimal | ❌ No |
+## 🔧 Performance Optimization Strategies
 
-**Result:** kk-date shows excellent memory efficiency with negative memory usage and rich functionality.
-
-## 🧠 Intelligent Caching System
-
-### Cache Performance Impact
+### 1. Enable Caching
 
 ```javascript
 const kk_date = require('kk-date');
 
-// Enable caching
-kk_date.caching({ status: true, defaultTtl: 3600 });
+// Enable caching at application startup
+kk_date.caching({ status: true, defaultTtl: 3600 }); // 1 hour TTL
 
-// Performance test
-console.time('With Cache');
-for (let i = 0; i < 100000; i++) {
-    const date = new kk_date('2024-08-23 10:00:00');
-    date.tz('America/New_York');
-}
-console.timeEnd('With Cache');
-// Result: ~35.93ms (2,783,093 ops/sec)
-
-console.time('Without Cache');
-kk_date.caching({ status: false });
-for (let i = 0; i < 100000; i++) {
-    const date = new kk_date('2024-08-23 10:00:00');
-    date.tz('America/New_York');
-}
-console.timeEnd('Without Cache');
-// Result: ~131.32ms (761,522 ops/sec)
-```
-
-**Cache Impact:** **3.7x performance improvement** for repeated operations.
-
-### Cache Statistics
-
-```javascript
-// Get cache performance metrics
-const stats = kk_date.caching_status();
-console.log('Cache Statistics:', {
-    hitRate: stats.hitRate,           // 100.00%
-    totalOperations: stats.totalOps,  // 4,199,996
-    cacheSize: stats.cacheSize,       // 48/20000 items
-    memoryUsage: stats.memoryUsage    // Optimized
-});
-```
-
-## 📊 Big Data Performance
-
-### Million-Operation Test
-
-```javascript
-// Test with 1 million date operations
-const startTime = Date.now();
-const startMemory = process.memoryUsage().heapUsed;
-
-// Run 1M operations
-for (let i = 0; i < 1000000; i++) {
-    const date = new kk_date('2024-08-23 10:00:00');
-    date.tz('America/New_York');
-    date.format('YYYY-MM-DD HH:mm:ss');
-}
-
-const endTime = Date.now();
-const endMemory = process.memoryUsage().heapUsed;
-
-console.log(`Duration: ${endTime - startTime}ms`);
-console.log(`Memory increase: ${(endMemory - startMemory) / 1024 / 1024}MB`);
-// Result: ~1504ms, ~0.11MB memory increase
-```
-
-### Multiple Timezone Conversions
-
-**Test Setup:** Converting between 8 major timezones (100,000 iterations)
-
-| Library | Operations/sec | Memory Usage | Timezones |
-|---------|---------------|--------------|-----------|
-| **kk-date (8 timezones)** | **351,212** | **-3.19 MB** | **8** |
-| Moment.js (8 timezones) | 111,069 | 4.50 MB | 8 |
-| Day.js (8 timezones) | 2,452 | -12.63 MB | 8 |
-
-**Result:** kk-date is **3.2x faster** than Moment.js and **143.2x faster** than Day.js for multiple timezone conversions.
-
-### Timezone + Formatting Performance
-
-**Test Setup:** Timezone conversion + formatting operations (100,000 iterations)
-
-| Library | Operations/sec | Memory Usage |
-|---------|---------------|--------------|
-| **kk-date (tz + format)** | **661,864** | **-3.19 MB** |
-| Moment.js (tz + format) | 189,459 | 4.50 MB |
-| Day.js (tz + format) | 18,898 | -12.63 MB |
-
-**Result:** kk-date is **3.5x faster** than Moment.js and **35.0x faster** than Day.js for timezone + formatting operations.
-
-### DST Transition Performance
-
-**Test Setup:** DST transition detection and handling (100,000 iterations)
-
-| Library | Operations/sec | Memory Usage | Features |
-|---------|---------------|--------------|----------|
-| **kk-date (DST transitions)** | **679,069** | **-3.19 MB** | **Automatic DST detection** |
-| Moment.js (DST transitions) | 187,370 | 4.50 MB | Manual DST handling |
-| Day.js (DST transitions) | 18,450 | -12.63 MB | Plugin required |
-
-**Result:** kk-date is **3.6x faster** than Moment.js and **36.8x faster** than Day.js for DST transition handling.
-
-## 🏆 Performance Comparison Summary
-
-| Metric | kk-date (no cache) | kk-date (with cache) | Moment.js | Day.js | Luxon | Native JS |
-|--------|-------------------|---------------------|-----------|--------|-------|-----------|
-| **Speed (ops/sec)** | **727,795** | **2,783,093** | 222,897 | 18,641 | 119,619 | 7,038,568 |
-| **Memory Usage** | **-3.19 MB** | **-3.19 MB** | 4.50 MB | -12.63 MB | 11.25 MB | -5.05 MB |
-| **Bundle Size** | **15 KB** | **15 KB** | 232 KB | 6.5 KB | 68 KB | 0 KB |
-| **DST Handling** | **Automatic** | **Automatic** | Manual | Plugin | Automatic | Basic |
-| **Caching** | **Built-in** | **Built-in** | ❌ | ❌ | ❌ | ❌ |
-| **Object Pooling** | **✅** | **✅** | ❌ | ❌ | ❌ | ❌ |
-
-## 🚀 Performance Benefits
-
-### Speed Advantages
-- **3.3x faster** timezone operations than Moment.js (with cache)
-- **149x faster** timezone operations than Day.js (with cache)
-- **2.6-3.6x faster** date formatting than alternatives (with cache)
-- **37.97-74.58% faster** string parsing than alternatives (with cache)
-- **67.81-76.45% faster** comparison operations than alternatives (with cache)
-- **77.86-95.34% faster** validation operations than alternatives (with cache)
-
-### Memory Advantages
-- **Excellent memory efficiency** with negative memory usage
-- **Efficient object pooling** for reduced GC pressure
-- **Intelligent caching** with minimal memory overhead
-- **Outstanding performance** with optimal memory footprint
-
-### Developer Experience
-- **Zero configuration** required
-- **Automatic DST detection** and handling
-- **Cross-platform consistency**
-- **Built-in caching** system
-- **Comprehensive timezone support**
-
-## 📈 Real-World Performance Comparison
-
-### What If You Chose Other Libraries?
-
-**Scenario:** Processing 100,000 timezone conversions in a real-time application
-
-#### Moment.js + moment-timezone
-```javascript
-// With Moment.js + moment-timezone
-const moment = require('moment-timezone');
-
-console.time('Moment.js Processing');
-for (let i = 0; i < 100000; i++) {
-    const date = moment('2024-08-23 10:00:00');
-    date.tz('America/New_York');
-    date.format('YYYY-MM-DD HH:mm:ss');
-}
-console.timeEnd('Moment.js Processing');
-// Result: ~4486ms (22,292 ops/sec)
-// Memory: 4.50 MB
-// DST: Manual configuration required
-```
-
-#### Day.js + timezone plugin
-```javascript
-// With Day.js + timezone plugin
-const dayjs = require('dayjs');
-const timezone = require('dayjs/plugin/timezone');
-const utc = require('dayjs/plugin/utc');
-
-dayjs.extend(utc);
-dayjs.extend(timezone);
-
-console.time('Day.js Processing');
-for (let i = 0; i < 100000; i++) {
-    const date = dayjs('2024-08-23 10:00:00');
-    date.tz('America/New_York');
-    date.format('YYYY-MM-DD HH:mm:ss');
-}
-console.timeEnd('Day.js Processing');
-// Result: ~40778ms (2,452 ops/sec)
-// Memory: -12.63 MB
-// DST: Plugin required
-```
-
-#### kk-date (Recommended)
-```javascript
-// With kk-date
-const kk_date = require('kk-date');
-
-// Enable caching for optimal performance
-kk_date.caching({ status: true, defaultTtl: 3600 });
-
-console.time('kk-date Processing');
-for (let i = 0; i < 100000; i++) {
-    const date = new kk_date('2024-08-23 10:00:00');
-    date.tz('America/New_York');
-    date.format('YYYY-MM-DD HH:mm:ss');
-}
-console.timeEnd('kk-date Processing');
-// Result: ~284.73ms (351,212 ops/sec)
-// Memory: -3.19 MB
-// DST: Automatic detection
-```
-
-### Performance Analysis
-
-| Library | Duration | Operations/sec | Memory | DST Support |
-|---------|----------|----------------|--------|-------------|
-| **kk-date** | **285ms** | **351,212** | **-3.19 MB** | **Automatic** |
-| Day.js | 40778ms | 2,452 | -12.63 MB | Plugin |
-| Moment.js | 4486ms | 22,292 | 4.50 MB | Manual |
-
-### Why kk-date is Still the Better Choice
-
-1. **Speed:** 143x faster than Day.js, 15.7x faster than Moment.js
-2. **Functionality:** Rich features vs basic operations
-3. **Simplicity:** Zero configuration vs plugin setup
-4. **Reliability:** Automatic DST handling vs manual configuration
-5. **Future-proof:** Built-in caching and optimization
-
-## 🎯 Optimization Strategies
-
-### 1. Enable Caching for Repeated Operations
-
-```javascript
-// For applications with repeated timezone operations
-kk_date.caching({ status: true, defaultTtl: 3600 }); // 1 hour cache
-
-// For real-time applications
-kk_date.caching({ status: true, defaultTtl: 300 }); // 5 min cache
-
-// For batch processing
-kk_date.caching({ status: true, defaultTtl: 86400 }); // 24 hour cache
-```
-
-### 2. Use Object Pooling for High-Frequency Operations
-
-```javascript
-// Create reusable date instances for high-frequency operations
-const datePool = [];
-for (let i = 0; i < 1000; i++) {
-    datePool.push(new kk_date('2024-08-23 10:00:00'));
-}
-
-// Use pool for operations
-datePool.forEach(date => {
-    date.tz('America/New_York');
-    date.format('YYYY-MM-DD HH:mm:ss');
-});
-```
-
-### 3. Optimize for Your Use Case
-
-```javascript
-// For real-time applications
-kk_date.caching({ status: true, defaultTtl: 300 }); // 5 min cache
-
-// For batch processing
-kk_date.caching({ status: true, defaultTtl: 86400 }); // 24 hour cache
-
-// For memory-constrained environments
-kk_date.caching({ status: false }); // Disable cache
-```
-
-## 📈 Performance Monitoring
-
-### Cache Performance Metrics
-
-```javascript
 // Monitor cache performance
 setInterval(() => {
     const stats = kk_date.caching_status();
-    console.log('Cache Performance:', {
-        hitRate: `${stats.hitRate}%`,
-        operations: stats.totalOps,
-        memory: `${stats.memoryUsage}MB`
+    console.log('Cache stats:', {
+        hitRate: stats.hitRate,
+        size: stats.size,
+        efficiency: stats.hits / (stats.hits + stats.misses)
     });
-}, 60000); // Every minute
+}, 60000); // Log every minute
 ```
 
-### Memory Usage Monitoring
+### 2. Reuse Date Instances
 
 ```javascript
-// Monitor memory usage
-const initialMemory = process.memoryUsage().heapUsed;
+// ❌ Inefficient: Creating new instances repeatedly
+function formatDatesSlowly(timestamps) {
+    return timestamps.map(ts => new kk_date(ts).format('YYYY-MM-DD'));
+}
 
-// After operations
-const finalMemory = process.memoryUsage().heapUsed;
-const memoryIncrease = (finalMemory - initialMemory) / 1024 / 1024;
-
-console.log(`Memory increase: ${memoryIncrease.toFixed(2)}MB`);
+// ✅ Efficient: Reuse instance where possible
+function formatDatesFast(timestamps) {
+    const date = new kk_date();
+    return timestamps.map(ts => {
+        date.date = new Date(ts);
+        return date.format('YYYY-MM-DD');
+    });
+}
 ```
 
-## 🏆 Performance Comparison Summary
+### 3. Pre-compile Format Strings
 
-| Metric | kk-date (no cache) | kk-date (with cache) | Moment.js | Day.js | Luxon |
-|--------|-------------------|---------------------|-----------|--------|-------|
-| **Speed (ops/sec)** | **727,795** | **2,783,093** | 222,897 | 18,641 | 119,619 |
-| **Memory Usage** | **-3.19 MB** | **-3.19 MB** | 4.50 MB | -12.63 MB | 11.25 MB |
-| **Bundle Size** | **15 KB** | **15 KB** | 232 KB | 6.5 KB | 68 KB |
-| **DST Handling** | **Automatic** | **Automatic** | Manual | Plugin | Automatic |
-| **Caching** | **Built-in** | **Built-in** | ❌ | ❌ | ❌ |
-| **Object Pooling** | **✅** | **✅** | ❌ | ❌ | ❌ |
+```javascript
+// Define format constants to enable caching
+const DATE_FORMAT = 'YYYY-MM-DD';
+const TIME_FORMAT = 'HH:mm:ss';
+const DATETIME_FORMAT = 'YYYY-MM-DD HH:mm:ss';
 
-## 🚀 Performance Benefits
+function formatDate(date) {
+    // These formats will be cached after first use
+    return {
+        date: date.format(DATE_FORMAT),
+        time: date.format(TIME_FORMAT),
+        datetime: date.format(DATETIME_FORMAT)
+    };
+}
+```
 
-- **3.3x faster** timezone operations than Moment.js (with cache)
-- **149x faster** timezone operations than Day.js (with cache)
-- **Excellent memory efficiency** with negative memory usage
-- **3.7x cache speedup** for repeated operations
-- **Automatic DST detection** and handling
-- **Zero configuration** required
-- **Built-in intelligent caching** system
+### 4. Optimize Timezone Operations
+
+```javascript
+// ❌ Inefficient: Multiple timezone conversions
+function getTimesInMultipleZones(date) {
+    return {
+        ny: date.tz('America/New_York').format('HH:mm'),
+        london: date.tz('Europe/London').format('HH:mm'),
+        tokyo: date.tz('Asia/Tokyo').format('HH:mm')
+    };
+}
+
+// ✅ Efficient: Batch timezone operations
+function getTimesInMultipleZonesFast(date) {
+    const timezones = ['America/New_York', 'Europe/London', 'Asia/Tokyo'];
+    const results = {};
+    
+    timezones.forEach(tz => {
+        const converted = date.tz(tz);
+        results[tz.split('/')[1].toLowerCase()] = converted.format('HH:mm');
+    });
+    
+    return results;
+}
+```
+
+### 5. Memory Management
+
+```javascript
+// Monitor memory usage in production
+function monitorMemoryUsage() {
+    const used = process.memoryUsage();
+    console.log('Memory usage:', {
+        rss: Math.round(used.rss / 1024 / 1024 * 100) / 100 + ' MB',
+        heapTotal: Math.round(used.heapTotal / 1024 / 1024 * 100) / 100 + ' MB',
+        heapUsed: Math.round(used.heapUsed / 1024 / 1024 * 100) / 100 + ' MB',
+        external: Math.round(used.external / 1024 / 1024 * 100) / 100 + ' MB'
+    });
+}
+
+// Clear cache periodically if needed
+function manageCacheMemory() {
+    const stats = kk_date.caching_status();
+    if (stats.size > 1000) { // Arbitrary threshold
+        kk_date.clearCache();
+        console.log('Cache cleared due to size:', stats.size);
+    }
+}
+```
+
+## 📊 Running Your Own Benchmarks
+
+### Using the Built-in Benchmark Script
+
+```bash
+# Run the included benchmark script
+npm run benchmark
+
+# Or directly
+node benchmark.js
+```
+
+### Custom Benchmark Template
+
+```javascript
+const kk_date = require('kk-date');
+
+function runBenchmark(name, testFunction, iterations = 10000) {
+    console.log(`\nBenchmarking: ${name}`);
+    
+    // Warm up
+    for (let i = 0; i < 100; i++) {
+        testFunction();
+    }
+    
+    // Measure
+    const start = process.hrtime.bigint();
+    for (let i = 0; i < iterations; i++) {
+        testFunction();
+    }
+    const end = process.hrtime.bigint();
+    
+    const duration = Number(end - start) / 1000000; // Convert to milliseconds
+    const opsPerSecond = Math.round((iterations / duration) * 1000);
+    
+    console.log(`${iterations} iterations completed in ${duration.toFixed(2)}ms`);
+    console.log(`${opsPerSecond.toLocaleString()} operations per second`);
+}
+
+// Example usage
+runBenchmark('Date Creation', () => {
+    new kk_date('2024-08-23 10:30:45');
+});
+
+runBenchmark('Date Formatting', () => {
+    const date = new kk_date('2024-08-23 10:30:45');
+    date.format('YYYY-MM-DD HH:mm:ss');
+});
+
+runBenchmark('Timezone Conversion', () => {
+    const date = new kk_date('2024-08-23 10:30:45');
+    date.tz('America/New_York');
+});
+```
+
+## 🏆 Best Practices for Performance
+
+### 1. Application Startup
+
+```javascript
+const kk_date = require('kk-date');
+
+// Configure for optimal performance at startup
+function configureKkDate() {
+    // Enable caching
+    kk_date.caching({ status: true, defaultTtl: 3600 });
+    
+    // Set default timezone
+    kk_date.setTimezone('UTC');
+    
+    // Pre-warm common operations
+    const warmupDate = new kk_date();
+    warmupDate.format('YYYY-MM-DD');
+    warmupDate.tz('America/New_York');
+    warmupDate.add(1, 'days');
+    
+    console.log('kk-date configured for optimal performance');
+}
+
+configureKkDate();
+```
+
+### 2. High-Volume Operations
+
+```javascript
+// For processing large datasets
+function processDateArray(dates) {
+    // Enable caching for bulk operations
+    const originalCaching = kk_date.caching_status().enabled;
+    if (!originalCaching) {
+        kk_date.caching({ status: true });
+    }
+    
+    try {
+        const results = dates.map(dateStr => {
+            const date = new kk_date(dateStr);
+            return {
+                formatted: date.format('YYYY-MM-DD'),
+                timestamp: date.getTime(),
+                isWeekend: [0, 6].includes(new Date(date.date).getDay())
+            };
+        });
+        
+        return results;
+    } finally {
+        // Restore original caching state
+        if (!originalCaching) {
+            kk_date.caching({ status: false });
+        }
+    }
+}
+```
+
+### 3. Production Monitoring
+
+```javascript
+// Monitor performance in production
+class PerformanceMonitor {
+    constructor() {
+        this.metrics = {
+            operations: 0,
+            totalTime: 0,
+            errors: 0
+        };
+    }
+    
+    measure(operation) {
+        const start = process.hrtime.bigint();
+        
+        try {
+            const result = operation();
+            this.metrics.operations++;
+            return result;
+        } catch (error) {
+            this.metrics.errors++;
+            throw error;
+        } finally {
+            const end = process.hrtime.bigint();
+            this.metrics.totalTime += Number(end - start) / 1000000;
+        }
+    }
+    
+    getStats() {
+        return {
+            averageTime: this.metrics.totalTime / this.metrics.operations,
+            operationsPerSecond: (this.metrics.operations / this.metrics.totalTime) * 1000,
+            errorRate: this.metrics.errors / this.metrics.operations,
+            totalOperations: this.metrics.operations
+        };
+    }
+}
+
+const monitor = new PerformanceMonitor();
+
+// Use in your application
+const result = monitor.measure(() => {
+    const date = new kk_date('2024-08-23 10:30:45');
+    return date.format('YYYY-MM-DD HH:mm:ss');
+});
+
+// Check performance periodically
+setInterval(() => {
+    console.log('Performance stats:', monitor.getStats());
+}, 60000);
+```
+
+## 🔍 Troubleshooting Performance Issues
+
+### Common Performance Bottlenecks
+
+1. **Excessive Object Creation**
+   ```javascript
+   // ❌ Creating many objects
+   dates.map(d => new kk_date(d).format('YYYY-MM-DD'))
+   
+   // ✅ Reuse where possible
+   const formatter = new kk_date();
+   dates.map(d => {
+       formatter.date = new Date(d);
+       return formatter.format('YYYY-MM-DD');
+   })
+   ```
+
+2. **Uncached Timezone Operations**
+   ```javascript
+   // Enable caching for timezone-heavy operations
+   kk_date.caching({ status: true, defaultTtl: 3600 });
+   ```
+
+3. **Memory Leaks in Long-Running Processes**
+   ```javascript
+   // Clear cache periodically in long-running processes
+   setInterval(() => {
+       if (kk_date.caching_status().size > 10000) {
+           kk_date.clearCache();
+       }
+   }, 3600000); // Every hour
+   ```
+
+### Performance Debugging
+
+```javascript
+function debugPerformance() {
+    const stats = kk_date.caching_status();
+    const memUsage = process.memoryUsage();
+    
+    console.log('Performance Debug Info:', {
+        cache: {
+            enabled: stats.enabled,
+            size: stats.size,
+            hitRate: stats.hitRate,
+            efficiency: stats.hits / (stats.hits + stats.misses || 1)
+        },
+        memory: {
+            heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024) + ' MB',
+            heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024) + ' MB'
+        },
+        recommendations: {
+            enableCaching: !stats.enabled ? 'Enable caching for better performance' : null,
+            clearCache: stats.size > 1000 ? 'Consider clearing cache' : null,
+            memoryUsage: memUsage.heapUsed > 100 * 1024 * 1024 ? 'High memory usage detected' : null
+        }
+    });
+}
+
+// Run performance debugging
+debugPerformance();
+```
+
+## 📈 Performance Comparison Guidelines
+
+When comparing kk-date with other date libraries:
+
+1. **Use Realistic Test Cases**: Test with your actual data patterns and operations
+2. **Include Cache Warm-up**: Run operations multiple times to account for caching
+3. **Test in Your Environment**: Performance varies by Node.js version and platform
+4. **Measure What Matters**: Focus on operations you use most frequently
+5. **Consider Total Cost**: Include memory usage, bundle size, and feature completeness
+
+Remember: The best performance optimization is using the right tool for your specific use case and measuring actual performance in your production environment.
