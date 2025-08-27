@@ -395,7 +395,7 @@ You can create conditional formats based on date properties:
 const date = new kk_date('2024-08-23 10:30:45');
 
 // Different formats for different times
-const hour = parseInt(date.format('HH'));
+const hour = parseInt(date.format('HH'), 10);
 if (hour < 12) {
     console.log(date.format('Good morning! It\'s HH:mm')); // 'Good morning! It's 10:30'
 } else if (hour < 18) {

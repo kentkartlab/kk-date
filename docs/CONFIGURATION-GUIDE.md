@@ -475,7 +475,7 @@ if (!setValidTimezone('Invalid/Timezone')) {
 const config = {
     timezone: process.env.DEFAULT_TIMEZONE || 'UTC',
     locale: process.env.DEFAULT_LOCALE || 'en',
-    weekStartDay: parseInt(process.env.WEEK_START_DAY) || 0
+    weekStartDay: parseInt(process.env.WEEK_START_DAY, 10) || 0
 };
 
 // Apply configuration
