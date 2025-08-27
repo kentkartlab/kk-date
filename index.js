@@ -1553,7 +1553,7 @@ function formatter(orj_this, template = null) {
 			return `${result.day} ${formatted}`;
 		}
 		case format_types['D MMMM YYYY']: {
-			const day = converter(orj_this.date, ['day'], { pad: false, detectedFormat: orj_this.detected_format }).day;
+			const day = converter(orj_this.date, ['day'], { pad: false, isUTC, detectedFormat: orj_this.detected_format }).day;
 			const year = converter(orj_this.date, ['year'], { isUTC, detectedFormat: orj_this.detected_format }).year;
 			const value = dateTimeFormat(orj_this, 'MMMM');
 			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
