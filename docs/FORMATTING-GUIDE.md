@@ -459,7 +459,9 @@ locales.forEach(locale => {
 const date = new kk_date();
 
 // Create timestamped filenames
-const filename = `backup_${date.format('YYYYMMDD_HHmmss')}.zip`;
+const dateStr = date.format('YYYYMMDD');
+const timeStr = date.format('HH:mm:ss').replace(/:/g, '');
+const filename = `backup_${dateStr}_${timeStr}.zip`;
 console.log(filename); // 'backup_20240823_143045.zip'
 
 const logFile = `app_${date.format('YYYY-MM-DD')}.log`;
@@ -551,8 +553,11 @@ const logTime = date.format('HH:mm:ss');
 console.log(`[${logTimestamp}] INFO: Application started`);
 // [2024-08-23 14:30:45.123] INFO: Application started
 
-console.log(`Log file: ${logDate}_${logTime}.log`);
-// Log file: 23/08/2024_14:30:45.log
+// For filename, combine separate format calls
+const logDateFile = date.format('YYYYMMDD');
+const logTimeFile = date.format('HH:mm:ss').replace(/:/g, '');
+console.log(`Log file: ${logDateFile}_${logTimeFile}.log`);
+// Log file: 20240823_143045.log
 ```
 
 ### Performance Tips
