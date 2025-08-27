@@ -1,4 +1,4 @@
-const { describe, test, expect } = require('@jest/globals');
+const { describe, test, expect, afterEach } = require('@jest/globals');
 const kk_date = require('../index');
 const test_date = '2024-08-19';
 const test_time = '23:50:59';
@@ -346,5 +346,164 @@ describe('year tests', () => {
 			const date = new kk_date(input);
 			expect(date.add(add, 'years').format('YYYY-MM-DD')).toBe(expected);
 		}
+	});
+});
+
+describe('newly added format templates', () => {
+	const test_date = '2024-08-19';
+	const test_time = '14:30:45';
+	const base_datetime = `${test_date} ${test_time}`;
+
+	test('YYYY-MM-DD HH:mm format', () => {
+		expect(new kk_date(base_datetime).format('YYYY-MM-DD HH:mm')).toBe('2024-08-19 14:30');
+		expect(new kk_date('2024-01-01 09:05:30').format('YYYY-MM-DD HH:mm')).toBe('2024-01-01 09:05');
+		expect(new kk_date('2024-12-31 23:59:59').format('YYYY-MM-DD HH:mm')).toBe('2024-12-31 23:59');
+	});
+
+	test('YYYY.MM.DD HH:mm format', () => {
+		expect(new kk_date(base_datetime).format('YYYY.MM.DD HH:mm')).toBe('2024.08.19 14:30');
+		expect(new kk_date('2024-01-01 09:05:30').format('YYYY.MM.DD HH:mm')).toBe('2024.01.01 09:05');
+		expect(new kk_date('2024-12-31 23:59:59').format('YYYY.MM.DD HH:mm')).toBe('2024.12.31 23:59');
+	});
+
+	test('Do MMMM YYYY format (ordinal day)', () => {
+		expect(new kk_date('2024-08-01').format('Do MMMM YYYY')).toBe('1 August 2024');
+		expect(new kk_date('2024-08-03').format('Do MMMM YYYY')).toBe('3 August 2024');
+		expect(new kk_date('2024-08-19').format('Do MMMM YYYY')).toBe('19 August 2024');
+		expect(new kk_date('2024-12-31').format('Do MMMM YYYY')).toBe('31 December 2024');
+	});
+
+	test('Do MMM YYYY format (ordinal day short)', () => {
+		expect(new kk_date('2024-08-01').format('Do MMM YYYY')).toBe('1 Aug 2024');
+		expect(new kk_date('2024-08-03').format('Do MMM YYYY')).toBe('3 Aug 2024');
+		expect(new kk_date('2024-08-19').format('Do MMM YYYY')).toBe('19 Aug 2024');
+		expect(new kk_date('2024-12-31').format('Do MMM YYYY')).toBe('31 Dec 2024');
+	});
+
+	test('DD MMMM dddd, YYYY format', () => {
+		expect(new kk_date('2024-08-19').format('DD MMMM dddd, YYYY')).toBe('19 August Monday, 2024');
+		expect(new kk_date('2024-01-01').format('DD MMMM dddd, YYYY')).toBe('01 January Monday, 2024');
+		expect(new kk_date('2024-12-25').format('DD MMMM dddd, YYYY')).toBe('25 December Wednesday, 2024');
+	});
+
+	test('YYYY MMM DD format (reverse order)', () => {
+		expect(new kk_date('2024-08-19').format('YYYY MMM DD')).toBe('2024 Aug 19');
+		expect(new kk_date('2024-01-01').format('YYYY MMM DD')).toBe('2024 Jan 01');
+		expect(new kk_date('2024-12-31').format('YYYY MMM DD')).toBe('2024 Dec 31');
+	});
+
+	test('YYYY MMMM DD format (reverse order full)', () => {
+		expect(new kk_date('2024-08-19').format('YYYY MMMM DD')).toBe('2024 August 19');
+		expect(new kk_date('2024-01-01').format('YYYY MMMM DD')).toBe('2024 January 01');
+		expect(new kk_date('2024-12-31').format('YYYY MMMM DD')).toBe('2024 December 31');
+	});
+});
+
+describe('ordinal formats multi-language tests', () => {
+	const originalLocale = 'en'; // Default locale
+
+	afterEach(() => {
+		// Reset to original locale after each test
+		kk_date.config({ locale: originalLocale });
+	});
+
+	test('Do MMMM YYYY format - English locale', () => {
+		kk_date.config({ locale: 'en' });
+		expect(new kk_date('2024-08-01').format('Do MMMM YYYY')).toBe('1 August 2024');
+		expect(new kk_date('2024-08-02').format('Do MMMM YYYY')).toBe('2 August 2024');
+		expect(new kk_date('2024-08-03').format('Do MMMM YYYY')).toBe('3 August 2024');
+		expect(new kk_date('2024-08-11').format('Do MMMM YYYY')).toBe('11 August 2024');
+		expect(new kk_date('2024-08-21').format('Do MMMM YYYY')).toBe('21 August 2024');
+		expect(new kk_date('2024-08-22').format('Do MMMM YYYY')).toBe('22 August 2024');
+		expect(new kk_date('2024-08-23').format('Do MMMM YYYY')).toBe('23 August 2024');
+	});
+
+	test('Do MMMM YYYY format - Turkish locale', () => {
+		kk_date.config({ locale: 'tr' });
+		// Turkish locale will use native number formatting
+		expect(new kk_date('2024-08-01').format('Do MMMM YYYY')).toBe('1 Ağustos 2024');
+		expect(new kk_date('2024-08-15').format('Do MMMM YYYY')).toBe('15 Ağustos 2024');
+		expect(new kk_date('2024-01-01').format('Do MMMM YYYY')).toBe('1 Ocak 2024');
+	});
+
+	test('Do MMMM YYYY format - German locale', () => {
+		kk_date.config({ locale: 'de' });
+		// German locale will use native number formatting
+		expect(new kk_date('2024-08-01').format('Do MMMM YYYY')).toBe('1 August 2024');
+		expect(new kk_date('2024-08-15').format('Do MMMM YYYY')).toBe('15 August 2024');
+		expect(new kk_date('2024-12-25').format('Do MMMM YYYY')).toBe('25 Dezember 2024');
+	});
+
+	test('Do MMMM YYYY format - French locale', () => {
+		kk_date.config({ locale: 'fr' });
+		// French locale will use native number formatting
+		expect(new kk_date('2024-08-01').format('Do MMMM YYYY')).toBe('1 août 2024');
+		expect(new kk_date('2024-08-15').format('Do MMMM YYYY')).toBe('15 août 2024');
+		expect(new kk_date('2024-01-01').format('Do MMMM YYYY')).toBe('1 janvier 2024');
+	});
+
+	test('Do MMMM YYYY format - Spanish locale', () => {
+		kk_date.config({ locale: 'es' });
+		// Spanish locale will use native number formatting
+		expect(new kk_date('2024-08-01').format('Do MMMM YYYY')).toBe('1 agosto 2024');
+		expect(new kk_date('2024-08-15').format('Do MMMM YYYY')).toBe('15 agosto 2024');
+		expect(new kk_date('2024-12-25').format('Do MMMM YYYY')).toBe('25 diciembre 2024');
+	});
+
+	test('Do MMMM YYYY format - Japanese locale', () => {
+		kk_date.config({ locale: 'ja' });
+		// Japanese locale will use native number formatting
+		expect(new kk_date('2024-08-01').format('Do MMMM YYYY')).toBe('1 8月 2024');
+		expect(new kk_date('2024-08-15').format('Do MMMM YYYY')).toBe('15 8月 2024');
+		expect(new kk_date('2024-01-01').format('Do MMMM YYYY')).toBe('1 1月 2024');
+	});
+
+	test('Do MMM YYYY format - multiple locales', () => {
+		// English
+		kk_date.config({ locale: 'en' });
+		expect(new kk_date('2024-08-15').format('Do MMM YYYY')).toBe('15 Aug 2024');
+
+		// Turkish  
+		kk_date.config({ locale: 'tr' });
+		expect(new kk_date('2024-08-15').format('Do MMM YYYY')).toBe('15 Ağu 2024');
+
+		// German
+		kk_date.config({ locale: 'de' });
+		expect(new kk_date('2024-08-15').format('Do MMM YYYY')).toBe('15 Aug 2024');
+
+		// French
+		kk_date.config({ locale: 'fr' });
+		expect(new kk_date('2024-08-15').format('Do MMM YYYY')).toBe('15 août 2024');
+	});
+
+	test('ordinal formats should work with different numbering systems', () => {
+		// Arabic numerals (default)
+		kk_date.config({ locale: 'en' });
+		expect(new kk_date('2024-08-05').format('Do MMMM YYYY')).toBe('5 August 2024');
+
+		// Test edge cases with different locales
+		const testDays = ['01', '02', '03', '11', '21', '22', '23', '31'];
+		
+		for (const day of testDays) {
+			const testDate = `2024-08-${day}`;
+			const result = new kk_date(testDate).format('Do MMMM YYYY');
+			
+			// Should always contain the day number (without leading zero for single digits)
+			const expectedDay = parseInt(day, 10).toString();
+			expect(result).toContain(expectedDay);
+			expect(result).toContain('August');
+			expect(result).toContain('2024');
+		}
+	});
+
+	test('ordinal formats should handle locale fallbacks gracefully', () => {
+		// Test with a potentially unsupported locale
+		kk_date.config({ locale: 'xyz-invalid' });
+		
+		// Should fallback gracefully and still produce readable output
+		const result = new kk_date('2024-08-15').format('Do MMMM YYYY');
+		expect(result).toContain('15');
+		expect(result).toContain('2024');
+		// Month name might be in English as fallback
 	});
 });

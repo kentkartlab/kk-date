@@ -105,6 +105,8 @@ console.log(date.format('YYYY-MM-DDTHH:mm:ss'));     // '2024-08-23T10:30:45'
 ```
 
 **Available Templates:**
+
+**Basic Templates:**
 - `YYYY` - 4-digit year
 - `MM` - 2-digit month
 - `DD` - 2-digit day
@@ -116,6 +118,36 @@ console.log(date.format('YYYY-MM-DDTHH:mm:ss'));     // '2024-08-23T10:30:45'
 - `MMM` - Short month name
 - `dddd` - Full weekday name
 - `ddd` - Short weekday name
+
+**Date Format Templates:**
+- `YYYY-MM-DD` - ISO date format
+- `YYYY-MM-DD HH:mm:ss` - ISO datetime format
+- `YYYY-MM-DD HH:mm` - ISO datetime without seconds
+- `DD.MM.YYYY HH:mm:ss` - European datetime format
+- `DD.MM.YYYY HH:mm` - European datetime without seconds
+- `DD-MM-YYYY HH:mm:ss` - European datetime with dashes
+- `YYYY.MM.DD HH:mm:ss` - Dotted datetime format
+- `YYYY.MM.DD HH:mm` - Dotted datetime without seconds
+- `YYYY-MM-DDTHH:mm:ss` - ISO 8601 format
+- `YYYYMMDD` - Compact date format
+
+**Named Format Templates:**
+- `Do MMMM YYYY` - Ordinal day with full month (locale-aware)
+- `Do MMM YYYY` - Ordinal day with short month (locale-aware)
+- `DD MMMM YYYY` - Date with full month
+- `DD MMMM dddd, YYYY` - Date with weekday and comma
+- `YYYY MMM DD` - Year-month-day format
+- `YYYY MMMM DD` - Year-fullmonth-day format
+
+**Time Format Templates:**
+- `HH:mm:ss` - 24-hour time with seconds
+- `HH:mm` - 24-hour time without seconds
+- `hh:mm:ss` - 12-hour time with seconds
+- `hh:mm` - 12-hour time without seconds
+- `HH:mm:ss.SSS` - 24-hour time with milliseconds
+- `hh:mm:ss.SSS` - 12-hour time with milliseconds
+
+For a complete list of 50+ available templates, see the [Formatting Guide](FORMATTING-GUIDE.md).
 
 #### `toString()`
 

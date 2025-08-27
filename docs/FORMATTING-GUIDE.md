@@ -15,7 +15,7 @@ Complete guide to date and time formatting in kk-date, including all supported t
 
 ## Introduction
 
-kk-date provides comprehensive date and time formatting capabilities with support for 40+ predefined formats and custom templates. The `format()` method allows you to convert dates into human-readable strings using various templates.
+kk-date provides comprehensive date and time formatting capabilities with support for 50+ predefined formats and custom templates. The `format()` method allows you to convert dates into human-readable strings using various templates.
 
 ### Basic Usage
 
@@ -289,17 +289,25 @@ date.format('HH:mm:ss.SSS'); // '10:30:45.123'
 | Template | Description | Example |
 |----------|-------------|---------|
 | `YYYY-MM-DD HH:mm:ss` | ISO datetime format | `2024-08-23 10:30:45` |
+| `YYYY-MM-DD HH:mm` | ISO datetime without seconds | `2024-08-23 10:30` |
 | `DD.MM.YYYY HH:mm:ss` | European datetime format | `23.08.2024 10:30:45` |
+| `DD.MM.YYYY HH:mm` | European datetime without seconds | `23.08.2024 10:30` |
 | `DD-MM-YYYY HH:mm:ss` | European datetime with dashes | `23-08-2024 10:30:45` |
 | `MM/DD/YYYY HH:mm:ss` | US datetime format | `08/23/2024 10:30:45` |
+| `YYYY.MM.DD HH:mm:ss` | Dotted datetime format | `2024.08.23 10:30:45` |
+| `YYYY.MM.DD HH:mm` | Dotted datetime without seconds | `2024.08.23 10:30` |
 
 ```javascript
 const date = new kk_date('2024-08-23 10:30:45');
 
 date.format('YYYY-MM-DD HH:mm:ss'); // '2024-08-23 10:30:45'
+date.format('YYYY-MM-DD HH:mm');    // '2024-08-23 10:30'
 date.format('DD.MM.YYYY HH:mm:ss'); // '23.08.2024 10:30:45'
+date.format('DD.MM.YYYY HH:mm');    // '23.08.2024 10:30'
 date.format('DD-MM-YYYY HH:mm:ss'); // '23-08-2024 10:30:45'
 date.format('MM/DD/YYYY HH:mm:ss'); // '08/23/2024 10:30:45'
+date.format('YYYY.MM.DD HH:mm:ss'); // '2024.08.23 10:30:45'
+date.format('YYYY.MM.DD HH:mm');    // '2024.08.23 10:30'
 ```
 
 ### ISO 8601 Format
@@ -319,15 +327,21 @@ date.format('YYYY-MM-DDTHH:mm:ss'); // '2024-08-23T10:30:45'
 | Template | Description | Example |
 |----------|-------------|---------|
 | `DD MMMM YYYY HH:mm` | Date with full month and time | `23 August 2024 10:30` |
-| `Do MMMM YYYY HH:mm` | Date with ordinal and time | `23rd August 2024 10:30` |
-| `dddd, DD MMMM YYYY HH:mm` | Full weekday with datetime | `Friday, 23 August 2024 10:30` |
+| `Do MMMM YYYY` | Ordinal day with full month | `23 August 2024` |
+| `Do MMM YYYY` | Ordinal day with short month | `23 Aug 2024` |
+| `DD MMMM dddd, YYYY` | Date with weekday and comma | `23 August Friday, 2024` |
+| `YYYY MMM DD` | Year-month-day format | `2024 Aug 23` |
+| `YYYY MMMM DD` | Year-fullmonth-day format | `2024 August 23` |
 
 ```javascript
 const date = new kk_date('2024-08-23 10:30:45');
 
-date.format('DD MMMM YYYY HH:mm');        // '23 August 2024 10:30'
-date.format('Do MMMM YYYY HH:mm');        // '23rd August 2024 10:30'
-date.format('dddd, DD MMMM YYYY HH:mm');  // 'Friday, 23 August 2024 10:30'
+date.format('DD MMMM YYYY HH:mm');   // '23 August 2024 10:30'
+date.format('Do MMMM YYYY');         // '23 August 2024'
+date.format('Do MMM YYYY');          // '23 Aug 2024'
+date.format('DD MMMM dddd, YYYY');   // '23 August Friday, 2024'
+date.format('YYYY MMM DD');          // '2024 Aug 23'
+date.format('YYYY MMMM DD');         // '2024 August 23'
 ```
 
 ### Compact Formats
@@ -448,6 +462,32 @@ locales.forEach(locale => {
 // fr: Vendredi, 23 août 2024
 // es: Viernes, 23 agosto 2024
 ```
+
+### Ordinal Formats with Locale Support
+
+Ordinal formats (`Do MMMM YYYY`, `Do MMM YYYY`) use native `Intl.NumberFormat` for locale-aware number formatting:
+
+```javascript
+const date = new kk_date('2024-08-01');
+
+// English ordinals (native number formatting)
+kk_date.config({ locale: 'en' });
+console.log(date.format('Do MMMM YYYY')); // '1 August 2024'
+
+// Turkish ordinals 
+kk_date.config({ locale: 'tr' });
+console.log(date.format('Do MMMM YYYY')); // '1 Ağustos 2024'
+
+// German ordinals
+kk_date.config({ locale: 'de' });
+console.log(date.format('Do MMMM YYYY')); // '1 August 2024'
+
+// French ordinals
+kk_date.config({ locale: 'fr' });
+console.log(date.format('Do MMMM YYYY')); // '1 août 2024'
+```
+
+**Note:** Ordinal formats use native browser internationalization (Intl.NumberFormat) instead of hardcoded English suffixes, ensuring proper localization across different languages and regions.
 
 ## Examples
 

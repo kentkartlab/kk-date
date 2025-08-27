@@ -277,6 +277,8 @@ const cached_dateTimeFormat = {
 	},
 };
 
+const cached_numberFormat = new Map();
+
 const global_config = {
 	locale: 'en',
 	timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -301,4 +303,5 @@ module.exports.timezone_abbreviation_cache = timezone_abbreviation_cache;
 module.exports.target_timezone_cache = target_timezone_cache;
 module.exports.long_timezone_cache = long_timezone_cache;
 module.exports.cached_dateTimeFormat = cached_dateTimeFormat;
+module.exports.cached_numberFormat = cached_numberFormat;
 module.exports.global_config = global_config;
