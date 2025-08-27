@@ -93,11 +93,11 @@ const format_types_regex = {
 	'MMMM YYYY': /^\p{L}+ (17|18|19|20|21)\d\d$/u,
 	'DD MMMM dddd YYYY': /^[0-3]?[0-9] [\p{L}\p{M}]+ [\p{L}\p{M}]+ (17|18|19|20|21)\d\d$/u,
 	'HH:mm:ss': /^([01]\d|2[0-9]):([0-5]\d):([0-5]\d)$/,
-	'HH:mm:ss.SSS': /^([01]\d|2[0-9]):([0-5]\d):([0-5]\d):([0-5][0-9])\.(\d{3})$/,
+	'HH:mm:ss.SSS': /^([01]\d|2[0-9]):([0-5]\d):([0-5]\d)\.(\d{3})$/,
 	'HH:mm': /^([01]\d|2[0-9]):([0-5]\d)(?::[0-5]\d)?$/,
 	'hh:mm': /^(0[1-9]|1[0-2]):([0-5][0-9]) (AM|PM)$/,
 	'hh:mm:ss': /^(0[1-9]|1[0-2]):([0-5][0-9]):([0-5]\d) (AM|PM)$/,
-	'hh:mm:ss.SSS': /^(0[1-9]|1[0-2]|2[0-3]):([0-5][0-9]):([0-5][0-9])\.(\d{3})$/,
+	'hh:mm:ss.SSS': /^(0[1-9]|1[0-2]):([0-5][0-9]):([0-5][0-9])\.(\d{3}) (AM|PM)$/,
 	HH: /^([01]\d|2[0-9])$/,
 	mm: /^([0-5]\d)$/,
 	ss: /^([0-5]\d)$/,
@@ -122,6 +122,16 @@ const format_types_regex = {
 	'YYYY-MM-DDTHH:mm:ss': /^(17|18|19|20|21)\d\d-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01]\d|2[0-3]):([0-5]\d):([0-5]\d)$/,
 	'DD MMMM': /^(0?[1-9]|[12][0-9]|3[01]) \p{L}+$/u,
 };
+
+const format_types_cache = new Map();
+for (const key in format_types) {
+	format_types_cache.set(key, format_types[key]);
+}
+
+const format_types_regex_cache = new Map();
+for (const key in format_types_regex) {
+	format_types_regex_cache.set(key, format_types_regex[key]);
+}
 
 const month_numbers = {
 	1: 'January',
@@ -244,6 +254,10 @@ const iso6391_languages = {
 const default_en_day_number = new Intl.DateTimeFormat('en', { day: 'numeric' });
 
 const timezone_cache = new Map();
+const timezone_check_cache = new Map();
+const timezone_abbreviation_cache = new Map();
+const target_timezone_cache = new Map();
+const long_timezone_cache = new Map();
 const cached_dateTimeFormat = {
 	dddd: new Intl.DateTimeFormat('en', {
 		weekday: 'long',
@@ -274,11 +288,17 @@ const global_config = {
 module.exports.cache_ttl = cache_ttl;
 module.exports.timeInMilliseconds = timeInMilliseconds;
 module.exports.format_types = format_types;
+module.exports.format_types_cache = format_types_cache;
+module.exports.format_types_regex_cache = format_types_regex_cache;
 module.exports.month_numbers = month_numbers;
 module.exports.day_numbers = day_numbers;
 module.exports.iso6391_languages = iso6391_languages;
 module.exports.default_en_day_number = default_en_day_number;
 module.exports.format_types_regex = format_types_regex;
 module.exports.timezone_cache = timezone_cache;
+module.exports.timezone_check_cache = timezone_check_cache;
+module.exports.timezone_abbreviation_cache = timezone_abbreviation_cache;
+module.exports.target_timezone_cache = target_timezone_cache;
+module.exports.long_timezone_cache = long_timezone_cache;
 module.exports.cached_dateTimeFormat = cached_dateTimeFormat;
 module.exports.global_config = global_config;
