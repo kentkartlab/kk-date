@@ -45,12 +45,10 @@ console.log(currentTimezone); // 'UTC'
 ### Converting Between Timezones
 
 ```javascript
-const date = new kk_date('2024-08-23 10:00:00');
-
-// Convert to different timezones
-const nyTime = date.tz('America/New_York');
-const tokyoTime = date.tz('Asia/Tokyo');
-const londonTime = date.tz('Europe/London');
+// Each timezone conversion should use a separate instance
+const nyTime = new kk_date('2024-08-23 10:00:00').tz('America/New_York');
+const tokyoTime = new kk_date('2024-08-23 10:00:00').tz('Asia/Tokyo');
+const londonTime = new kk_date('2024-08-23 10:00:00').tz('Europe/London');
 
 console.log(nyTime.format('HH:mm'));     // '06:00' (EDT)
 console.log(tokyoTime.format('HH:mm'));  // '19:00' (JST)
@@ -62,7 +60,7 @@ console.log(londonTime.format('HH:mm')); // '11:00' (BST)
 ```javascript
 // Create date with specific timezone
 const date = new kk_date('2024-08-23 10:00:00');
-            date.config({timezone: 'America/New_York'});
+date.config({timezone: 'America/New_York'});
 
 console.log(date.format('HH:mm')); // '10:00' (interpreted as NY time)
 ```
@@ -74,17 +72,15 @@ console.log(date.format('HH:mm')); // '10:00' (interpreted as NY time)
 kk-date automatically handles DST transitions without any additional configuration:
 
 ```javascript
-// DST transition examples
-const date = new kk_date('2024-03-10 02:00:00');
+// DST transition examples - separate instances for each conversion
 
 // Spring forward (DST starts)
-const nyTime = date.tz('America/New_York');
-console.log(nyTime.format('HH:mm')); // '03:00' (EDT)
+const springTime = new kk_date('2024-03-10 02:00:00').tz('America/New_York');
+console.log(springTime.format('HH:mm')); // '03:00' (EDT)
 
 // Fall back (DST ends)
-const fallDate = new kk_date('2024-11-03 02:00:00');
-const fallNyTime = fallDate.tz('America/New_York');
-console.log(fallNyTime.format('HH:mm')); // '01:00' (EST)
+const fallTime = new kk_date('2024-11-03 02:00:00').tz('America/New_York');
+console.log(fallTime.format('HH:mm')); // '01:00' (EST)
 ```
 
 ### Checking DST Status
@@ -105,13 +101,14 @@ console.log(info.abbreviation); // 'EDT'
 ### DST Transition Dates
 
 ```javascript
-// 2024 DST transitions in US
-const springForward = new kk_date('2024-03-10 02:00:00');
-const fallBack = new kk_date('2024-11-03 02:00:00');
+// 2024 DST transitions in US - separate instances for each operation
 
-// Before and after spring forward
-const beforeSpring = springForward.add(-1, 'hours');
-const afterSpring = springForward.add(1, 'hours');
+// Before and after spring forward (separate instances)
+const beforeSpring = new kk_date('2024-03-10 02:00:00');
+beforeSpring.add(-1, 'hours');
+
+const afterSpring = new kk_date('2024-03-10 02:00:00');
+afterSpring.add(1, 'hours');
 
 console.log(beforeSpring.tz('America/New_York').format('HH:mm')); // '01:00' (EST)
 console.log(afterSpring.tz('America/New_York').format('HH:mm'));  // '03:00' (EDT)
@@ -126,12 +123,12 @@ console.log(afterSpring.tz('America/New_York').format('HH:mm'));  // '03:00' (ED
 ```javascript
 // Schedule a meeting at 2 PM New York time
 const meetingTime = new kk_date('2024-08-23 14:00:00');
-            date.config({timezone: 'America/New_York'});
+meetingTime.config({timezone: 'America/New_York'});
 
-// Convert to other timezones
-const londonTime = meetingTime.tz('Europe/London');
-const tokyoTime = meetingTime.tz('Asia/Tokyo');
-const sydneyTime = meetingTime.tz('Australia/Sydney');
+// Convert to other timezones - separate instances for each conversion
+const londonTime = new kk_date('2024-08-23 14:00:00').config({timezone: 'America/New_York'}).tz('Europe/London');
+const tokyoTime = new kk_date('2024-08-23 14:00:00').config({timezone: 'America/New_York'}).tz('Asia/Tokyo');
+const sydneyTime = new kk_date('2024-08-23 14:00:00').config({timezone: 'America/New_York'}).tz('Australia/Sydney');
 
 console.log('Meeting times:');
 console.log('New York:', meetingTime.format('HH:mm'));     // 14:00
@@ -145,15 +142,15 @@ console.log('Sydney:', sydneyTime.format('HH:mm'));        // 04:00 (next day)
 ```javascript
 // Flight departs at 10:30 AM from Istanbul
 const departure = new kk_date('2024-08-23 10:30:00');
-            date.config({timezone: 'Europe/Istanbul'});
+departure.config({timezone: 'Europe/Istanbul'});
 
 // Flight arrives at 2:15 PM in New York
 const arrival = new kk_date('2024-08-23 14:15:00');
-            date.config({timezone: 'America/New_York'});
+arrival.config({timezone: 'America/New_York'});
 
-// Convert to UTC for storage
-const departureUTC = departure.tz('UTC');
-const arrivalUTC = arrival.tz('UTC');
+// Convert to UTC for storage - separate instances
+const departureUTC = new kk_date('2024-08-23 10:30:00').config({timezone: 'Europe/Istanbul'}).tz('UTC');
+const arrivalUTC = new kk_date('2024-08-23 14:15:00').config({timezone: 'America/New_York'}).tz('UTC');
 
 console.log('Flight times (UTC):');
 console.log('Departure:', departureUTC.format('HH:mm')); // 07:30
@@ -165,14 +162,14 @@ console.log('Arrival:', arrivalUTC.format('HH:mm'));     // 18:15
 ```javascript
 // Order placed at 3:45 PM in customer's timezone (Los Angeles)
 const orderTime = new kk_date('2024-08-23 15:45:00');
-            date.config({timezone: 'America/Los_Angeles'});
+orderTime.config({timezone: 'America/Los_Angeles'});
 
-// Convert to warehouse timezone (Chicago)
-const warehouseTime = orderTime.tz('America/Chicago');
+// Convert to warehouse timezone (Chicago) - separate instance
+const warehouseTime = new kk_date('2024-08-23 15:45:00').config({timezone: 'America/Los_Angeles'}).tz('America/Chicago');
 console.log('Order received at warehouse:', warehouseTime.format('HH:mm')); // 17:45
 
-// Convert to customer support timezone (India)
-const supportTime = orderTime.tz('Asia/Kolkata');
+// Convert to customer support timezone (India) - separate instance
+const supportTime = new kk_date('2024-08-23 15:45:00').config({timezone: 'America/Los_Angeles'}).tz('Asia/Kolkata');
 console.log('Order time for support:', supportTime.format('HH:mm')); // 04:15 (next day)
 ```
 
@@ -181,16 +178,16 @@ console.log('Order time for support:', supportTime.format('HH:mm')); // 04:15 (n
 ```javascript
 // Late night in one timezone, early morning in another
 const lateNight = new kk_date('2024-08-23 23:30:00');
-            date.config({timezone: 'America/Los_Angeles'});
+lateNight.config({timezone: 'America/Los_Angeles'});
 
-const tokyoTime = lateNight.tz('Asia/Tokyo');
+const tokyoTime = new kk_date('2024-08-23 23:30:00').config({timezone: 'America/Los_Angeles'}).tz('Asia/Tokyo');
 console.log(tokyoTime.format('YYYY-MM-DD HH:mm')); // 2024-08-24 15:30
 
 // Early morning in one timezone, late night in another
 const earlyMorning = new kk_date('2024-08-24 06:00:00');
-            date.config({timezone: 'Asia/Tokyo'});
+earlyMorning.config({timezone: 'Asia/Tokyo'});
 
-const laTime = earlyMorning.tz('America/Los_Angeles');
+const laTime = new kk_date('2024-08-24 06:00:00').config({timezone: 'Asia/Tokyo'}).tz('America/Los_Angeles');
 console.log(laTime.format('YYYY-MM-DD HH:mm')); // 2024-08-23 14:00
 ```
 
@@ -222,7 +219,7 @@ kk_date.setTimezone('UTC');
 
 // Instance with specific timezone
 const nyDate = new kk_date('2024-08-23 10:00:00');
-            date.config({timezone: 'America/New_York'});
+nyDate.config({timezone: 'America/New_York'});
 
 console.log(nyDate.format('HH:mm')); // '10:00' (NY time, not UTC)
 ```
@@ -239,7 +236,7 @@ kk_date.setTimezone('UTC');
 
 // Instance: New York
 const date = new kk_date('2024-08-23 10:00:00');
-            date.config({timezone: 'America/New_York'});
+date.config({timezone: 'America/New_York'});
 
 // Result: Uses New York timezone (instance overrides global)
 console.log(date.format('HH:mm')); // '10:00' (NY time)
@@ -255,7 +252,7 @@ kk_date.setUserTimezone('America/New_York');
 
 // Use user timezone for display
 const serverTime = new kk_date('2024-08-23 15:00:00');
-            date.config({timezone: 'UTC'});
+serverTime.config({timezone: 'UTC'});
 
 const userTime = serverTime.tz(kk_date.getUserTimezone());
 console.log('Time for user:', userTime.format('HH:mm')); // '11:00'
@@ -270,7 +267,7 @@ const userTimezone = 'America/Chicago';
 
 // Parse user input in their timezone
 const userDate = new kk_date(userInput);
-            date.config({timezone: userTimezone});
+userDate.config({timezone: userTimezone});
 
 // Convert to UTC for storage
 const utcDate = userDate.tz('UTC');
@@ -282,11 +279,11 @@ console.log('Store in database:', utcDate.toISOString()); // '2024-08-23T19:30:0
 ```javascript
 // Server time in UTC
 const serverTime = new kk_date('2024-08-23 15:00:00');
-            date.config({timezone: 'UTC'});
+serverTime.config({timezone: 'UTC'});
 
 // Convert to client's timezone for API response
 const clientTimezone = 'Europe/London';
-const clientTime = serverTime.tz(clientTimezone);
+const clientTime = new kk_date('2024-08-23 15:00:00').config({timezone: 'UTC'}).tz(clientTimezone);
 
 const apiResponse = {
     serverTime: serverTime.toISOString(),
@@ -300,7 +297,7 @@ const apiResponse = {
 ```javascript
 // Event at 2 PM in organizer's timezone
 const eventTime = new kk_date('2024-08-23 14:00:00');
-            date.config({timezone: 'America/New_York'});
+eventTime.config({timezone: 'America/New_York'});
 
 // Convert for different attendees
 const attendees = [
@@ -310,7 +307,7 @@ const attendees = [
 ];
 
 attendees.forEach(attendee => {
-    const localTime = eventTime.tz(attendee.timezone);
+    const localTime = new kk_date('2024-08-23 14:00:00').config({timezone: 'America/New_York'}).tz(attendee.timezone);
     console.log(`${attendee.name}: ${localTime.format('HH:mm')}`);
 });
 // John: 19:00
@@ -325,10 +322,10 @@ attendees.forEach(attendee => {
 ```javascript
 // ❌ Don't store local times
 const localTime = new kk_date('2024-08-23 14:00:00');
-            date.config({timezone: 'America/New_York'});
+localTime.config({timezone: 'America/New_York'});
 
 // ✅ Store in UTC
-const utcTime = localTime.tz('UTC');
+const utcTime = new kk_date('2024-08-23 14:00:00').config({timezone: 'America/New_York'}).tz('UTC');
 console.log(utcTime.toISOString()); // '2024-08-23T18:00:00.000Z'
 ```
 
@@ -373,7 +370,7 @@ date.tz('America/Los_Angeles'); // Clear and unambiguous
 ```javascript
 // Be careful with DST transition times
 const dstTransition = new kk_date('2024-03-10 02:30:00');
-            date.config({timezone: 'America/New_York'});
+dstTransition.config({timezone: 'America/New_York'});
 
 // This time doesn't exist during spring forward
 console.log(dstTransition.format('HH:mm')); // May show unexpected result
@@ -447,10 +444,12 @@ const third = date.tz('America/New_York');
 const date = new kk_date('2024-08-23 10:00:00');
 const info = date.getTimezoneInfo('America/New_York');
 
-console.log('Timezone info:').config({timezone: info.timezone,
+console.log('Timezone info:', {
+    timezone: info.timezone,
     offset: info.offset / (60 * 60 * 1000) + ' hours',
     isDST: info.isDST,
-    abbreviation: info.abbreviation});
+    abbreviation: info.abbreviation
+});
 ```
 
 #### 2. Verify UTC Base

@@ -30,20 +30,20 @@ const kk_date = require('kk-date');
 // Enable caching for high-performance applications
 kk_date.caching({ status: true, defaultTtl: 3600 });
 
-// Create and manipulate dates with automatic DST handling
+// Create and format dates
 const date = new kk_date('2024-08-23 10:30:00');
 console.log(date.format('YYYY-MM-DD HH:mm:ss')); // 2024-08-23 10:30:00
 
 // Zero-config timezone conversion with automatic DST detection
-const nyTime = date.tz('America/New_York');
+const nyTime = new kk_date('2024-08-23 10:30:00').tz('America/New_York');
 console.log(nyTime.format('HH:mm')); // 06:30 (EDT - automatically detected)
 
 // Consistent results across all platforms and systems
-const tokyoTime = date.tz('Asia/Tokyo');
+const tokyoTime = new kk_date('2024-08-23 10:30:00').tz('Asia/Tokyo');
 console.log(tokyoTime.format('HH:mm')); // 16:00 (JST - consistent everywhere)
 
 // Lightning-fast date manipulation
-const tomorrow = date.add(1, 'days');
+const tomorrow = new kk_date('2024-08-23 10:30:00').add(1, 'days');
 console.log(tomorrow.format('YYYY-MM-DD')); // 2024-08-24
 ```
 
@@ -95,8 +95,8 @@ Timezone handling is one of the most critical aspects of date libraries. Inconsi
 const testDate = '2024-08-23 10:00:00';
 
 // kk-date: Consistent results across all platforms
-const kkDate = new kk_date(testDate);
-console.log(kkDate.tz('America/New_York').format('YYYY-MM-DD HH:mm:ss'));
+const kkDate = new kk_date(testDate).tz('America/New_York');
+console.log(kkDate.format('YYYY-MM-DD HH:mm:ss'));
 // Result: 2024-08-23 06:00:00 (consistent everywhere)
 
 // Moment.js: Results vary based on system timezone
@@ -118,13 +118,13 @@ console.log(dayjsDate.tz('America/New_York').format('YYYY-MM-DD HH:mm:ss'));
 
 ```javascript
 // Same code, same results on Windows, macOS, Linux, and Docker
-const date = new kk_date('2024-08-23 10:00:00');
+const baseTime = '2024-08-23 10:00:00';
 
 // These results are identical on all platforms:
-console.log(date.tz('UTC').format('YYYY-MM-DD HH:mm:ss'));        // 2024-08-23 07:00:00
-console.log(date.tz('America/New_York').format('YYYY-MM-DD HH:mm:ss')); // 2024-08-23 03:00:00
-console.log(date.tz('Europe/London').format('YYYY-MM-DD HH:mm:ss'));    // 2024-08-23 08:00:00
-console.log(date.tz('Asia/Tokyo').format('YYYY-MM-DD HH:mm:ss'));       // 2024-08-23 16:00:00
+console.log(new kk_date(baseTime).tz('UTC').format('YYYY-MM-DD HH:mm:ss'));        // 2024-08-23 07:00:00
+console.log(new kk_date(baseTime).tz('America/New_York').format('YYYY-MM-DD HH:mm:ss')); // 2024-08-23 03:00:00
+console.log(new kk_date(baseTime).tz('Europe/London').format('YYYY-MM-DD HH:mm:ss'));    // 2024-08-23 08:00:00
+console.log(new kk_date(baseTime).tz('Asia/Tokyo').format('YYYY-MM-DD HH:mm:ss'));       // 2024-08-23 16:00:00
 ```
 
 ### Automatic DST Detection
@@ -136,10 +136,10 @@ console.log(date.tz('Asia/Tokyo').format('YYYY-MM-DD HH:mm:ss'));       // 2024-
 const dstStart = new kk_date('2024-03-10 02:30:00'); // DST begins
 const dstEnd = new kk_date('2024-11-03 02:30:00');   // DST ends
 
-console.log(dstStart.tz('America/New_York').format('YYYY-MM-DD HH:mm:ss'));
+console.log(new kk_date('2024-03-10 02:30:00').tz('America/New_York').format('YYYY-MM-DD HH:mm:ss'));
 // Result: 2024-03-09 21:30:00 (correctly adjusted)
 
-console.log(dstEnd.tz('America/New_York').format('YYYY-MM-DD HH:mm:ss'));
+console.log(new kk_date('2024-11-03 02:30:00').tz('America/New_York').format('YYYY-MM-DD HH:mm:ss'));
 // Result: 2024-11-02 21:30:00 (correctly adjusted)
 ```
 
@@ -179,10 +179,11 @@ for (let i = 0; i < 1000000; i++) {
 ### Zero-Config DST Handling
 ```javascript
 // Automatic DST detection - no manual configuration needed
-const date = new kk_date('2024-08-23 10:00:00');
-const nyTime = date.tz('America/New_York'); // Automatically EDT
-const winterTime = new kk_date('2024-12-23 10:00:00');
-const nyWinter = winterTime.tz('America/New_York'); // Automatically EST
+const summerTime = new kk_date('2024-08-23 10:00:00').tz('America/New_York'); // Automatically EDT
+const winterTime = new kk_date('2024-12-23 10:00:00').tz('America/New_York'); // Automatically EST
+
+console.log(summerTime.format('HH:mm')); // Summer time (EDT)
+console.log(winterTime.format('HH:mm')); // Winter time (EST)
 ```
 
 ### Memory-Efficient Operations

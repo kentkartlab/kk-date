@@ -361,6 +361,9 @@ const padZero = (num) => String(num).padStart(2, '0');
  * // Output: { years: 0, months: 0, weeks: 0, days: 0, hours: 20, minutes: 34, seconds: 0, milliseconds: 0 }
  */
 function duration(time, type) {
+	if (!Number.isInteger(time)) {
+		throw new Error('Invalid time');
+	}
 	const _milliseconds = time * timeInMilliseconds[type];
 
 	const response = {

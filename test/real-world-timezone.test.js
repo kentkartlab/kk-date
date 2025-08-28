@@ -85,8 +85,8 @@ describe('Real-World Timezone Scenarios', () => {
 			expect(dubaiTime.isValid()).toBe(true);
 
 			// Check that times are reasonable (between 0-23 hours)
-			const nyHour = parseInt(nyTime.format('HH'));
-			const tokyoHour = parseInt(tokyoTime.format('HH'));
+			const nyHour = parseInt(nyTime.format('HH'), 10);
+			const tokyoHour = parseInt(tokyoTime.format('HH'), 10);
 			expect(nyHour).toBeGreaterThanOrEqual(0);
 			expect(nyHour).toBeLessThanOrEqual(23);
 			expect(tokyoHour).toBeGreaterThanOrEqual(0);
@@ -109,7 +109,7 @@ describe('Real-World Timezone Scenarios', () => {
 			for (const { timezone } of offices) {
 				const localTime = testTime.tz(timezone);
 				expect(localTime.isValid()).toBe(true);
-				const hour = parseInt(localTime.format('HH'));
+				const hour = parseInt(localTime.format('HH'), 10);
 				expect(hour).toBeGreaterThanOrEqual(0);
 				expect(hour).toBeLessThanOrEqual(23);
 			}
@@ -146,7 +146,7 @@ describe('Real-World Timezone Scenarios', () => {
 
 			// Should arrive at a reasonable time
 			expect(nyArrival.isValid()).toBe(true);
-			const arrivalHour = parseInt(nyArrival.format('HH'));
+			const arrivalHour = parseInt(nyArrival.format('HH'), 10);
 			expect(arrivalHour).toBeGreaterThanOrEqual(0);
 			expect(arrivalHour).toBeLessThanOrEqual(23);
 		});
@@ -160,7 +160,7 @@ describe('Real-World Timezone Scenarios', () => {
 
 			// Should be valid conversion
 			expect(niue.isValid()).toBe(true);
-			const niueHour = parseInt(niue.format('HH'));
+			const niueHour = parseInt(niue.format('HH'), 10);
 			expect(niueHour).toBeGreaterThanOrEqual(0);
 			expect(niueHour).toBeLessThanOrEqual(23);
 		});
@@ -172,7 +172,7 @@ describe('Real-World Timezone Scenarios', () => {
 
 			// Should be valid conversion
 			expect(utc.isValid()).toBe(true);
-			const utcHour = parseInt(utc.format('HH'));
+			const utcHour = parseInt(utc.format('HH'), 10);
 			expect(utcHour).toBeGreaterThanOrEqual(0);
 			expect(utcHour).toBeLessThanOrEqual(23);
 		});
@@ -184,7 +184,7 @@ describe('Real-World Timezone Scenarios', () => {
 
 			// Should be valid conversion
 			expect(utc.isValid()).toBe(true);
-			const utcHour = parseInt(utc.format('HH'));
+			const utcHour = parseInt(utc.format('HH'), 10);
 			expect(utcHour).toBeGreaterThanOrEqual(0);
 			expect(utcHour).toBeLessThanOrEqual(23);
 		});
@@ -198,7 +198,7 @@ describe('Real-World Timezone Scenarios', () => {
 
 			// Should be valid conversion
 			expect(la.isValid()).toBe(true);
-			const laHour = parseInt(la.format('HH'));
+			const laHour = parseInt(la.format('HH'), 10);
 			expect(laHour).toBeGreaterThanOrEqual(0);
 			expect(laHour).toBeLessThanOrEqual(23);
 
@@ -208,7 +208,7 @@ describe('Real-World Timezone Scenarios', () => {
 
 			// Should be valid conversion
 			expect(tokyoEvening.isValid()).toBe(true);
-			const tokyoHour = parseInt(tokyoEvening.format('HH'));
+			const tokyoHour = parseInt(tokyoEvening.format('HH'), 10);
 			expect(tokyoHour).toBeGreaterThanOrEqual(0);
 			expect(tokyoHour).toBeLessThanOrEqual(23);
 		});
@@ -220,7 +220,7 @@ describe('Real-World Timezone Scenarios', () => {
 
 			// Should be valid conversion
 			expect(la.isValid()).toBe(true);
-			const laHour = parseInt(la.format('HH'));
+			const laHour = parseInt(la.format('HH'), 10);
 			expect(laHour).toBeGreaterThanOrEqual(0);
 			expect(laHour).toBeLessThanOrEqual(23);
 		});
@@ -240,7 +240,7 @@ describe('Real-World Timezone Scenarios', () => {
 				const winterDate = new kk_date('2024-01-15 12:00:00').tz(timezone);
 				const winterUTC = winterDate.tz('UTC');
 				expect(winterUTC.isValid()).toBe(true);
-				const winterHour = parseInt(winterUTC.format('HH'));
+				const winterHour = parseInt(winterUTC.format('HH'), 10);
 				expect(winterHour).toBeGreaterThanOrEqual(0);
 				expect(winterHour).toBeLessThanOrEqual(23);
 
@@ -248,7 +248,7 @@ describe('Real-World Timezone Scenarios', () => {
 				const summerDate = new kk_date('2024-07-15 12:00:00').tz(timezone);
 				const summerUTC = summerDate.tz('UTC');
 				expect(summerUTC.isValid()).toBe(true);
-				const summerHour = parseInt(summerUTC.format('HH'));
+				const summerHour = parseInt(summerUTC.format('HH'), 10);
 				expect(summerHour).toBeGreaterThanOrEqual(0);
 				expect(summerHour).toBeLessThanOrEqual(23);
 			}
@@ -281,7 +281,7 @@ describe('Real-World Timezone Scenarios', () => {
 			for (const timezone of timezones) {
 				const localTime = webinarTime.tz(timezone);
 				expect(localTime.isValid()).toBe(true);
-				const hour = parseInt(localTime.format('HH'));
+				const hour = parseInt(localTime.format('HH'), 10);
 				expect(hour).toBeGreaterThanOrEqual(0);
 				expect(hour).toBeLessThanOrEqual(23);
 			}
@@ -297,21 +297,21 @@ describe('Real-World Timezone Scenarios', () => {
 			// London arrival
 			const londonArrival = new kk_date(istanbulDeparture.getTime() + flightToLondon).tz('Europe/London');
 			expect(londonArrival.isValid()).toBe(true);
-			const londonHour = parseInt(londonArrival.format('HH'));
+			const londonHour = parseInt(londonArrival.format('HH'), 10);
 			expect(londonHour).toBeGreaterThanOrEqual(0);
 			expect(londonHour).toBeLessThanOrEqual(23);
 
 			// London departure
 			const londonDeparture = new kk_date(londonArrival.getTime() + layover).tz('Europe/London');
 			expect(londonDeparture.isValid()).toBe(true);
-			const departureHour = parseInt(londonDeparture.format('HH'));
+			const departureHour = parseInt(londonDeparture.format('HH'), 10);
 			expect(departureHour).toBeGreaterThanOrEqual(0);
 			expect(departureHour).toBeLessThanOrEqual(23);
 
 			// New York arrival
 			const nyArrival = new kk_date(londonDeparture.getTime() + flightToNY).tz('America/New_York');
 			expect(nyArrival.isValid()).toBe(true);
-			const nyHour = parseInt(nyArrival.format('HH'));
+			const nyHour = parseInt(nyArrival.format('HH'), 10);
 			expect(nyHour).toBeGreaterThanOrEqual(0);
 			expect(nyHour).toBeLessThanOrEqual(23);
 		});
