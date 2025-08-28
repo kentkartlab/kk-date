@@ -1,4 +1,4 @@
-const { describe, test, expect } = require('@jest/globals');
+const { describe, test, expect, afterEach } = require('@jest/globals');
 const kk_date = require('../index');
 const test_date = '2024-08-19';
 const test_time = '23:50:59';
@@ -348,3 +348,41 @@ describe('year tests', () => {
 		}
 	});
 });
+
+describe('newly added format templates', () => {
+	const test_date = '2024-08-19';
+	const test_time = '14:30:45';
+	const base_datetime = `${test_date} ${test_time}`;
+
+	test('YYYY-MM-DD HH:mm format', () => {
+		expect(new kk_date(base_datetime).format('YYYY-MM-DD HH:mm')).toBe('2024-08-19 14:30');
+		expect(new kk_date('2024-01-01 09:05:30').format('YYYY-MM-DD HH:mm')).toBe('2024-01-01 09:05');
+		expect(new kk_date('2024-12-31 23:59:59').format('YYYY-MM-DD HH:mm')).toBe('2024-12-31 23:59');
+	});
+
+	test('YYYY.MM.DD HH:mm format', () => {
+		expect(new kk_date(base_datetime).format('YYYY.MM.DD HH:mm')).toBe('2024.08.19 14:30');
+		expect(new kk_date('2024-01-01 09:05:30').format('YYYY.MM.DD HH:mm')).toBe('2024.01.01 09:05');
+		expect(new kk_date('2024-12-31 23:59:59').format('YYYY.MM.DD HH:mm')).toBe('2024.12.31 23:59');
+	});
+
+
+	test('DD MMMM dddd, YYYY format', () => {
+		expect(new kk_date('2024-08-19').format('DD MMMM dddd, YYYY')).toBe('19 August Monday, 2024');
+		expect(new kk_date('2024-01-01').format('DD MMMM dddd, YYYY')).toBe('01 January Monday, 2024');
+		expect(new kk_date('2024-12-25').format('DD MMMM dddd, YYYY')).toBe('25 December Wednesday, 2024');
+	});
+
+	test('YYYY MMM DD format (reverse order)', () => {
+		expect(new kk_date('2024-08-19').format('YYYY MMM DD')).toBe('2024 Aug 19');
+		expect(new kk_date('2024-01-01').format('YYYY MMM DD')).toBe('2024 Jan 01');
+		expect(new kk_date('2024-12-31').format('YYYY MMM DD')).toBe('2024 Dec 31');
+	});
+
+	test('YYYY MMMM DD format (reverse order full)', () => {
+		expect(new kk_date('2024-08-19').format('YYYY MMMM DD')).toBe('2024 August 19');
+		expect(new kk_date('2024-01-01').format('YYYY MMMM DD')).toBe('2024 January 01');
+		expect(new kk_date('2024-12-31').format('YYYY MMMM DD')).toBe('2024 December 31');
+	});
+});
+

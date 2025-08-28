@@ -325,7 +325,7 @@ const customFormatters = {
     
     // Quarter formatting
     quarter: (date) => {
-        const month = parseInt(date.format('M'));
+        const month = parseInt(date.format('MM'), 10);
         const quarter = Math.ceil(month / 3);
         return `Q${quarter} ${date.format('YYYY')}`;
     }

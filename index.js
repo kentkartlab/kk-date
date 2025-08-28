@@ -1290,6 +1290,13 @@ function formatter(orj_this, template = null) {
 			});
 			return `${result.year}-${result.month}-${result.day} ${result.hours}:${result.minutes}:${result.seconds}`;
 		}
+		case format_types['YYYY-MM-DD HH:mm']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes'], {
+				isUTC,
+				detectedFormat: orj_this.detected_format,
+			});
+			return `${result.year}-${result.month}-${result.day} ${result.hours}:${result.minutes}`;
+		}
 		case format_types['YYYY-MM-DDTHH:mm:ss']: {
 			// ISO format - use UTC
 			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes', 'seconds'], {
@@ -1304,6 +1311,13 @@ function formatter(orj_this, template = null) {
 				detectedFormat: orj_this.detected_format,
 			});
 			return `${result.year}.${result.month}.${result.day} ${result.hours}:${result.minutes}:${result.seconds}`;
+		}
+		case format_types['YYYY.MM.DD HH:mm']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes'], {
+				isUTC,
+				detectedFormat: orj_this.detected_format,
+			});
+			return `${result.year}.${result.month}.${result.day} ${result.hours}:${result.minutes}`;
 		}
 		case format_types['YYYY-MM-DD HH']: {
 			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours'], { isUTC, detectedFormat: orj_this.detected_format });
@@ -1538,7 +1552,7 @@ function formatter(orj_this, template = null) {
 			return `${result.day} ${formatted}`;
 		}
 		case format_types['D MMMM YYYY']: {
-			const day = converter(orj_this.date, ['day'], { pad: false, detectedFormat: orj_this.detected_format }).day;
+			const day = converter(orj_this.date, ['day'], { pad: false, isUTC, detectedFormat: orj_this.detected_format }).day;
 			const year = converter(orj_this.date, ['year'], { isUTC, detectedFormat: orj_this.detected_format }).year;
 			const value = dateTimeFormat(orj_this, 'MMMM');
 			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
@@ -1551,6 +1565,38 @@ function formatter(orj_this, template = null) {
 				nopeRedis.setItemAsync(cache_key, formatted);
 			}
 			return `${day} ${formatted} ${year}`;
+		}
+		case format_types['DD MMMM dddd, YYYY']: {
+			const result = converter(orj_this.date, ['day', 'year'], { isUTC, detectedFormat: orj_this.detected_format });
+			return `${result.day} ${dateTimeFormat(orj_this, 'MMMM').value.format(orj_this.date)} ${dateTimeFormat(orj_this, 'dddd').value.format(orj_this.date)}, ${result.year}`;
+		}
+		case format_types['YYYY MMM DD']: {
+			const result = converter(orj_this.date, ['day', 'year'], { isUTC, detectedFormat: orj_this.detected_format });
+			const value = dateTimeFormat(orj_this, 'MMM');
+			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
+			const cache = nopeRedis.getItem(cache_key);
+			let formatted = null;
+			if (cache) {
+				formatted = cache;
+			} else {
+				formatted = value.value.format(orj_this.date);
+				nopeRedis.setItemAsync(cache_key, formatted);
+			}
+			return `${result.year} ${formatted} ${result.day}`;
+		}
+		case format_types['YYYY MMMM DD']: {
+			const result = converter(orj_this.date, ['day', 'year'], { isUTC, detectedFormat: orj_this.detected_format });
+			const value = dateTimeFormat(orj_this, 'MMMM');
+			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
+			const cache = nopeRedis.getItem(cache_key);
+			let formatted = null;
+			if (cache) {
+				formatted = cache;
+			} else {
+				formatted = value.value.format(orj_this.date);
+				nopeRedis.setItemAsync(cache_key, formatted);
+			}
+			return `${result.year} ${formatted} ${result.day}`;
 		}
 		case null: {
 			const timezoneOffset = -orj_this.date.getTimezoneOffset();
