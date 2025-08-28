@@ -69,14 +69,12 @@ date.format('MMM');   // 'Aug'
 |----------|-------------|---------|
 | `DD` | 2-digit day (01-31) | `23` |
 
-**Note:** `D` (single digit day) and `Do` (day with ordinal suffix) templates are not available as standalone templates in this implementation. However, `Do` is available in specific format combinations like `'Do MMMM YYYY'`.
+**Note:** `D` (single digit day) template is not available in this implementation.
 
 ```javascript
 const date = new kk_date('2024-08-23 10:30:45');
 
 date.format('DD'); // '23'
-// For ordinal day, use combined formats:
-date.format('Do MMMM YYYY'); // '23rd August 2024'
 ```
 
 ### Hour Templates
@@ -181,17 +179,13 @@ date.format('YYYYMMDD');   // '20240823'
 | Template | Description | Example |
 |----------|-------------|---------|
 | `DD MMMM YYYY` | Day with full month name | `23 August 2024` |
-| `Do MMMM YYYY` | Day with ordinal and full month | `23rd August 2024` |
 | `DD MMM YYYY` | Day with short month name | `23 Aug 2024` |
-| `Do MMM YYYY` | Day with ordinal and short month | `23rd Aug 2024` |
 
 ```javascript
 const date = new kk_date('2024-08-23 10:30:45');
 
 date.format('DD MMMM YYYY'); // '23 August 2024'
-date.format('Do MMMM YYYY'); // '23rd August 2024'
 date.format('DD MMM YYYY');  // '23 Aug 2024'
-date.format('Do MMM YYYY');  // '23rd Aug 2024'
 ```
 
 ### Weekday Date Formats
@@ -327,8 +321,6 @@ date.format('YYYY-MM-DDTHH:mm:ss'); // '2024-08-23T10:30:45'
 | Template | Description | Example |
 |----------|-------------|---------|
 | `DD MMMM YYYY HH:mm` | Date with full month and time | `23 August 2024 10:30` |
-| `Do MMMM YYYY` | Ordinal day with full month | `23 August 2024` |
-| `Do MMM YYYY` | Ordinal day with short month | `23 Aug 2024` |
 | `DD MMMM dddd, YYYY` | Date with weekday and comma | `23 August Friday, 2024` |
 | `YYYY MMM DD` | Year-month-day format | `2024 Aug 23` |
 | `YYYY MMMM DD` | Year-fullmonth-day format | `2024 August 23` |
@@ -337,8 +329,6 @@ date.format('YYYY-MM-DDTHH:mm:ss'); // '2024-08-23T10:30:45'
 const date = new kk_date('2024-08-23 10:30:45');
 
 date.format('DD MMMM YYYY HH:mm');   // '23 August 2024 10:30'
-date.format('Do MMMM YYYY');         // '23 August 2024'
-date.format('Do MMM YYYY');          // '23 Aug 2024'
 date.format('DD MMMM dddd, YYYY');   // '23 August Friday, 2024'
 date.format('YYYY MMM DD');          // '2024 Aug 23'
 date.format('YYYY MMMM DD');         // '2024 August 23'
@@ -463,31 +453,6 @@ locales.forEach(locale => {
 // es: Viernes, 23 agosto 2024
 ```
 
-### Ordinal Formats with Locale Support
-
-Ordinal formats (`Do MMMM YYYY`, `Do MMM YYYY`) use native `Intl.NumberFormat` for locale-aware number formatting:
-
-```javascript
-const date = new kk_date('2024-08-01');
-
-// English ordinals (native number formatting)
-kk_date.config({ locale: 'en' });
-console.log(date.format('Do MMMM YYYY')); // '1 August 2024'
-
-// Turkish ordinals 
-kk_date.config({ locale: 'tr' });
-console.log(date.format('Do MMMM YYYY')); // '1 Ağustos 2024'
-
-// German ordinals
-kk_date.config({ locale: 'de' });
-console.log(date.format('Do MMMM YYYY')); // '1 August 2024'
-
-// French ordinals
-kk_date.config({ locale: 'fr' });
-console.log(date.format('Do MMMM YYYY')); // '1 août 2024'
-```
-
-**Note:** Ordinal formats use native browser internationalization (Intl.NumberFormat) instead of hardcoded English suffixes, ensuring proper localization across different languages and regions.
 
 ## Examples
 

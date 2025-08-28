@@ -132,8 +132,6 @@ console.log(date.format('YYYY-MM-DDTHH:mm:ss'));     // '2024-08-23T10:30:45'
 - `YYYYMMDD` - Compact date format
 
 **Named Format Templates:**
-- `Do MMMM YYYY` - Ordinal day with full month (locale-aware)
-- `Do MMM YYYY` - Ordinal day with short month (locale-aware)
 - `DD MMMM YYYY` - Date with full month
 - `DD MMMM dddd, YYYY` - Date with weekday and comma
 - `YYYY MMM DD` - Year-month-day format

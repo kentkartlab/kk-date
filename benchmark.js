@@ -134,12 +134,6 @@ const testScenarios = [
 				dayjs: () => dayjs('15 January 2024', 'DD MMMM YYYY'),
 			},
 			{
-				name: 'Do MMMM YYYY Format',
-				kkDate: () => new KkDate('15th January 2024'),
-				moment: () => momentTimezone('15th January 2024', 'Do MMMM YYYY'),
-				dayjs: () => dayjs('15th January 2024', 'Do MMMM YYYY'),
-			},
-			{
 				name: 'DD MMMM dddd Format',
 				kkDate: () => new KkDate('15 January Monday'),
 				moment: () => momentTimezone('15 January Monday', 'DD MMMM dddd'),
@@ -174,12 +168,6 @@ const testScenarios = [
 				kkDate: () => new KkDate('2024 Jan 15'),
 				moment: () => momentTimezone('2024 Jan 15', 'YYYY MMM DD'),
 				dayjs: () => dayjs('2024 Jan 15', 'YYYY MMM DD'),
-			},
-			{
-				name: 'Do MMM YYYY Format',
-				kkDate: () => new KkDate('15th Jan 2024'),
-				moment: () => momentTimezone('15th Jan 2024', 'Do MMM YYYY'),
-				dayjs: () => dayjs('15th Jan 2024', 'Do MMM YYYY'),
 			},
 			{
 				name: 'HH:mm:ss Format',

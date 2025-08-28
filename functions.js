@@ -7,7 +7,6 @@ const {
 	timeInMilliseconds,
 	format_types,
 	cached_dateTimeFormat,
-	cached_numberFormat,
 	timezone_cache,
 	timezone_check_cache,
 	timezone_abbreviation_cache,
@@ -611,22 +610,7 @@ module.exports.getTimezoneAbbreviation = getTimezoneAbbreviation;
 module.exports.padZero = padZero;
 module.exports.absFloor = absFloor;
 module.exports.duration = duration;
-/**
- * Gets a cached NumberFormat instance for the given locale, creates one if not exists
- * @param {string} locale - The locale to get NumberFormat for
- * @returns {Intl.NumberFormat} Cached NumberFormat instance
- */
-function getCachedNumberFormat(locale) {
-	let numberFormatter = cached_numberFormat.get(locale);
-	if (!numberFormatter) {
-		numberFormatter = new Intl.NumberFormat(locale);
-		cached_numberFormat.set(locale, numberFormatter);
-	}
-	return numberFormatter;
-}
-
 module.exports.dateTimeFormat = dateTimeFormat;
 module.exports.converter = converter;
 module.exports.isValidMonth = isValidMonth;
 module.exports.isValidDayName = isValidDayName;
-module.exports.getCachedNumberFormat = getCachedNumberFormat;

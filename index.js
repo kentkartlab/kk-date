@@ -14,7 +14,6 @@ const {
 	dateTimeFormat,
 	converter,
 	isValidMonth,
-	getCachedNumberFormat,
 } = require('./functions');
 const {
 	cached_dateTimeFormat,
@@ -1566,48 +1565,6 @@ function formatter(orj_this, template = null) {
 				nopeRedis.setItemAsync(cache_key, formatted);
 			}
 			return `${day} ${formatted} ${year}`;
-		}
-		case format_types['Do MMMM YYYY']: {
-			const result = converter(orj_this.date, ['day', 'year'], { isUTC, detectedFormat: orj_this.detected_format });
-			const day = parseInt(result.day, 10);
-			
-			// Use cached native Intl API for locale-aware day formatting
-			const locale = global_config.locale || 'en';
-			const numberFormatter = getCachedNumberFormat(locale);
-			const dayWithOrdinal = numberFormatter.format(day);
-			
-			const value = dateTimeFormat(orj_this, 'MMMM');
-			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
-			const cache = nopeRedis.getItem(cache_key);
-			let formatted = null;
-			if (cache) {
-				formatted = cache;
-			} else {
-				formatted = value.value.format(orj_this.date);
-				nopeRedis.setItemAsync(cache_key, formatted);
-			}
-			return `${dayWithOrdinal} ${formatted} ${result.year}`;
-		}
-		case format_types['Do MMM YYYY']: {
-			const result = converter(orj_this.date, ['day', 'year'], { isUTC, detectedFormat: orj_this.detected_format });
-			const day = parseInt(result.day, 10);
-			
-			// Use cached native Intl API for locale-aware day formatting
-			const locale = global_config.locale || 'en';
-			const numberFormatter = getCachedNumberFormat(locale);
-			const dayWithOrdinal = numberFormatter.format(day);
-			
-			const value = dateTimeFormat(orj_this, 'MMM');
-			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
-			const cache = nopeRedis.getItem(cache_key);
-			let formatted = null;
-			if (cache) {
-				formatted = cache;
-			} else {
-				formatted = value.value.format(orj_this.date);
-				nopeRedis.setItemAsync(cache_key, formatted);
-			}
-			return `${dayWithOrdinal} ${formatted} ${result.year}`;
 		}
 		case format_types['DD MMMM dddd, YYYY']: {
 			const result = converter(orj_this.date, ['day', 'year'], { isUTC, detectedFormat: orj_this.detected_format });
