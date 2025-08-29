@@ -8,6 +8,7 @@ let criticalError = 0;
 let KILL_SERVICE = false;
 const intervalSecond = 5;
 let runnerInterval = null;
+const MAX_CACHE_SIZE = 10000; // Maximum number of items in cache
 
 const memory = {
 	config: {
@@ -18,8 +19,11 @@ const memory = {
 		totalHits: 0,
 		nextMemoryStatsTime: 0,
 		memoryStats: {},
+		totalKeys: 0,
 	},
 	store: {},
+	// LRU tracking
+	lru: new Map(), // key -> timestamp
 };
 
 /**
@@ -49,7 +53,68 @@ module.exports.config = (options = { defaultTtl }) => {
 };
 
 /**
- * set item to no-redis
+ * LRU eviction - remove least recently used items
+ */
+function evictLRU() {
+	if (memory.config.totalKeys <= MAX_CACHE_SIZE) {
+		return;
+	}
+
+	// Sort by access time (least recent first)
+	const sortedKeys = Array.from(memory.lru.entries())
+		.sort((a, b) => a[1] - b[1])
+		.map((entry) => entry[0]);
+
+	// Remove oldest 20% of items
+	const itemsToRemove = Math.floor(MAX_CACHE_SIZE * 0.2);
+	const keysToRemove = sortedKeys.slice(0, itemsToRemove);
+
+	// biome-ignore lint/complexity/noForEach: <explanation>
+	keysToRemove.forEach((key) => {
+		delete memory.store[key];
+		memory.lru.delete(key);
+		memory.config.totalKeys--;
+	});
+}
+
+/**
+ * set item to no-redis (sync version for performance)
+ *
+ * @param {string} key
+ * @param {*} value
+ * @param {number} ttl
+ * @returns {Boolean}
+ */
+module.exports.setItemSync = (key, value, ttl = defaultTtl) => {
+	try {
+		const keyStr = `${key}`;
+		if (!memory.config.status || typeof ttl !== 'number') {
+			return false;
+		}
+
+		// Check if we need to evict items
+		if (memory.config.totalKeys > MAX_CACHE_SIZE) {
+			evictLRU();
+		}
+
+		memory.store[keyStr] = {
+			value: value,
+			hit: 0,
+			expires_at: Math.floor(new Date() / 1000) + Number.parseInt(ttl, 10),
+		};
+		// Update LRU tracking
+		memory.lru.set(keyStr, Date.now());
+		memory.config.totalKeys++;
+
+		return true;
+	} catch (error) {
+		console.error('nope-redis -> Cant Set Error! ', error.message);
+		return false;
+	}
+};
+
+/**
+ * set item to no-redis (async version)
  *
  * @param {string} key
  * @param {*} value
@@ -57,20 +122,7 @@ module.exports.config = (options = { defaultTtl }) => {
  * @returns {Boolean}
  */
 module.exports.setItemAsync = async (key, value, ttl = defaultTtl) => {
-	try {
-		if (memory.config.status === false || typeof ttl !== 'number') {
-			return false;
-		}
-		memory.store[key] = {
-			value: value,
-			hit: 0,
-			expires_at: Math.floor(new Date() / 1000) + Number.parseInt(ttl, 10),
-		};
-		return true;
-	} catch (error) {
-		console.error('nope-redis -> Cant Set Error! ', error.message);
-		return false;
-	}
+	return module.exports.setItemSync(key, value, ttl);
 };
 
 /**
@@ -102,14 +154,20 @@ module.exports.itemStats = (key) => {
  * @returns {*}
  */
 module.exports.getItem = (key) => {
+	if (!key) return null;
+	const keyStr = `${key}`;
 	try {
-		if (memory.config.status === false) {
+		if (!memory.config.status) {
 			return false;
 		}
-		if (memory.store[key]) {
-			memory.store[key].hit++;
+		if (memory.store[keyStr]) {
+			memory.store[keyStr].hit++;
 			memory.config.totalHits++;
-			return memory.store[key].value;
+
+			// Update LRU tracking on access
+			memory.lru.set(keyStr, Date.now());
+
+			return memory.store[keyStr].value;
 		}
 		return null;
 	} catch (error) {
@@ -126,11 +184,14 @@ module.exports.getItem = (key) => {
  */
 module.exports.deleteItem = (key) => {
 	try {
+		const keyStr = `${key}`;
 		if (memory.config.status === false) {
 			return false;
 		}
-		if (memory.store[`${key}`]) {
-			delete memory.store[`${key}`];
+		if (memory.store[keyStr]) {
+			delete memory.store[keyStr];
+			memory.lru.delete(keyStr);
+			memory.config.totalKeys--;
 		}
 		return true;
 	} catch (error) {
@@ -174,6 +235,8 @@ module.exports.stats = (config = { showKeys: true, showTotal: true, showSize: fa
 			criticalError,
 			defaultTtl,
 			totalHits: memory.config.totalHits,
+			cacheSize: Object.keys(memory.store).length,
+			maxCacheSize: MAX_CACHE_SIZE,
 		};
 		if (config.showTotal) {
 			result.total = Object.keys(memory.store).length;
@@ -208,9 +271,11 @@ function defaultMemory(withConfig = false) {
 				nextMemoryStatsTime: 0,
 				status: false,
 				memoryStats: {},
+				totalKeys: 0,
 			},
 		};
 		memory.store = {};
+		memory.lru.clear();
 		if (withConfig) {
 			memory.config = JSON.parse(JSON.stringify(defaultMemory.config));
 		}
@@ -281,6 +346,7 @@ function killer() {
 	for (const property in memory.store) {
 		if (memory.store[`${property}`].expires_at < Math.floor(new Date() / 1000)) {
 			delete memory.store[`${property}`];
+			memory.config.totalKeys--;
 		}
 	}
 	memory.config.killerIsFinished = true;
