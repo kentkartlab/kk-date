@@ -84,9 +84,9 @@ Timezone handling is one of the most critical aspects of date libraries. Inconsi
 
 | Library | Timezone Accuracy | DST Handling | Cross-Platform Consistency | Configuration Required |
 |---------|------------------|--------------|---------------------------|----------------------|
-| **kk-date** | ✅ **Perfect** | ✅ **Automatic** | ✅ **Consistent** | ❌ **Zero Config** |
-| Moment.js | ⚠️ **System Dependent** | ⚠️ **Manual Setup** | ❌ **Inconsistent** | ✅ **Complex Setup** |
-| Day.js | ⚠️ **System Dependent** | ⚠️ **Plugin Required** | ❌ **Inconsistent** | ✅ **Plugin Setup** |
+| **kk-date** | ✅ **Perfect** | ✅ **Automatic** | ✅ **Consistent** | ✅ **Zero Config** |
+| Moment.js | ⚠️ **System Dependent** | ⚠️ **Manual Setup** | ❌ **Inconsistent** | ⚠️ **Complex Setup** |
+| Day.js | ⚠️ **System Dependent** | ⚠️ **Plugin Required** | ❌ **Inconsistent** | ⚠️ **Plugin Setup** |
 
 ### Real-World Example
 
