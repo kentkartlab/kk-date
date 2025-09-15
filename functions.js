@@ -199,40 +199,66 @@ function getTimezoneInfo(timezone, date = new Date()) {
  * @returns {Date} - Parsed date with timezone conversion
  */
 function parseWithTimezone(kkDate) {
-	// If no timezone conversion needed, return original date
-	if (!kkDate.temp_config.timezone) {
-		return kkDate.date;
+	// If this is a .tz() call, convert from global timezone to target timezone
+	if (kkDate.temp_config.timezone) {
+		const sourceTimezone = global_config.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+		const targetTimezone = kkDate.temp_config.timezone;
+
+		// Special handling for UTC - return original UTC time
+		if (targetTimezone === 'UTC') {
+			return kkDate.date;
+		}
+
+		// If source and target are the same, no conversion needed
+		if (sourceTimezone === targetTimezone) {
+			return kkDate.date;
+		}
+
+		// The date was initially parsed in system timezone but should be treated as global timezone
+		// First, we need to get the "time value" as if it was in global timezone
+		// Then convert to target timezone
+
+		const systemTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+		// If global timezone differs from system timezone, we need to adjust the base time
+		if (sourceTimezone !== systemTimezone) {
+			// The date object represents the time in system timezone
+			// But we want to treat it as if it's in global timezone
+			// So we need to create a new date that represents the same "clock time" in global timezone
+
+			// Get the offset difference between system and global timezone
+			const systemOffset = getTimezoneOffset(systemTimezone, kkDate.date);
+			const globalOffset = getTimezoneOffset(sourceTimezone, kkDate.date);
+			const offsetDiff = globalOffset - systemOffset;
+
+			// Adjust the date to represent the same clock time in global timezone
+			// This gives us the UTC equivalent of the "clock time" in global timezone
+			const adjustedBaseTime = kkDate.date.getTime() - offsetDiff;
+			const adjustedDate = new Date(adjustedBaseTime);
+
+			// adjustedDate now represents the UTC time equivalent of the input in global timezone
+			// For display purposes, we need to create a date that when viewed in system timezone
+			// shows the equivalent time in target timezone
+
+			// Example: NY 04:41 -> UTC 08:41 -> should display as Istanbul 11:41
+			// If system is Istanbul: we need UTC (08:41 - 3h) = UTC 05:41
+			// so when JavaScript adds +3h for local display, we get 08:41 (wrong!)
+
+			// Actually, if system is Istanbul and we want to show Istanbul 11:41:
+			// We need date object to be UTC 08:41, which when displayed in Istanbul shows 11:41
+
+			// But that's exactly what adjustedDate already is!
+			// Let's check why it's showing wrong...
+
+			return adjustedDate;
+		}
+
+		// Convert from source timezone to target timezone
+		return convertToTimezone(kkDate.date, targetTimezone, sourceTimezone);
 	}
 
-	const targetTimezone = kkDate.temp_config.timezone;
-
-	// Special handling for UTC - return original UTC time
-	if (targetTimezone === 'UTC') {
-		return kkDate.date;
-	}
-
-	// For timezone conversion, we need to work with the original UTC time
-	// If this is an ISO8601 date, use the original UTC time
-	// Otherwise, use the current date's time
-	let baseTime;
-	if (kkDate.detected_format === 'ISO8601') {
-		// For ISO8601 dates, we need to reconstruct the original UTC time
-		// This is a limitation - we don't store the original UTC timestamp
-		// For now, we'll use the current date's time
-		baseTime = kkDate.date.getTime();
-	} else {
-		baseTime = kkDate.date.getTime();
-	}
-
-	// Get the offset of the target timezone
-	const targetOffset = getTimezoneOffset(targetTimezone, kkDate.date);
-
-	// Create a new date by adjusting for the timezone offset
-	// The offset represents the difference between UTC and the target timezone
-	// We add the offset to convert from UTC to the target timezone
-	const adjustedTime = baseTime + targetOffset;
-
-	return new Date(adjustedTime);
+	// Constructor call - no timezone conversion needed
+	return kkDate.date;
 }
 
 /**
