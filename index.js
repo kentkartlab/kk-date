@@ -213,9 +213,10 @@ class KkDate {
 							if (hours >= 24) {
 								const extraDays = Math.floor(hours / 24);
 								const dateObj = new Date(`${year}-${month}-${day} 00:00:00`);
-								dateObj.setDate(dateObj.getDate() + extraDays);
+								const get_date = dateObj.getDate();
+								dateObj.setDate(get_date + extraDays);
 
-								const newDay = String(dateObj.getDate()).padStart(2, '0');
+								const newDay = String(get_date).padStart(2, '0');
 								const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
 								const newYear = dateObj.getFullYear();
 
