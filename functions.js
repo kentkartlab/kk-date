@@ -214,15 +214,19 @@ function parseWithTimezone(kkDate) {
 		return kkDate.date;
 	}
 
-	// Constructor call - convert input from system timezone to global timezone if needed
+	// Constructor call - reinterpret input in global timezone if:
+	// 1. Global timezone is set and different from system timezone
+	// 2. Input is not ISO8601 UTC timestamp  
+	// 3. Global timezone will be used for formatting (not just UTC display)
 	const systemTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 	const globalTimezone = global_config.timezone;
 
-	// If global timezone is set and differs from system timezone,
-	// we need to reinterpret the input as being in global timezone
-	if (globalTimezone && globalTimezone !== systemTimezone && kkDate.detected_format !== 'ISO8601') {
-		// The date was parsed in system timezone, but should be interpreted in global timezone
-		// Get the offset difference and adjust
+	if (globalTimezone &&
+		globalTimezone !== systemTimezone &&
+		globalTimezone !== 'UTC' &&
+		kkDate.detected_format !== 'ISO8601') {
+
+		// Reinterpret the input as being in global timezone
 		const systemOffset = getTimezoneOffset(systemTimezone, kkDate.date);
 		const globalOffset = getTimezoneOffset(globalTimezone, kkDate.date);
 		const offsetDiff = globalOffset - systemOffset;
@@ -488,7 +492,7 @@ function converter(date, to, options = { pad: true }) {
 	const isUTC = options.isUTC || false;
 	const detectedFormat = options.detectedFormat || null;
 	const orj_this = options.orj_this;
-	
+
 	// Determine timezone for formatting
 	let targetTimezone = null;
 	if (orj_this) {
@@ -510,13 +514,13 @@ function converter(date, to, options = { pad: true }) {
 			second: '2-digit',
 			hour12: false,
 		});
-		
+
 		const parts = formatter.formatToParts(date);
 		const partsMap = {};
 		for (const part of parts) {
 			partsMap[part.type] = part.value;
 		}
-		
+
 		const len = to.length;
 		for (let i = 0; i < len; i++) {
 			const field = to[i];

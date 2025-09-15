@@ -1305,6 +1305,7 @@ function formatter(orj_this, template = null) {
 			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes', 'seconds'], {
 				isUTC,
 				detectedFormat: orj_this.detected_format,
+				orj_this: orj_this,
 			});
 			return `${result.year}-${result.month}-${result.day}T${result.hours}:${result.minutes}:${result.seconds}`;
 		}
@@ -1609,14 +1610,6 @@ function formatter(orj_this, template = null) {
 			const offsetMinutes = padZero(absOffset % 60);
 			const result = converter(orj_this.date, ['day', 'year', 'hours', 'minutes', 'seconds'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this });
 			return `${result.year}-${result.month}-${result.day}T${result.hours}:${result.minutes}:${result.seconds}${sign}${offsetHours}:${offsetMinutes}`;
-		}
-		case format_types['YYYY-MM-DDTHH:mm:ss']: {
-			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes', 'seconds'], {
-				isUTC,
-				detectedFormat: orj_this.detected_format,
-				orj_this: orj_this,
-			});
-			return `${result.year}-${result.month}-${result.day}T${result.hours}:${result.minutes}:${result.seconds}`;
 		}
 		default:
 			throw new Error('template is not right');
