@@ -285,6 +285,10 @@ const global_config = {
 	weekStartDay: 0,
 };
 
+const cached_converter_int = {};
+
+const systemTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
 module.exports.cache_ttl = cache_ttl;
 module.exports.timeInMilliseconds = timeInMilliseconds;
 module.exports.format_types = format_types;
@@ -302,3 +306,5 @@ module.exports.target_timezone_cache = target_timezone_cache;
 module.exports.long_timezone_cache = long_timezone_cache;
 module.exports.cached_dateTimeFormat = cached_dateTimeFormat;
 module.exports.global_config = global_config;
+module.exports.systemTimezone = systemTimezone;
+module.exports.cached_converter_int = cached_converter_int;
