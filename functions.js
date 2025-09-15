@@ -202,54 +202,36 @@ function parseWithTimezone(kkDate) {
 	// If this is a .tz() call, convert to target timezone
 	if (kkDate.temp_config.timezone) {
 		const targetTimezone = kkDate.temp_config.timezone;
-		
+
 		// Special handling for UTC - return original UTC time
 		if (targetTimezone === 'UTC') {
 			return kkDate.date;
 		}
 
-		// Check if this is an ISO8601 UTC timestamp
-		if (kkDate.detected_format === 'ISO8601') {
-			// For ISO8601 timestamps, the date is already in UTC
-			// We just need to convert from UTC to target timezone for display
-			return convertToTimezone(kkDate.date, targetTimezone, 'UTC');
-		}
-		
-		// For non-ISO8601 inputs (local time strings), we need to consider global timezone
-		const sourceTimezone = global_config.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
-		
-		// If source and target are the same, no conversion needed
-		if (sourceTimezone === targetTimezone) {
-			return kkDate.date;
-		}
-		
-		const systemTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-		
-		// If global timezone differs from system timezone, we need to reinterpret the input
-		if (sourceTimezone !== systemTimezone) {
-			// The date object represents the time in system timezone
-			// But we want to treat it as if it's in global timezone
-			// So we need to create a new date that represents the same "clock time" in global timezone
-			
-			// Get the offset difference between system and global timezone
-			const systemOffset = getTimezoneOffset(systemTimezone, kkDate.date);
-			const globalOffset = getTimezoneOffset(sourceTimezone, kkDate.date);
-			const offsetDiff = globalOffset - systemOffset;
-			
-			// Adjust the date to represent the same clock time in global timezone
-			// This gives us the UTC equivalent of the "clock time" in global timezone
-			const adjustedBaseTime = kkDate.date.getTime() - offsetDiff;
-			const adjustedDate = new Date(adjustedBaseTime);
-			
-			// Now convert to target timezone for display
-			return convertToTimezone(adjustedDate, targetTimezone, 'UTC');
-		}
-		
-		// Convert from source timezone to target timezone
-		return convertToTimezone(kkDate.date, targetTimezone, sourceTimezone);
+		// For .tz() calls, we don't change the date object
+		// The timezone information is stored in temp_config.timezone
+		// and the format function will handle the display conversion
+		return kkDate.date;
 	}
-	
-	// Constructor call - no timezone conversion needed
+
+	// Constructor call - convert input from system timezone to global timezone if needed
+	const systemTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+	const globalTimezone = global_config.timezone;
+
+	// If global timezone is set and differs from system timezone,
+	// we need to reinterpret the input as being in global timezone
+	if (globalTimezone && globalTimezone !== systemTimezone && kkDate.detected_format !== 'ISO8601') {
+		// The date was parsed in system timezone, but should be interpreted in global timezone
+		// Get the offset difference and adjust
+		const systemOffset = getTimezoneOffset(systemTimezone, kkDate.date);
+		const globalOffset = getTimezoneOffset(globalTimezone, kkDate.date);
+		const offsetDiff = globalOffset - systemOffset;
+
+		// Adjust the date to represent the same clock time in global timezone
+		const adjustedTime = kkDate.date.getTime() - offsetDiff;
+		return new Date(adjustedTime);
+	}
+
 	return kkDate.date;
 }
 
@@ -505,8 +487,67 @@ function converter(date, to, options = { pad: true }) {
 	const shouldPad = options.pad !== false;
 	const isUTC = options.isUTC || false;
 	const detectedFormat = options.detectedFormat || null;
+	const orj_this = options.orj_this;
+	
+	// Determine timezone for formatting
+	let targetTimezone = null;
+	if (orj_this) {
+		targetTimezone = orj_this.temp_config.timezone || global_config.timezone;
+	}
 
-	// Fast path: Use direct Date methods for most cases
+
+	// Use timezone-aware formatting if targetTimezone is specified and not UTC
+	// For ISO8601 UTC timestamps with .tz() calls, we also need timezone formatting
+	if (targetTimezone && targetTimezone !== 'UTC') {
+		// Use Intl.DateTimeFormat for timezone-aware formatting
+		const formatter = new Intl.DateTimeFormat('en-CA', {
+			timeZone: targetTimezone,
+			year: 'numeric',
+			month: '2-digit',
+			day: '2-digit',
+			hour: '2-digit',
+			minute: '2-digit',
+			second: '2-digit',
+			hour12: false,
+		});
+		
+		const parts = formatter.formatToParts(date);
+		const partsMap = {};
+		for (const part of parts) {
+			partsMap[part.type] = part.value;
+		}
+		
+		const len = to.length;
+		for (let i = 0; i < len; i++) {
+			const field = to[i];
+			switch (field) {
+				case 'year':
+					result.year = partsMap.year;
+					break;
+				case 'month':
+					result.month = partsMap.month;
+					break;
+				case 'day':
+					result.day = partsMap.day;
+					break;
+				case 'hours':
+					result.hours = partsMap.hour;
+					break;
+				case 'minutes':
+					result.minutes = partsMap.minute;
+					break;
+				case 'seconds':
+					result.seconds = partsMap.second;
+					break;
+				case 'milliseconds':
+					result.milliseconds = shouldPad ? (date.getMilliseconds() < 100 ? `0${date.getMilliseconds() < 10 ? `0${date.getMilliseconds()}` : date.getMilliseconds()}` : String(date.getMilliseconds())) : date.getMilliseconds();
+					break;
+			}
+		}
+		return result;
+	}
+
+	// Fast path: Use direct Date methods for most cases  
 	if (detectedFormat !== 'Xx' || !global_config.timezone || global_config.timezone === 'UTC') {
 		// Standard formatting - much faster
 		const len = to.length;
@@ -552,12 +593,12 @@ function converter(date, to, options = { pad: true }) {
 	}
 
 	// Timezone-aware formatting only when absolutely necessary
-	const targetTimezone = global_config.timezone;
-	const cache = target_timezone_cache.get(targetTimezone);
+	const useTimezone = targetTimezone || global_config.timezone;
+	const cache = target_timezone_cache.get(useTimezone);
 	let in_result = {};
 	if (!cache) {
 		const formatter_value = new Intl.DateTimeFormat('en-CA', {
-			timeZone: targetTimezone,
+			timeZone: useTimezone,
 			year: 'numeric',
 			month: '2-digit',
 			day: '2-digit',
@@ -577,7 +618,7 @@ function converter(date, to, options = { pad: true }) {
 			const part = parts[i];
 			partsMap[part.type] = part.value;
 		}
-		target_timezone_cache.set(targetTimezone, partsMap);
+		target_timezone_cache.set(useTimezone, partsMap);
 		in_result = partsMap;
 	} else {
 		in_result = cache;
