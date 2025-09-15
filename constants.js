@@ -277,6 +277,13 @@ const cached_dateTimeFormat = {
 	},
 };
 
+const cached_dateTimeFormat_with_locale = {
+	dddd: {},
+	ddd: {},
+	MMMM: {},
+	MMM: {},
+};
+
 const global_config = {
 	locale: 'en',
 	timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -308,3 +315,4 @@ module.exports.cached_dateTimeFormat = cached_dateTimeFormat;
 module.exports.global_config = global_config;
 module.exports.systemTimezone = systemTimezone;
 module.exports.cached_converter_int = cached_converter_int;
+module.exports.cached_dateTimeFormat_with_locale = cached_dateTimeFormat_with_locale;

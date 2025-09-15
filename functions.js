@@ -15,6 +15,7 @@ const {
 	global_config,
 	systemTimezone,
 	cached_converter_int,
+	cached_dateTimeFormat_with_locale,
 } = require('./constants');
 
 const months = {};
@@ -431,28 +432,44 @@ function dateTimeFormat(orj_this, template) {
 		const timezone = global_config.timezone;
 
 		if (template === format_types.dddd) {
-			return {
+			if (cached_dateTimeFormat_with_locale.dddd[`${locale}_${timezone}`]) {
+				return cached_dateTimeFormat_with_locale.dddd[`${locale}_${timezone}`];
+			}
+			cached_dateTimeFormat_with_locale.dddd[`${locale}_${timezone}`] = {
 				value: new Intl.DateTimeFormat(locale, { weekday: 'long', timeZone: timezone }),
 				id: `${locale}_${timezone}_dddd`,
 			};
+			return cached_dateTimeFormat_with_locale.dddd[`${locale}_${timezone}`];
 		}
 		if (template === format_types.ddd) {
-			return {
+			if (cached_dateTimeFormat_with_locale.ddd[`${locale}_${timezone}`]) {
+				return cached_dateTimeFormat_with_locale.ddd[`${locale}_${timezone}`];
+			}
+			cached_dateTimeFormat_with_locale.ddd[`${locale}_${timezone}`] = {
 				value: new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: timezone }),
 				id: `${locale}_${timezone}_ddd`,
 			};
+			return cached_dateTimeFormat_with_locale.ddd[`${locale}_${timezone}`];
 		}
 		if (template === format_types.MMMM) {
-			return {
+			if (cached_dateTimeFormat_with_locale.MMMM[`${locale}_${timezone}`]) {
+				return cached_dateTimeFormat_with_locale.MMMM[`${locale}_${timezone}`];
+			}
+			cached_dateTimeFormat_with_locale.MMMM[`${locale}_${timezone}`] = {
 				value: new Intl.DateTimeFormat(locale, { month: 'long', timeZone: timezone }),
 				id: `${locale}_${timezone}_MMMM`,
 			};
+			return cached_dateTimeFormat_with_locale.MMMM[`${locale}_${timezone}`];
 		}
 		if (template === format_types.MMM) {
-			return {
+			if (cached_dateTimeFormat_with_locale.MMM[`${locale}_${timezone}`]) {
+				return cached_dateTimeFormat_with_locale.MMM[`${locale}_${timezone}`];
+			}
+			cached_dateTimeFormat_with_locale.MMM[`${locale}_${timezone}`] = {
 				value: new Intl.DateTimeFormat(locale, { month: 'short', timeZone: timezone }),
 				id: `${locale}_${timezone}_MMM`,
 			};
+			return cached_dateTimeFormat_with_locale.MMM[`${locale}_${timezone}`];
 		}
 	}
 
@@ -501,6 +518,8 @@ function converter(date, to, options = { pad: true }) {
 	if (targetTimezone && targetTimezone !== 'UTC') {
 		// Use Intl.DateTimeFormat for timezone-aware formatting
 		let formatter = null;
+		const partsMap = {};
+
 		if (cached_converter_int[targetTimezone]) {
 			formatter = cached_converter_int[targetTimezone];
 		} else {
@@ -518,7 +537,6 @@ function converter(date, to, options = { pad: true }) {
 		}
 
 		const parts = formatter.formatToParts(date);
-		const partsMap = {};
 		for (const part of parts) {
 			partsMap[part.type] = part.value;
 		}
