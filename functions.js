@@ -222,9 +222,10 @@ function parseWithTimezone(kkDate) {
 	// 1. Global timezone is set and different from system timezone
 	// 2. Input is not ISO8601 UTC timestamp
 	// 3. Global timezone will be used for formatting (not just UTC display)
+	// 4. Input is not 'now' (current time should not be reinterpreted)
 	const globalTimezone = global_config.timezone;
 
-	if (globalTimezone && globalTimezone !== systemTimezone && globalTimezone !== 'UTC' && kkDate.detected_format !== 'ISO8601') {
+	if (globalTimezone && globalTimezone !== systemTimezone && globalTimezone !== 'UTC' && kkDate.detected_format !== 'ISO8601' && kkDate.detected_format !== 'now') {
 		// Reinterpret the input as being in global timezone
 		const systemOffset = getTimezoneOffset(systemTimezone, kkDate.date);
 		const globalOffset = getTimezoneOffset(globalTimezone, kkDate.date);

@@ -53,11 +53,12 @@ class KkDate {
 		this.temp_config = {};
 		if (params.length === 0) {
 			this.date = new Date();
+			this.detected_format = 'now';
 		} else {
 			const date = params[0];
 			let forced_format_founded = false;
 			cached = nopeRedis.getItem(date instanceof Date || Number.isInteger(date) ? null : `${date}`);
-			if (params[1] && !cached) {
+			if (typeof params[1] === 'string' && !cached) {
 				if (!format_types_regex[params[1]]) {
 					throw new Error(`Unsupported Format! ${params[1]} !`);
 				}
@@ -97,7 +98,7 @@ class KkDate {
 				} else if (isValid(date, format_types['YYYY-MM-DD'])) {
 					const [year, month, day] = date.split('-');
 					this.date = new Date(`${year}-${month}-${day} 00:00:00`);
-					this.detected_format = format_types['YYYY-MM-DD'];
+					this.detected_format = 'YYYY-MM-DD';
 				} else {
 					is_can_cache = true;
 					if (
@@ -442,10 +443,7 @@ class KkDate {
 	 * @returns {number}
 	 */
 	_getTimestamp(date) {
-		if (isKkDate(date)) {
-			return date.getTime();
-		}
-		if (date instanceof Date) {
+		if (isKkDate(date) || date instanceof Date) {
 			return date.getTime();
 		}
 		if (Number.isInteger(date)) {
