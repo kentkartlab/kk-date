@@ -277,6 +277,13 @@ const cached_dateTimeFormat = {
 	},
 };
 
+const cached_dateTimeFormat_with_locale = {
+	dddd: {},
+	ddd: {},
+	MMMM: {},
+	MMM: {},
+};
+
 const global_config = {
 	locale: 'en',
 	timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -284,6 +291,12 @@ const global_config = {
 	rtf: {},
 	weekStartDay: 0,
 };
+
+const cached_converter_int = {};
+const converter_results_cache = new Map();
+const formatter_cache = new Map();
+
+const systemTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 module.exports.cache_ttl = cache_ttl;
 module.exports.timeInMilliseconds = timeInMilliseconds;
@@ -302,3 +315,8 @@ module.exports.target_timezone_cache = target_timezone_cache;
 module.exports.long_timezone_cache = long_timezone_cache;
 module.exports.cached_dateTimeFormat = cached_dateTimeFormat;
 module.exports.global_config = global_config;
+module.exports.systemTimezone = systemTimezone;
+module.exports.cached_converter_int = cached_converter_int;
+module.exports.converter_results_cache = converter_results_cache;
+module.exports.formatter_cache = formatter_cache;
+module.exports.cached_dateTimeFormat_with_locale = cached_dateTimeFormat_with_locale;

@@ -534,7 +534,7 @@ testScenarios.forEach((scenario) => {
 				const setup = test.setup ? test.setup() : null;
 				return test.luxon(setup);
 			}, iterations);
-			totalLuxonTest++
+			totalLuxonTest++;
 		}
 
 		// Calculate operations per second
@@ -545,7 +545,9 @@ testScenarios.forEach((scenario) => {
 
 		// Calculate improvements
 		const competitors = [momentTime, dayjsTime];
-		if (test.luxon) { competitors.push(luxonTime); }
+		if (test.luxon) {
+			competitors.push(luxonTime);
+		}
 		const avgOtherTime = competitors.reduce((a, b) => a + b, 0) / competitors.length;
 		const improvement = (((avgOtherTime - kkDateTime) / avgOtherTime) * 100).toFixed(2);
 
@@ -561,7 +563,9 @@ testScenarios.forEach((scenario) => {
 		totalKkDateTime += kkDateTime;
 		totalMomentTime += momentTime;
 		totalDayjsTime += dayjsTime;
-		if (test.luxon) { totalLuxonTime += luxonTime; }
+		if (test.luxon) {
+			totalLuxonTime += luxonTime;
+		}
 		testCount++;
 	});
 });
@@ -691,4 +695,4 @@ console.log(`Heap Used: ${(memUsage.heapUsed / 1024 / 1024).toFixed(2)} MB`);
 console.log(`Heap Total: ${(memUsage.heapTotal / 1024 / 1024).toFixed(2)} MB`);
 
 console.log('\n✨ Benchmark completed!');
-KkDate.caching({ status: false })
+KkDate.caching({ status: false });

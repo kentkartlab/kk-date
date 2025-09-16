@@ -13,6 +13,10 @@ const {
 	target_timezone_cache,
 	long_timezone_cache,
 	global_config,
+	systemTimezone,
+	cached_converter_int,
+	converter_results_cache,
+	cached_dateTimeFormat_with_locale,
 } = require('./constants');
 
 const months = {};
@@ -67,6 +71,9 @@ function isValidDayName(dayname) {
  */
 function getTimezoneOffset(timezone, date = new Date()) {
 	try {
+		// Validate timezone
+		checkTimezone(timezone);
+
 		// Check cache first
 		const cacheKey = `${timezone}_${date.getTime()}`;
 		if (timezone_cache.has(cacheKey)) {
@@ -75,9 +82,6 @@ function getTimezoneOffset(timezone, date = new Date()) {
 				return offset;
 			}
 		}
-
-		// Validate timezone
-		checkTimezone(timezone);
 
 		let formatter;
 		if (long_timezone_cache.has(timezone)) {
@@ -199,40 +203,40 @@ function getTimezoneInfo(timezone, date = new Date()) {
  * @returns {Date} - Parsed date with timezone conversion
  */
 function parseWithTimezone(kkDate) {
-	// If no timezone conversion needed, return original date
-	if (!kkDate.temp_config.timezone) {
+	// If this is a .tz() call, convert to target timezone
+	if (kkDate.temp_config.timezone) {
+		const targetTimezone = kkDate.temp_config.timezone;
+
+		// Special handling for UTC - return original UTC time
+		if (targetTimezone === 'UTC') {
+			return kkDate.date;
+		}
+
+		// For .tz() calls, we don't change the date object
+		// The timezone information is stored in temp_config.timezone
+		// and the format function will handle the display conversion
 		return kkDate.date;
 	}
 
-	const targetTimezone = kkDate.temp_config.timezone;
+	// Constructor call - reinterpret input in global timezone if:
+	// 1. Global timezone is set and different from system timezone
+	// 2. Input is not ISO8601 UTC timestamp
+	// 3. Global timezone will be used for formatting (not just UTC display)
+	// 4. Input is not 'now' (current time should not be reinterpreted)
+	const globalTimezone = global_config.timezone;
 
-	// Special handling for UTC - return original UTC time
-	if (targetTimezone === 'UTC') {
-		return kkDate.date;
+	if (globalTimezone && globalTimezone !== systemTimezone && globalTimezone !== 'UTC' && kkDate.detected_format !== 'ISO8601' && kkDate.detected_format !== 'now') {
+		// Reinterpret the input as being in global timezone
+		const systemOffset = getTimezoneOffset(systemTimezone, kkDate.date);
+		const globalOffset = getTimezoneOffset(globalTimezone, kkDate.date);
+		const offsetDiff = globalOffset - systemOffset;
+
+		// Adjust the date to represent the same clock time in global timezone
+		const adjustedTime = kkDate.date.getTime() - offsetDiff;
+		return new Date(adjustedTime);
 	}
 
-	// For timezone conversion, we need to work with the original UTC time
-	// If this is an ISO8601 date, use the original UTC time
-	// Otherwise, use the current date's time
-	let baseTime;
-	if (kkDate.detected_format === 'ISO8601') {
-		// For ISO8601 dates, we need to reconstruct the original UTC time
-		// This is a limitation - we don't store the original UTC timestamp
-		// For now, we'll use the current date's time
-		baseTime = kkDate.date.getTime();
-	} else {
-		baseTime = kkDate.date.getTime();
-	}
-
-	// Get the offset of the target timezone
-	const targetOffset = getTimezoneOffset(targetTimezone, kkDate.date);
-
-	// Create a new date by adjusting for the timezone offset
-	// The offset represents the difference between UTC and the target timezone
-	// We add the offset to convert from UTC to the target timezone
-	const adjustedTime = baseTime + targetOffset;
-
-	return new Date(adjustedTime);
+	return kkDate.date;
 }
 
 /**
@@ -430,28 +434,44 @@ function dateTimeFormat(orj_this, template) {
 		const timezone = global_config.timezone;
 
 		if (template === format_types.dddd) {
-			return {
+			if (cached_dateTimeFormat_with_locale.dddd[`${locale}_${timezone}`]) {
+				return cached_dateTimeFormat_with_locale.dddd[`${locale}_${timezone}`];
+			}
+			cached_dateTimeFormat_with_locale.dddd[`${locale}_${timezone}`] = {
 				value: new Intl.DateTimeFormat(locale, { weekday: 'long', timeZone: timezone }),
 				id: `${locale}_${timezone}_dddd`,
 			};
+			return cached_dateTimeFormat_with_locale.dddd[`${locale}_${timezone}`];
 		}
 		if (template === format_types.ddd) {
-			return {
+			if (cached_dateTimeFormat_with_locale.ddd[`${locale}_${timezone}`]) {
+				return cached_dateTimeFormat_with_locale.ddd[`${locale}_${timezone}`];
+			}
+			cached_dateTimeFormat_with_locale.ddd[`${locale}_${timezone}`] = {
 				value: new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: timezone }),
 				id: `${locale}_${timezone}_ddd`,
 			};
+			return cached_dateTimeFormat_with_locale.ddd[`${locale}_${timezone}`];
 		}
 		if (template === format_types.MMMM) {
-			return {
+			if (cached_dateTimeFormat_with_locale.MMMM[`${locale}_${timezone}`]) {
+				return cached_dateTimeFormat_with_locale.MMMM[`${locale}_${timezone}`];
+			}
+			cached_dateTimeFormat_with_locale.MMMM[`${locale}_${timezone}`] = {
 				value: new Intl.DateTimeFormat(locale, { month: 'long', timeZone: timezone }),
 				id: `${locale}_${timezone}_MMMM`,
 			};
+			return cached_dateTimeFormat_with_locale.MMMM[`${locale}_${timezone}`];
 		}
 		if (template === format_types.MMM) {
-			return {
+			if (cached_dateTimeFormat_with_locale.MMM[`${locale}_${timezone}`]) {
+				return cached_dateTimeFormat_with_locale.MMM[`${locale}_${timezone}`];
+			}
+			cached_dateTimeFormat_with_locale.MMM[`${locale}_${timezone}`] = {
 				value: new Intl.DateTimeFormat(locale, { month: 'short', timeZone: timezone }),
 				id: `${locale}_${timezone}_MMM`,
 			};
+			return cached_dateTimeFormat_with_locale.MMM[`${locale}_${timezone}`];
 		}
 	}
 
@@ -483,10 +503,99 @@ function dateTimeFormat(orj_this, template) {
  * @returns {Object}
  */
 function converter(date, to, options = { pad: true }) {
-	const result = {};
 	const shouldPad = options.pad !== false;
 	const isUTC = options.isUTC || false;
 	const detectedFormat = options.detectedFormat || null;
+	const orj_this = options.orj_this;
+
+	// Determine timezone for formatting
+	let targetTimezone = null;
+	if (orj_this) {
+		targetTimezone = orj_this.temp_config.timezone || global_config.timezone;
+	}
+
+	// Create cache key for this specific conversion
+	const timestamp = date.getTime();
+	const cacheKey = `${timestamp}_${to.join(',')}_${shouldPad}_${isUTC}_${targetTimezone || 'none'}_${detectedFormat || 'none'}`;
+
+	// Check cache first
+	if (converter_results_cache.has(cacheKey)) {
+		return converter_results_cache.get(cacheKey);
+	}
+
+	// Limit cache size to prevent memory leaks
+	if (converter_results_cache.size > 10000) {
+		// Clear half of the cache when limit is reached
+		const keysToDelete = Array.from(converter_results_cache.keys()).slice(0, 5000);
+		for (const key of keysToDelete) {
+			converter_results_cache.delete(key);
+		}
+	}
+
+	const result = {};
+
+	// Use timezone-aware formatting if targetTimezone is specified and not UTC
+	// For ISO8601 UTC timestamps with .tz() calls, we also need timezone formatting
+	if (targetTimezone && targetTimezone !== 'UTC') {
+		// Use Intl.DateTimeFormat for timezone-aware formatting
+		let formatter = null;
+		const partsMap = {};
+
+		if (cached_converter_int[targetTimezone]) {
+			formatter = cached_converter_int[targetTimezone];
+		} else {
+			formatter = new Intl.DateTimeFormat('en-CA', {
+				timeZone: targetTimezone,
+				year: 'numeric',
+				month: '2-digit',
+				day: '2-digit',
+				hour: '2-digit',
+				minute: '2-digit',
+				second: '2-digit',
+				hour12: false,
+			});
+			cached_converter_int[targetTimezone] = formatter;
+		}
+
+		const parts = formatter.formatToParts(date);
+		for (const part of parts) {
+			partsMap[part.type] = part.value;
+		}
+
+		const len = to.length;
+		for (let i = 0; i < len; i++) {
+			const field = to[i];
+			switch (field) {
+				case 'year':
+					result.year = partsMap.year;
+					break;
+				case 'month':
+					result.month = partsMap.month;
+					break;
+				case 'day':
+					result.day = partsMap.day;
+					break;
+				case 'hours':
+					result.hours = partsMap.hour;
+					break;
+				case 'minutes':
+					result.minutes = partsMap.minute;
+					break;
+				case 'seconds':
+					result.seconds = partsMap.second;
+					break;
+				case 'milliseconds':
+					result.milliseconds = shouldPad
+						? date.getMilliseconds() < 100
+							? `0${date.getMilliseconds() < 10 ? `0${date.getMilliseconds()}` : date.getMilliseconds()}`
+							: String(date.getMilliseconds())
+						: date.getMilliseconds();
+					break;
+			}
+		}
+		converter_results_cache.set(cacheKey, result);
+		return result;
+	}
 
 	// Fast path: Use direct Date methods for most cases
 	if (detectedFormat !== 'Xx' || !global_config.timezone || global_config.timezone === 'UTC') {
@@ -530,16 +639,17 @@ function converter(date, to, options = { pad: true }) {
 				}
 			}
 		}
+		converter_results_cache.set(cacheKey, result);
 		return result;
 	}
 
 	// Timezone-aware formatting only when absolutely necessary
-	const targetTimezone = global_config.timezone;
-	const cache = target_timezone_cache.get(targetTimezone);
+	const useTimezone = targetTimezone || global_config.timezone;
+	const cache = target_timezone_cache.get(useTimezone);
 	let in_result = {};
 	if (!cache) {
 		const formatter_value = new Intl.DateTimeFormat('en-CA', {
-			timeZone: targetTimezone,
+			timeZone: useTimezone,
 			year: 'numeric',
 			month: '2-digit',
 			day: '2-digit',
@@ -559,7 +669,7 @@ function converter(date, to, options = { pad: true }) {
 			const part = parts[i];
 			partsMap[part.type] = part.value;
 		}
-		target_timezone_cache.set(targetTimezone, partsMap);
+		target_timezone_cache.set(useTimezone, partsMap);
 		in_result = partsMap;
 	} else {
 		in_result = cache;
@@ -596,6 +706,7 @@ function converter(date, to, options = { pad: true }) {
 		}
 	}
 
+	converter_results_cache.set(cacheKey, result);
 	return result;
 }
 
