@@ -44,8 +44,9 @@ kk_date.caching({ status: true, defaultTtl: 3600 });
 
 // Check cache statistics
 const stats = kk_date.caching_status();
-console.log('Cache hit rate:', stats.hitRate);
-console.log('Cache size:', stats.size);
+const hitRate = stats.totalHits > 0 ? (stats.totalHits / (stats.totalHits + stats.total) * 100).toFixed(1) : 0;
+console.log('Cache hit rate:', hitRate + '%');
+console.log('Cache size:', stats.cacheSize || 0);
 ```
 
 ### Timezone Conversion Performance
@@ -259,10 +260,11 @@ kk_date.caching({ status: true, defaultTtl: 3600 }); // 1 hour TTL
 // Monitor cache performance
 setInterval(() => {
     const stats = kk_date.caching_status();
+    const hitRate = stats.totalHits > 0 ? (stats.totalHits / (stats.totalHits + stats.total) * 100).toFixed(1) : 0;
     console.log('Cache stats:', {
-        hitRate: stats.hitRate,
-        size: stats.size,
-        efficiency: stats.hits / (stats.hits + stats.misses)
+        hitRate: hitRate + '%',
+        size: stats.cacheSize || 0,
+        totalHits: stats.totalHits || 0
     });
 }, 60000); // Log every minute
 ```
@@ -348,9 +350,9 @@ function monitorMemoryUsage() {
 // Clear cache periodically if needed
 function manageCacheMemory() {
     const stats = kk_date.caching_status();
-    if (stats.size > 1000) { // Arbitrary threshold
+    if (stats.cacheSize > 1000) { // Arbitrary threshold
         kk_date.clearCache();
-        console.log('Cache cleared due to size:', stats.size);
+        console.log('Cache cleared due to size:', stats.cacheSize);
     }
 }
 ```
@@ -467,7 +469,7 @@ configureKkDate();
 // For processing large datasets
 function processDateArray(dates) {
     // Enable caching for bulk operations
-    const originalCaching = kk_date.caching_status().enabled;
+    const originalCaching = kk_date.caching_status().status;
     if (!originalCaching) {
         kk_date.caching({ status: true });
     }
@@ -572,7 +574,7 @@ setInterval(() => {
    ```javascript
    // Clear cache periodically in long-running processes
    setInterval(() => {
-       if (kk_date.caching_status().size > 10000) {
+       if (kk_date.caching_status().cacheSize > 10000) {
            kk_date.clearCache();
        }
    }, 3600000); // Every hour
@@ -587,18 +589,18 @@ function debugPerformance() {
     
     console.log('Performance Debug Info:', {
         cache: {
-            enabled: stats.enabled,
-            size: stats.size,
-            hitRate: stats.hitRate,
-            efficiency: stats.hits / (stats.hits + stats.misses || 1)
+            status: stats.status,
+            cacheSize: stats.cacheSize || 0,
+            totalHits: stats.totalHits || 0,
+            hitRate: stats.totalHits > 0 ? (stats.totalHits / (stats.totalHits + stats.total) * 100).toFixed(1) + '%' : '0%'
         },
         memory: {
             heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024) + ' MB',
             heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024) + ' MB'
         },
         recommendations: {
-            enableCaching: !stats.enabled ? 'Enable caching for better performance' : null,
-            clearCache: stats.size > 1000 ? 'Consider clearing cache' : null,
+            enableCaching: !stats.status ? 'Enable caching for better performance' : null,
+            clearCache: stats.cacheSize > 1000 ? 'Consider clearing cache' : null,
             memoryUsage: memUsage.heapUsed > 100 * 1024 * 1024 ? 'High memory usage detected' : null
         }
     });

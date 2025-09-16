@@ -26,7 +26,8 @@ kk_date.caching({ status: true, defaultTtl: 3600 });
 
 // Monitor cache performance
 const stats = kk_date.caching_status();
-console.log('Cache hit rate:', stats.hitRate); // Typically 99%+
+const hitRate = stats.totalHits > 0 ? (stats.totalHits / (stats.totalHits + stats.total) * 100).toFixed(1) : 0;
+console.log('Cache hit rate:', hitRate + '%'); // Typically 99%+
 
 // First conversion - initial computation
 const date = new kk_date('2024-08-23 10:00:00');
