@@ -15,6 +15,7 @@ const {
 	global_config,
 	systemTimezone,
 	cached_converter_int,
+	converter_results_cache,
 	cached_dateTimeFormat_with_locale,
 } = require('./constants');
 
@@ -501,7 +502,6 @@ function dateTimeFormat(orj_this, template) {
  * @returns {Object}
  */
 function converter(date, to, options = { pad: true }) {
-	const result = {};
 	const shouldPad = options.pad !== false;
 	const isUTC = options.isUTC || false;
 	const detectedFormat = options.detectedFormat || null;
@@ -512,6 +512,26 @@ function converter(date, to, options = { pad: true }) {
 	if (orj_this) {
 		targetTimezone = orj_this.temp_config.timezone || global_config.timezone;
 	}
+
+	// Create cache key for this specific conversion
+	const timestamp = date.getTime();
+	const cacheKey = `${timestamp}_${to.join(',')}_${shouldPad}_${isUTC}_${targetTimezone || 'none'}_${detectedFormat || 'none'}`;
+
+	// Check cache first
+	if (converter_results_cache.has(cacheKey)) {
+		return converter_results_cache.get(cacheKey);
+	}
+
+	// Limit cache size to prevent memory leaks
+	if (converter_results_cache.size > 10000) {
+		// Clear half of the cache when limit is reached
+		const keysToDelete = Array.from(converter_results_cache.keys()).slice(0, 5000);
+		for (const key of keysToDelete) {
+			converter_results_cache.delete(key);
+		}
+	}
+
+	const result = {};
 
 	// Use timezone-aware formatting if targetTimezone is specified and not UTC
 	// For ISO8601 UTC timestamps with .tz() calls, we also need timezone formatting
@@ -572,6 +592,7 @@ function converter(date, to, options = { pad: true }) {
 					break;
 			}
 		}
+		converter_results_cache.set(cacheKey, result);
 		return result;
 	}
 
@@ -617,6 +638,7 @@ function converter(date, to, options = { pad: true }) {
 				}
 			}
 		}
+		converter_results_cache.set(cacheKey, result);
 		return result;
 	}
 
@@ -683,6 +705,7 @@ function converter(date, to, options = { pad: true }) {
 		}
 	}
 
+	converter_results_cache.set(cacheKey, result);
 	return result;
 }
 

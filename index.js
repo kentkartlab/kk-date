@@ -23,6 +23,7 @@ const {
 	global_config,
 	format_types_cache,
 	format_types_regex_cache,
+	formatter_cache,
 } = require('./constants');
 
 nopeRedis.config({ defaultTtl: 1300 });
@@ -1214,16 +1215,54 @@ function diff(start, end, type, is_decimal = false, turn_difftime = false) {
 function formatter(orj_this, template = null) {
 	isInvalid(orj_this.date);
 
+	// Cache key for formatter results
+	const timestamp = orj_this.date.getTime();
+	const timezone = orj_this.temp_config.timezone || global_config.timezone || 'none';
+	const locale = orj_this.temp_config.locale || global_config.locale || 'none';
+	const cacheKey = `${template}_${timestamp}_${timezone}_${locale}_${orj_this.detected_format || 'none'}`;
+
+	// Check cache first
+	if (formatter_cache.has(cacheKey)) {
+		return formatter_cache.get(cacheKey);
+	}
+
+	// Limit cache size to prevent memory leaks
+	if (formatter_cache.size > 10000) {
+		// Clear half of the cache when limit is reached
+		const keysToDelete = Array.from(formatter_cache.keys()).slice(0, 5000);
+		for (const key of keysToDelete) {
+			formatter_cache.delete(key);
+		}
+	}
+
+	let result;
+
 	// Determine if this is a UTC date (ISO8601 format)
 	const isUTC = orj_this.detected_format === 'ISO8601';
 
 	switch (template) {
 		case 'x': {
-			return parseInt(orj_this.valueOfLocal(true), 10);
+			result = parseInt(orj_this.valueOfLocal(true), 10);
+			break;
 		}
 		case 'X': {
-			return parseInt(orj_this.valueOfLocal(true) / 1000, 10);
+			result = parseInt(orj_this.valueOfLocal(true) / 1000, 10);
+			break;
 		}
+		default: {
+			// Store result in cache and return
+			result = _formatterCore(orj_this, template, isUTC);
+			break;
+		}
+	}
+
+	// Store result in cache
+	formatter_cache.set(cacheKey, result);
+	return result;
+}
+
+function _formatterCore(orj_this, template, isUTC) {
+	switch (template) {
 		case format_types.dddd: {
 			const formatter = dateTimeFormat(orj_this, template);
 			const cache_key = `${template}_${formatter.id}_${orj_this.date.getTime()}`;

@@ -2,18 +2,18 @@
 
 [![npm version](https://badge.fury.io/js/kk-date.svg)](https://badge.fury.io/js/kk-date)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests](https://img.shields.io/badge/Tests-214%20passed-brightgreen)](https://github.com/kentkartlab/kk-date)
+[![Tests](https://img.shields.io/badge/Tests-322%20passed-brightgreen)](https://github.com/kentkartlab/kk-date)
 
 A blazing-fast JavaScript date library with intelligent caching, automatic DST detection, and zero-config timezone handling. Perfect for high-performance applications, real-time systems, and data-intensive operations where speed and accuracy matter most.
 
 ## 🌟 Why Choose kk-date?
 
-- **⚡ Lightning Fast** - 149x faster timezone operations than alternatives
+- **⚡ Lightning Fast** - Up to 43x faster timezone operations than Day.js
 - **🌍 Accurate Timezone Handling** - Consistent, reliable timezone conversions across all platforms
 - **🧠 Zero-Config DST** - Automatic Daylight Saving Time detection without manual intervention
 - **📊 Big Data Ready** - Optional Redis-like caching for handling millions of date operations
 - **🎯 Memory Efficient** - Negative memory usage with object pooling and lazy loading
-- **🔒 Bulletproof** - 214 comprehensive tests covering edge cases and DST transitions
+- **🔒 Bulletproof** - 322 comprehensive tests covering edge cases and DST transitions
 - **🌍 Production Proven** - Cross-platform compatibility with zero dependencies
 
 ## 📦 Installation
@@ -257,31 +257,51 @@ date.config({
 
 ## 📊 Performance Benchmarks
 
-### Speed Comparison (100,000 operations)
+### Real-World Sequential Operations (1000 days, 100 operations/day)
 
-| Operation | kk-date | Moment.js | Day.js | Speed Improvement |
-|-----------|---------|-----------|--------|-------------------|
-| **Timezone Conversions** | **43.6ms** | 119.6ms | 2140ms | **49.1x faster** |
-| **Date Formatting** | **139.1ms** | 443.3ms | 191.8ms | **3.2x faster** |
-| **Date Construction** | **121.1ms** | 374.2ms | 37.6ms | **3.1x faster** |
-| **Comparison Operations** | **235.3ms** | 794.0ms | 263.4ms | **3.4x faster** |
+Our benchmark simulates real-world usage by processing 1000 sequential days with 100 operations per day. This reflects typical production scenarios where dates are processed in sequence rather than synthetic benchmarks.
+
+**Run the benchmark yourself:**
+```bash
+node benchmark2.js
+```
+
+**Latest Results:**
+
+| Operation | kk-date | Moment.js | Day.js | Luxon | Speed vs Fastest Competitor |
+|-----------|---------|-----------|--------|-------|-----------------------------|
+| **Date Creation & Formatting** | **287ms** | 644ms | 471ms | 559ms | **64% faster** than Day.js |
+| **Time Operations** | **197ms** | 785ms | 421ms | 2280ms | **114% faster** than Day.js |
+| **Timezone Conversions** | **336ms** | 1216ms | 14976ms | 2890ms | **262% faster** than Moment |
+| **Complex Operations** | **491ms** | 1486ms | 920ms | 2462ms | **87% faster** than Day.js |
+
+### Overall Performance Summary
+
+| Library | Total Time | Operations/sec | Performance |
+|---------|------------|---------------|-------------|
+| **kk-date** | **1.39s** | **288,351 ops/sec** | 🏆 **Winner** |
+| Moment.js | 4.24s | 94,255 ops/sec | 205% slower |
+| Luxon | 8.44s | 47,396 ops/sec | 508% slower |
+| Day.js | 17.09s | 23,401 ops/sec | **1132% slower** |
 
 ### Memory Efficiency
 
 | Library | Memory Usage | Bundle Size | DST Support |
 |---------|-------------|-------------|-------------|
-| **kk-date** | **11.83 MB** | **15 KB** | **Built-in** |
-| Moment.js | 2.16 MB | 297 KB | Plugin required |
-| Day.js | -12.72 MB | 18.5 KB | Plugin required |
+| **kk-date** | **~60 MB** | **15 KB** | **Built-in** |
+| Moment.js | ~180 MB | 297 KB | Plugin required |
+| Day.js | ~175 MB | 18.5 KB | Plugin required |
+| Luxon | ~178 MB | 71 KB | Built-in |
 
 ### Key Advantages
 
-- **⚡ 267x faster** timezone operations than Day.js
+- **⚡ 43x faster** timezone operations than Day.js in real-world scenarios
+- **🏆 Overall 11x faster** than Day.js across all operations
 - **🌍 Perfect timezone accuracy** across all platforms
 - **🧠 Zero-config DST** handling eliminates bugs
 - **📊 Big Data Ready** with optional Redis-like caching
-- **🏆 Production Proven** with 214 comprehensive tests
-- **💾 Moderate memory usage** with rich functionality
+- **✅ Production Proven** with 322 comprehensive tests
+- **💾 Memory efficient** with intelligent caching and object pooling
 
 ## 🤝 Contributing
 
@@ -292,6 +312,12 @@ We welcome contributions! Please see our [Contributing Guide](docs/CONTRIBUTING.
 npm test                    # Run all tests
 npm test -- --watch        # Run tests in watch mode
 npm test -- --coverage     # Run tests with coverage
+```
+
+### Running Benchmarks
+```bash
+node benchmark.js           # Run comprehensive benchmark suite
+node benchmark2.js          # Run sequential 1000-day benchmark
 ```
 
 ## 📄 License

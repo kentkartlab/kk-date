@@ -293,6 +293,8 @@ const global_config = {
 };
 
 const cached_converter_int = {};
+const converter_results_cache = new Map();
+const formatter_cache = new Map();
 
 const systemTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
@@ -315,4 +317,6 @@ module.exports.cached_dateTimeFormat = cached_dateTimeFormat;
 module.exports.global_config = global_config;
 module.exports.systemTimezone = systemTimezone;
 module.exports.cached_converter_int = cached_converter_int;
+module.exports.converter_results_cache = converter_results_cache;
+module.exports.formatter_cache = formatter_cache;
 module.exports.cached_dateTimeFormat_with_locale = cached_dateTimeFormat_with_locale;
