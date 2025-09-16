@@ -26,7 +26,9 @@ npm test -- --watch
 npm test -- --coverage
 
 # Run specific test file
-npm test -- test/timezone.test.js
+npm test test/timezone.test.js
+# or
+npx jest test/timezone.test.js
 
 # Run tests matching pattern
 npm test -- --testPathPattern="timezone"
@@ -50,21 +52,24 @@ NODE_ENV=test npm test
 
 ## Test Structure
 
-### Test File Organization
+### Test File Organization (322 Total Tests)
 
 ```
 test/
 ├── add.test.js                    # Addition operations
 ├── beforeAfter.test.js            # Before/after comparisons
-├── format.test.js                 # Formatting functionality
+├── format.test.js                 # Formatting functionality (including overflow time)
 ├── fromNow.test.js                # Relative time calculations
 ├── other.test.js                  # Miscellaneous functionality
 ├── startEndOf.test.js             # Start/end of period operations
+├── time-formatting.test.js        # Time-specific formatting tests
+├── time-operations.test.js        # Date manipulation tests
+├── time-parsing.test.js           # Various date/time parsing scenarios
 ├── timezone.test.js               # Basic timezone functionality
 ├── validInvalid.test.js           # Date validation
 ├── weekStartDay.test.js           # Week start day functionality
 ├── user-timezone-scenarios.test.js # Real-world timezone scenarios
-├── comprehensive-timezone-formats.test.js # All format templates
+├── comprehensive-timezone-formats.test.js # All format templates (24 combinations)
 ├── real-world-timezone.test.js    # Real-world timezone examples
 └── cross-platform-timezone.test.js # Cross-platform compatibility
 ```

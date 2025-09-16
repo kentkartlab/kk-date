@@ -8,14 +8,17 @@ kk-date is designed for speed and efficiency, featuring intelligent caching, mem
 
 ## ⚡ Performance Features
 
-### Intelligent Caching System
+### Intelligent Multi-Level Caching System
 
-kk-date uses an intelligent caching system (`nope-redis.js`) to optimize performance:
+kk-date uses a sophisticated multi-level caching system to optimize performance:
 
+- **Converter Results Cache**: Caches date component extraction results (10K limit with LRU eviction)
+- **Formatter Cache**: Caches formatted output strings (10K limit with LRU eviction)
 - **Timezone Offset Caching**: Caches timezone calculations with TTL to avoid repeated computations
 - **Format Pattern Caching**: Caches compiled format patterns for faster formatting
 - **Locale Data Caching**: Pre-computes and caches month/day names for different locales
-- **Automatic Cleanup**: Removes expired cache entries to prevent memory leaks
+- **DateTimeFormat Cache**: Reuses Intl.DateTimeFormat instances for locale operations
+- **Automatic Cleanup**: Removes expired cache entries and implements LRU eviction to prevent memory leaks
 
 ```javascript
 const kk_date = require('kk-date');
@@ -338,15 +341,29 @@ function manageCacheMemory() {
 
 ## 📊 Running Your Own Benchmarks
 
-### Using the Built-in Benchmark Script
+### Using the Built-in Benchmark Scripts
 
 ```bash
-# Run the included benchmark script
+# Run comprehensive benchmark against other libraries
 npm run benchmark
 
-# Or directly
-node benchmark.js
+# Run sequential 1000-day real-world benchmark
+npm run benchmark2
+
+# Or run directly
+node benchmark.js   # Comprehensive benchmark
+node benchmark2.js  # Sequential operations benchmark
 ```
+
+### Latest Benchmark Results (1000 Sequential Days)
+
+| Operation | kk-date | Moment.js | Day.js | Luxon | Performance |
+|-----------|---------|-----------|--------|-------|--------------|
+| **Date Creation & Formatting** | **287ms** | 644ms | 471ms | 559ms | **64% faster** than Day.js |
+| **Time Operations** | **197ms** | 785ms | 421ms | 2280ms | **114% faster** than Day.js |
+| **Timezone Conversions** | **336ms** | 1216ms | 14976ms | 2890ms | **43x faster** than Day.js |
+| **Complex Operations** | **491ms** | 1486ms | 920ms | 2462ms | **87% faster** than Day.js |
+| **Overall** | **1.39s** | 4.24s | 17.09s | 8.44s | **11x faster** than Day.js |
 
 ### Custom Benchmark Template
 
