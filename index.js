@@ -84,17 +84,23 @@ class KkDate {
 				if (Number.isInteger(date)) {
 					const stringed_date_length = `${date}`.length;
 					if (stringed_date_length <= 10) {
-						this.date = new Date(date * 1000);
+						// Unix timestamp (seconds) - always create as UTC
+						const utcDate = new Date(date * 1000);
+						this.date = utcDate;
 					} else if (stringed_date_length > 10) {
-						this.date = new Date(date);
+						// JavaScript timestamp (milliseconds) - always create as UTC
+						const utcDate = new Date(date);
+						this.date = utcDate;
 					}
 					this.detected_format = 'Xx';
 				} else if (date instanceof KkDate) {
+					// Clone from another KkDate - preserve the exact time
 					this.date = new Date(date.date.getTime());
 					this.detected_format = 'kkDate';
 				} else if (date instanceof Date) {
+					// Clone from Date object - preserve the exact time
 					this.date = new Date(date.getTime());
-					this.detected_format = 'Date';
+					this.detected_format = 'now';
 				} else if (isValid(date, format_types['YYYY-MM-DD'])) {
 					const [year, month, day] = date.split('-');
 					this.date = new Date(`${year}-${month}-${day} 00:00:00`);
