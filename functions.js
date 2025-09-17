@@ -10,8 +10,8 @@ const {
 	timezone_cache,
 	timezone_check_cache,
 	timezone_abbreviation_cache,
-	target_timezone_cache,
 	long_timezone_cache,
+	timezone_formatter_cache,
 	global_config,
 	systemTimezone,
 	cached_converter_int,
@@ -225,7 +225,7 @@ function parseWithTimezone(kkDate) {
 	// 4. Input is not 'now' (current time should not be reinterpreted)
 	const globalTimezone = global_config.timezone;
 
-	if (globalTimezone && globalTimezone !== systemTimezone && globalTimezone !== 'UTC' && kkDate.detected_format !== 'ISO8601' && kkDate.detected_format !== 'now') {
+	if (globalTimezone && globalTimezone !== systemTimezone && globalTimezone !== 'UTC' && kkDate.detected_format !== 'ISO8601' && kkDate.detected_format !== 'now' && kkDate.detected_format !== 'Xx' && kkDate.detected_format !== 'kkDate') {
 		// Reinterpret the input as being in global timezone
 		const systemOffset = getTimezoneOffset(systemTimezone, kkDate.date);
 		const globalOffset = getTimezoneOffset(globalTimezone, kkDate.date);
@@ -645,10 +645,13 @@ function converter(date, to, options = { pad: true }) {
 
 	// Timezone-aware formatting only when absolutely necessary
 	const useTimezone = targetTimezone || global_config.timezone;
-	const cache = target_timezone_cache.get(useTimezone);
-	let in_result = {};
-	if (!cache) {
-		const formatter_value = new Intl.DateTimeFormat('en-CA', {
+
+	// Cache the DateTimeFormat instance for performance
+	let formatter_value;
+	if (timezone_formatter_cache.has(useTimezone)) {
+		formatter_value = timezone_formatter_cache.get(useTimezone);
+	} else {
+		formatter_value = new Intl.DateTimeFormat('en-CA', {
 			timeZone: useTimezone,
 			year: 'numeric',
 			month: '2-digit',
@@ -658,21 +661,18 @@ function converter(date, to, options = { pad: true }) {
 			second: '2-digit',
 			hour12: false,
 		});
+		timezone_formatter_cache.set(useTimezone, formatter_value);
+	}
 
-		// Single formatToParts call - cache the result
-		const parts = formatter_value.formatToParts(date);
-		const partsMap = {};
-		const partsLen = parts.length;
+	// Format the specific date
+	const parts = formatter_value.formatToParts(date);
+	const in_result = {};
+	const partsLen = parts.length;
 
-		// Optimized parts mapping
-		for (let i = 0; i < partsLen; i++) {
-			const part = parts[i];
-			partsMap[part.type] = part.value;
-		}
-		target_timezone_cache.set(useTimezone, partsMap);
-		in_result = partsMap;
-	} else {
-		in_result = cache;
+	// Optimized parts mapping
+	for (let i = 0; i < partsLen; i++) {
+		const part = parts[i];
+		in_result[part.type] = part.value;
 	}
 
 	// Process requested fields

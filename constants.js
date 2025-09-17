@@ -258,6 +258,7 @@ const timezone_check_cache = new Map();
 const timezone_abbreviation_cache = new Map();
 const target_timezone_cache = new Map();
 const long_timezone_cache = new Map();
+const timezone_formatter_cache = new Map();
 const cached_dateTimeFormat = {
 	dddd: new Intl.DateTimeFormat('en', {
 		weekday: 'long',
@@ -313,6 +314,7 @@ module.exports.timezone_check_cache = timezone_check_cache;
 module.exports.timezone_abbreviation_cache = timezone_abbreviation_cache;
 module.exports.target_timezone_cache = target_timezone_cache;
 module.exports.long_timezone_cache = long_timezone_cache;
+module.exports.timezone_formatter_cache = timezone_formatter_cache;
 module.exports.cached_dateTimeFormat = cached_dateTimeFormat;
 module.exports.global_config = global_config;
 module.exports.systemTimezone = systemTimezone;
