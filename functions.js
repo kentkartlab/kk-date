@@ -584,7 +584,8 @@ function converter(date, to, options = { pad: true }) {
 					result.day = partsMap.day;
 					break;
 				case 'hours':
-					result.hours = partsMap.hour;
+					// Fix: Convert hour 24 to 00 (midnight)
+					result.hours = partsMap.hour === '24' ? '00' : partsMap.hour;
 					break;
 				case 'minutes':
 					result.minutes = partsMap.minute;
