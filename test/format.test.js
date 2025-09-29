@@ -12,6 +12,7 @@ describe('format', () => {
 		expect(new kk_date(`${test_date}`, 'YYYY-MM-DD').format('YYYY-MM-DD')).toBe(`${test_date}`);
 		expect(new kk_date(`${test_time}`, 'HH:mm:ss').format('HH:mm:ss')).toBe(test_time);
 		expect(new kk_date(`${test_date} ${test_time}`, 'YYYY-MM-DD HH:mm:ss').format('YYYY-MM-DD HH:mm:ss')).toBe(`${test_date} ${test_time}`);
+		expect(new kk_date(`${test_date} ${test_time}`).format()).toBe(`${test_date}T${test_time}+00:00`);
 	});
 
 	test('HH:mm:ss', () => {
@@ -366,7 +367,6 @@ describe('newly added format templates', () => {
 		expect(new kk_date('2024-12-31 23:59:59').format('YYYY.MM.DD HH:mm')).toBe('2024.12.31 23:59');
 	});
 
-
 	test('DD MMMM dddd, YYYY format', () => {
 		expect(new kk_date('2024-08-19').format('DD MMMM dddd, YYYY')).toBe('19 August Monday, 2024');
 		expect(new kk_date('2024-01-01').format('DD MMMM dddd, YYYY')).toBe('01 January Monday, 2024');
@@ -385,4 +385,3 @@ describe('newly added format templates', () => {
 		expect(new kk_date('2024-12-31').format('YYYY MMMM DD')).toBe('2024 December 31');
 	});
 });
-
