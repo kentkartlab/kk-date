@@ -1686,12 +1686,30 @@ function _formatterCore(orj_this, template, isUTC) {
 			return `${result.year} ${formatted} ${result.day}`;
 		}
 		case null: {
-			const timezoneOffset = -orj_this.date.getTimezoneOffset();
+			// When template is null, always return YYYY-MM-DDTHH:mm:ss format with timezone offset
+			// Get the configured timezone (from temp_config or global_config)
+			const targetTimezone = orj_this.temp_config.timezone || global_config.timezone;
+			let timezoneOffset;
+
+			if (targetTimezone) {
+				if (targetTimezone === 'UTC') {
+					// UTC has zero offset
+					timezoneOffset = 0;
+				} else {
+					// Calculate offset for the configured timezone
+					const offsetMs = getTimezoneOffset(targetTimezone, orj_this.date);
+					timezoneOffset = offsetMs / 60000; // Convert ms to minutes
+				}
+			} else {
+				// Fallback to system timezone offset
+				timezoneOffset = -orj_this.date.getTimezoneOffset();
+			}
+
 			const sign = timezoneOffset >= 0 ? '+' : '-';
 			const absOffset = Math.abs(timezoneOffset);
 			const offsetHours = padZero(Math.floor(absOffset / 60));
 			const offsetMinutes = padZero(absOffset % 60);
-			const result = converter(orj_this.date, ['day', 'year', 'hours', 'minutes', 'seconds'], {
+			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes', 'seconds'], {
 				isUTC,
 				detectedFormat: orj_this.detected_format,
 				orj_this: orj_this,

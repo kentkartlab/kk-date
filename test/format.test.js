@@ -1,4 +1,4 @@
-const { describe, test, expect, afterEach } = require('@jest/globals');
+const { describe, test, expect } = require('@jest/globals');
 const kk_date = require('../index');
 const test_date = '2024-08-19';
 const test_time = '23:50:59';
@@ -12,6 +12,7 @@ describe('format', () => {
 		expect(new kk_date(`${test_date}`, 'YYYY-MM-DD').format('YYYY-MM-DD')).toBe(`${test_date}`);
 		expect(new kk_date(`${test_time}`, 'HH:mm:ss').format('HH:mm:ss')).toBe(test_time);
 		expect(new kk_date(`${test_date} ${test_time}`, 'YYYY-MM-DD HH:mm:ss').format('YYYY-MM-DD HH:mm:ss')).toBe(`${test_date} ${test_time}`);
+		expect(new kk_date(`${test_date} ${test_time}`).format()).toBe(`${test_date}T${test_time}+00:00`);
 	});
 
 	test('HH:mm:ss', () => {
@@ -366,7 +367,6 @@ describe('newly added format templates', () => {
 		expect(new kk_date('2024-12-31 23:59:59').format('YYYY.MM.DD HH:mm')).toBe('2024.12.31 23:59');
 	});
 
-
 	test('DD MMMM dddd, YYYY format', () => {
 		expect(new kk_date('2024-08-19').format('DD MMMM dddd, YYYY')).toBe('19 August Monday, 2024');
 		expect(new kk_date('2024-01-01').format('DD MMMM dddd, YYYY')).toBe('01 January Monday, 2024');
@@ -384,5 +384,17 @@ describe('newly added format templates', () => {
 		expect(new kk_date('2024-01-01').format('YYYY MMMM DD')).toBe('2024 January 01');
 		expect(new kk_date('2024-12-31').format('YYYY MMMM DD')).toBe('2024 December 31');
 	});
-});
 
+	test('midnight hour should format as 00 not 24', () => {
+		// Test case for the bug where midnight was showing as 24:00:00 instead of 00:00:00
+		const midnight = new kk_date('2025-10-25').startOf('days');
+		expect(midnight.format('YYYY-MM-DD HH:mm:ss')).toBe('2025-10-25 00:00:00');
+		expect(midnight.format('HH')).toBe('00');
+		expect(midnight.format('HH:mm')).toBe('00:00');
+		expect(midnight.format('HH:mm:ss')).toBe('00:00:00');
+
+		// Test with different dates to ensure consistency
+		expect(new kk_date('2024-01-01').startOf('days').format('HH:mm:ss')).toBe('00:00:00');
+		expect(new kk_date('2024-12-31').startOf('days').format('HH:mm:ss')).toBe('00:00:00');
+	});
+});

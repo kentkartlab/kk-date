@@ -69,7 +69,6 @@ function evictLRU() {
 	const itemsToRemove = Math.floor(MAX_CACHE_SIZE * 0.2);
 	const keysToRemove = sortedKeys.slice(0, itemsToRemove);
 
-	// biome-ignore lint/complexity/noForEach: <explanation>
 	keysToRemove.forEach((key) => {
 		delete memory.store[key];
 		memory.lru.delete(key);
@@ -100,7 +99,7 @@ module.exports.setItemSync = (key, value, ttl = defaultTtl) => {
 		memory.store[keyStr] = {
 			value: value,
 			hit: 0,
-			expires_at: Math.floor(new Date() / 1000) + Number.parseInt(ttl, 10),
+			expires_at: Math.floor(Date.now() / 1000) + Number.parseInt(ttl, 10),
 		};
 		// Update LRU tracking
 		memory.lru.set(keyStr, Date.now());
@@ -136,7 +135,7 @@ module.exports.itemStats = (key) => {
 		if (memory.store[`${key}`]) {
 			return {
 				expires_at: memory.store[`${key}`].expires_at,
-				remaining_seconds: memory.store[`${key}`].expires_at - Math.floor(new Date() / 1000),
+				remaining_seconds: memory.store[`${key}`].expires_at - Math.floor(Date.now() / 1000),
 				hit: memory.store[`${key}`].hit,
 			};
 		}
@@ -344,13 +343,13 @@ function roughSizeOfObject(object) {
 function killer() {
 	memory.config.killerIsFinished = false;
 	for (const property in memory.store) {
-		if (memory.store[`${property}`].expires_at < Math.floor(new Date() / 1000)) {
+		if (memory.store[`${property}`].expires_at < Math.floor(Date.now() / 1000)) {
 			delete memory.store[`${property}`];
 			memory.config.totalKeys--;
 		}
 	}
 	memory.config.killerIsFinished = true;
-	memory.config.lastKiller = Math.floor(new Date() / 1000);
+	memory.config.lastKiller = Math.floor(Date.now() / 1000);
 }
 
 module.exports.SERVICE_KILL = async () => {
@@ -397,7 +396,7 @@ function runner() {
 				if (memory.config.killerIsFinished) {
 					killer();
 				}
-				memory.config.nextKiller = Math.floor(new Date() / 1000) + intervalSecond;
+				memory.config.nextKiller = Math.floor(Date.now() / 1000) + intervalSecond;
 			} catch (error) {
 				console.error('nope-redis -> Critical Error flushed all data! > ', error.message);
 				clearInterval(runnerInterval);
