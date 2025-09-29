@@ -1,17 +1,12 @@
 {
-	"$schema": "https://biomejs.dev/schemas/1.8.3/schema.json",
-	"organizeImports": {
-		"enabled": true
-	},
+	"$schema": "https://biomejs.dev/schemas/2.2.4/schema.json",
+	"assist": { "actions": { "source": { "organizeImports": "on" } } },
 	"files": {
-		"ignore": []
+		"includes": ["**"]
 	},
 	"linter": {
 		"enabled": true,
 		"rules": {
-			"suspicious": {
-				"noRedeclare": "error"
-			},
 			"recommended": true,
 			"performance": {
 				"noDelete": "off"
@@ -20,13 +15,14 @@
 				"useLiteralKeys": "off"
 			},
 			"correctness": {
-				"noInvalidUseBeforeDeclaration": "error",
-				"noUndeclaredVariables": "error",
-				"noUnusedVariables": "error"
+				"noUndeclaredVariables": "error"
 			},
 			"style": {
 				"useNumberNamespace": "off",
 				"useDefaultParameterLast": "off"
+			},
+			"suspicious": {
+				"noExplicitAny": "off"
 			}
 		}
 	},
@@ -35,9 +31,6 @@
 			"jsxQuoteStyle": "single",
 			"quoteStyle": "single",
 			"lineWidth": 150
-		},
-		"parser": {
-			"unsafeParameterDecoratorsEnabled": true
 		}
 	}
 }

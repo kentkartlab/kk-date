@@ -1691,7 +1691,7 @@ function _formatterCore(orj_this, template, isUTC) {
 			const absOffset = Math.abs(timezoneOffset);
 			const offsetHours = padZero(Math.floor(absOffset / 60));
 			const offsetMinutes = padZero(absOffset % 60);
-			const result = converter(orj_this.date, ['day', 'year', 'hours', 'minutes', 'seconds'], {
+			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes', 'seconds'], {
 				isUTC,
 				detectedFormat: orj_this.detected_format,
 				orj_this: orj_this,

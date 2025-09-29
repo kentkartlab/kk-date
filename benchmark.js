@@ -500,12 +500,10 @@ let totalLuxonTime = 0;
 let totalLuxonTest = 0;
 let testCount = 0;
 
-// biome-ignore lint/complexity/noForEach: <explanation>
 testScenarios.forEach((scenario) => {
 	console.log(`\n📊 ${scenario.name}`);
 	console.log('='.repeat(50));
 
-	// biome-ignore lint/complexity/noForEach: <explanation>
 	scenario.tests.forEach((test) => {
 		const iterations = test.iterations || 500000;
 

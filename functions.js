@@ -225,7 +225,15 @@ function parseWithTimezone(kkDate) {
 	// 4. Input is not 'now' (current time should not be reinterpreted)
 	const globalTimezone = global_config.timezone;
 
-	if (globalTimezone && globalTimezone !== systemTimezone && globalTimezone !== 'UTC' && kkDate.detected_format !== 'ISO8601' && kkDate.detected_format !== 'now' && kkDate.detected_format !== 'Xx' && kkDate.detected_format !== 'kkDate') {
+	if (
+		globalTimezone &&
+		globalTimezone !== systemTimezone &&
+		globalTimezone !== 'UTC' &&
+		kkDate.detected_format !== 'ISO8601' &&
+		kkDate.detected_format !== 'now' &&
+		kkDate.detected_format !== 'Xx' &&
+		kkDate.detected_format !== 'kkDate'
+	) {
 		// Reinterpret the input as being in global timezone
 		const systemOffset = getTimezoneOffset(systemTimezone, kkDate.date);
 		const globalOffset = getTimezoneOffset(globalTimezone, kkDate.date);
