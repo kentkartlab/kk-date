@@ -707,37 +707,78 @@ class KkDate {
 			defined_type = 'seconds';
 			defined_amount = amount.$kk_date.milliseconds / 1000;
 		}
+
+		const targetTimezone = this.temp_config.timezone || global_config.timezone;
+		let dateToModify = this.date;
+		let offset = 0;
+
+		if (targetTimezone) {
+			offset = getTimezoneOffset(targetTimezone, this.date);
+			dateToModify = new Date(this.date.getTime() + offset);
+		}
+
 		switch (defined_type) {
 			case 'days':
-				this.date.setDate(this.date.getDate() + defined_amount);
+				if (targetTimezone) {
+					dateToModify.setUTCDate(dateToModify.getUTCDate() + defined_amount);
+				} else {
+					dateToModify.setDate(dateToModify.getDate() + defined_amount);
+				}
 				break;
 			case 'minutes':
-				this.date.setMinutes(this.date.getMinutes() + defined_amount);
+				if (targetTimezone) {
+					dateToModify.setUTCMinutes(dateToModify.getUTCMinutes() + defined_amount);
+				} else {
+					dateToModify.setMinutes(dateToModify.getMinutes() + defined_amount);
+				}
 				break;
 			case 'seconds':
-				this.date.setSeconds(this.date.getSeconds() + defined_amount);
+				if (targetTimezone) {
+					dateToModify.setUTCSeconds(dateToModify.getUTCSeconds() + defined_amount);
+				} else {
+					dateToModify.setSeconds(dateToModify.getSeconds() + defined_amount);
+				}
 				break;
 			case 'hours':
-				this.date.setHours(this.date.getHours() + defined_amount);
+				if (targetTimezone) {
+					dateToModify.setUTCHours(dateToModify.getUTCHours() + defined_amount);
+				} else {
+					dateToModify.setHours(dateToModify.getHours() + defined_amount);
+				}
 				break;
 			case 'months': {
-				const currentDate = this.date.getDate();
-				const currentMonth = this.date.getMonth();
-				// Ay eklemenin düzgün olması için tarihin 1. gününü kullanıyoruz.
-				this.date.setDate(1);
-				this.date.setMonth(currentMonth + defined_amount);
-				// 29 çeken şubat aylarında, değişkendeki günle güncel günü karşılaştırıp son günü alıyoruz.
-				const lastDay = new Date(this.date.getFullYear(), this.date.getMonth() + 1, 0).getDate();
-				this.date.setDate(Math.min(currentDate, lastDay));
+				if (targetTimezone) {
+					const currentDate = dateToModify.getUTCDate();
+					const currentMonth = dateToModify.getUTCMonth();
+					dateToModify.setUTCDate(1);
+					dateToModify.setUTCMonth(currentMonth + defined_amount);
+					const lastDay = new Date(Date.UTC(dateToModify.getUTCFullYear(), dateToModify.getUTCMonth() + 1, 0)).getUTCDate();
+					dateToModify.setUTCDate(Math.min(currentDate, lastDay));
+				} else {
+					const currentDate = dateToModify.getDate();
+					const currentMonth = dateToModify.getMonth();
+					dateToModify.setDate(1);
+					dateToModify.setMonth(currentMonth + defined_amount);
+					const lastDay = new Date(dateToModify.getFullYear(), dateToModify.getMonth() + 1, 0).getDate();
+					dateToModify.setDate(Math.min(currentDate, lastDay));
+				}
 				break;
 			}
 			case 'years': {
 				const year_amount = defined_amount * 12;
-				this.date.setMonth(this.date.getMonth() + year_amount);
+				if (targetTimezone) {
+					dateToModify.setUTCMonth(dateToModify.getUTCMonth() + year_amount);
+				} else {
+					dateToModify.setMonth(dateToModify.getMonth() + year_amount);
+				}
 				break;
 			}
 			default:
 				throw new Error('type is wrong');
+		}
+
+		if (targetTimezone) {
+			this.date = new Date(dateToModify.getTime() - offset);
 		}
 		return this;
 	}
@@ -783,27 +824,64 @@ class KkDate {
 	 * @returns {KkDate}
 	 */
 	set(type, value) {
+		const targetTimezone = this.temp_config.timezone || global_config.timezone;
+		let dateToModify = this.date;
+		let offset = 0;
+
+		if (targetTimezone) {
+			offset = getTimezoneOffset(targetTimezone, this.date);
+			dateToModify = new Date(this.date.getTime() + offset);
+		}
+
 		switch (type) {
 			case 'seconds':
-				this.date.setSeconds(value);
+				if (targetTimezone) {
+					dateToModify.setUTCSeconds(value);
+				} else {
+					dateToModify.setSeconds(value);
+				}
 				break;
 			case 'minutes':
-				this.date.setMinutes(value);
+				if (targetTimezone) {
+					dateToModify.setUTCMinutes(value);
+				} else {
+					dateToModify.setMinutes(value);
+				}
 				break;
 			case 'hours':
-				this.date.setHours(value);
+				if (targetTimezone) {
+					dateToModify.setUTCHours(value);
+				} else {
+					dateToModify.setHours(value);
+				}
 				break;
 			case 'days':
-				this.date.setDate(value);
+				if (targetTimezone) {
+					dateToModify.setUTCDate(value);
+				} else {
+					dateToModify.setDate(value);
+				}
 				break;
 			case 'months':
-				this.date.setMonth(value);
+				if (targetTimezone) {
+					dateToModify.setUTCMonth(value);
+				} else {
+					dateToModify.setMonth(value);
+				}
 				break;
 			case 'years':
-				this.date.setFullYear(value);
+				if (targetTimezone) {
+					dateToModify.setUTCFullYear(value);
+				} else {
+					dateToModify.setFullYear(value);
+				}
 				break;
 			default:
 				throw new Error('type wrong');
+		}
+
+		if (targetTimezone) {
+			this.date = new Date(dateToModify.getTime() - offset);
 		}
 		return this;
 	}
@@ -815,19 +893,27 @@ class KkDate {
 	 * @returns {number}
 	 */
 	get(type) {
+		const targetTimezone = this.temp_config.timezone || global_config.timezone;
+		let dateToRead = this.date;
+
+		if (targetTimezone) {
+			const offset = getTimezoneOffset(targetTimezone, this.date);
+			dateToRead = new Date(this.date.getTime() + offset);
+		}
+
 		switch (type) {
 			case 'seconds':
-				return this.date.getSeconds();
+				return targetTimezone ? dateToRead.getUTCSeconds() : dateToRead.getSeconds();
 			case 'minutes':
-				return this.date.getMinutes();
+				return targetTimezone ? dateToRead.getUTCMinutes() : dateToRead.getMinutes();
 			case 'hours':
-				return this.date.getHours();
+				return targetTimezone ? dateToRead.getUTCHours() : dateToRead.getHours();
 			case 'days':
-				return this.date.getDate();
+				return targetTimezone ? dateToRead.getUTCDate() : dateToRead.getDate();
 			case 'months':
-				return this.date.getMonth();
+				return targetTimezone ? dateToRead.getUTCMonth() : dateToRead.getMonth();
 			case 'years':
-				return this.date.getFullYear();
+				return targetTimezone ? dateToRead.getUTCFullYear() : dateToRead.getFullYear();
 			default:
 				throw new Error('type is wrong');
 		}
@@ -1336,8 +1422,8 @@ function formatter(orj_this, template = null) {
 
 	let result;
 
-	// Determine if this is a UTC date (ISO8601 format)
-	const isUTC = orj_this.detected_format === 'ISO8601';
+	// Determine if this is a UTC date (ISO8601 format) or if timezone is explicitly UTC
+	const isUTC = orj_this.detected_format === 'ISO8601' || timezone === 'UTC';
 
 	switch (template) {
 		case 'x': {

@@ -228,7 +228,6 @@ function parseWithTimezone(kkDate) {
 	if (
 		globalTimezone &&
 		globalTimezone !== systemTimezone &&
-		globalTimezone !== 'UTC' &&
 		kkDate.detected_format !== 'ISO8601' &&
 		kkDate.detected_format !== 'now' &&
 		kkDate.detected_format !== 'Xx' &&
@@ -437,9 +436,10 @@ function dateTimeFormat(orj_this, template) {
 	const tempLocale = orj_this.temp_config.locale;
 
 	// For timestamp inputs with configured timezone, use timezone-aware formatting
-	if (orj_this.detected_format === 'Xx' && global_config.timezone && global_config.timezone !== 'UTC') {
+	// For timestamp inputs with configured timezone, use timezone-aware formatting
+	const timezone = orj_this.temp_config.timezone || global_config.timezone;
+	if (timezone) {
 		const locale = tempLocale || global_config.locale;
-		const timezone = global_config.timezone;
 
 		if (template === format_types.dddd) {
 			if (cached_dateTimeFormat_with_locale.dddd[`${locale}_${timezone}`]) {

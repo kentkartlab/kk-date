@@ -1,4 +1,4 @@
-const { describe, test, expect } = require('@jest/globals');
+const { describe, test, expect, beforeEach, afterEach } = require('@jest/globals');
 const kk_date = require('../index');
 
 kk_date.config({ timezone: 'UTC' });
@@ -130,6 +130,18 @@ describe('Time Parsing Tests', () => {
 	});
 
 	describe('Time Overflow Parsing', () => {
+		let originalTimezone;
+
+		beforeEach(() => {
+			originalTimezone = 'UTC';
+			const systemTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+			kk_date.config({ timezone: systemTimezone });
+		});
+
+		afterEach(() => {
+			kk_date.config({ timezone: originalTimezone });
+		});
+
 		test('parse hours overflow', () => {
 			// kk_date overflow değerleri için hata fırlatıyor
 			expect(new kk_date('24:00:00').format('HH:mm:ss')).toBe('00:00:00');
