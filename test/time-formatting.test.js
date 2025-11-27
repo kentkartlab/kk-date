@@ -1,4 +1,4 @@
-const { describe, test, expect } = require('@jest/globals');
+const { describe, test, expect, beforeEach, afterEach } = require('@jest/globals');
 const kk_date = require('../index');
 
 // Test için sabit değerler
@@ -39,11 +39,25 @@ describe('Time Formatting and Parsing Tests', () => {
 			expect(() => new kk_date('23:60:00')).toThrow();
 		});
 
-		test('second overflow handling', () => {
-			// kk_date overflow değerleri için hata fırlatmıyor, truncate ediyor
-			expect(new kk_date('12:30:60').format('HH:mm:ss')).toBe('12:30:00');
-			expect(new kk_date('12:30:120').format('HH:mm:ss')).toBe('12:30:00');
-			expect(new kk_date('23:59:60').format('HH:mm:ss')).toBe('23:59:00');
+		describe('Second Overflow Handling', () => {
+			let originalTimezone;
+
+			beforeEach(() => {
+				originalTimezone = 'UTC';
+				const systemTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+				kk_date.config({ timezone: systemTimezone });
+			});
+
+			afterEach(() => {
+				kk_date.config({ timezone: originalTimezone });
+			});
+
+			test('second overflow handling', () => {
+				// kk_date overflow değerleri için hata fırlatmıyor, truncate ediyor
+				expect(new kk_date('12:30:60').format('HH:mm:ss')).toBe('12:30:00');
+				expect(new kk_date('12:30:120').format('HH:mm:ss')).toBe('12:30:00');
+				expect(new kk_date('23:59:60').format('HH:mm:ss')).toBe('23:59:00');
+			});
 		});
 
 		test('partial time input', () => {
