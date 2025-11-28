@@ -29,6 +29,17 @@ const {
 nopeRedis.config({ defaultTtl: 1300 });
 
 /**
+ * Returns ordinal suffix for a number (1st, 2nd, 3rd, 4th, etc.)
+ * @param {number} n - The number to get ordinal suffix for
+ * @returns {string} The number with ordinal suffix
+ */
+function getOrdinal(n) {
+	const s = ['th', 'st', 'nd', 'rd'];
+	const v = n % 100;
+	return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+/**
  * @class KkDate
  * @description A utility class for date parsing, validation, and formatting.
  * Accepts various input types (string, Date, KkDate) and supports multiple date formats
@@ -1156,7 +1167,9 @@ class KkDate {
 		}
 
 		if (targetTimezone) {
-			this.date = new Date(dateToModify.getTime() - offset);
+			// Recalculate offset for the new date (DST may have changed)
+			const newOffset = getTimezoneOffset(targetTimezone, dateToModify);
+			this.date = new Date(dateToModify.getTime() - newOffset);
 		}
 		return this;
 	}
@@ -1249,7 +1262,9 @@ class KkDate {
 		}
 
 		if (targetTimezone) {
-			this.date = new Date(dateToModify.getTime() - offset);
+			// Recalculate offset for the new date (DST may have changed)
+			const newOffset = getTimezoneOffset(targetTimezone, dateToModify);
+			this.date = new Date(dateToModify.getTime() - newOffset);
 		}
 		return this;
 	}
@@ -1833,6 +1848,36 @@ function _formatterCore(orj_this, template, isUTC) {
 				nopeRedis.setItemAsync(cache_key, formatted);
 			}
 			return `${day} ${formatted} ${year}`;
+		}
+		case format_types['Do MMMM YYYY']: {
+			const day = converter(orj_this.date, ['day'], { pad: false, isUTC, detectedFormat: orj_this.detected_format }).day;
+			const year = converter(orj_this.date, ['year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this }).year;
+			const value = dateTimeFormat(orj_this, 'MMMM');
+			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
+			const cache = nopeRedis.getItem(cache_key);
+			let formatted = null;
+			if (cache) {
+				formatted = cache;
+			} else {
+				formatted = value.value.format(orj_this.date);
+				nopeRedis.setItemAsync(cache_key, formatted);
+			}
+			return `${getOrdinal(parseInt(day, 10))} ${formatted} ${year}`;
+		}
+		case format_types['Do MMM YYYY']: {
+			const day = converter(orj_this.date, ['day'], { pad: false, isUTC, detectedFormat: orj_this.detected_format }).day;
+			const year = converter(orj_this.date, ['year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this }).year;
+			const value = dateTimeFormat(orj_this, 'MMM');
+			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
+			const cache = nopeRedis.getItem(cache_key);
+			let formatted = null;
+			if (cache) {
+				formatted = cache;
+			} else {
+				formatted = value.value.format(orj_this.date);
+				nopeRedis.setItemAsync(cache_key, formatted);
+			}
+			return `${getOrdinal(parseInt(day, 10))} ${formatted} ${year}`;
 		}
 		case format_types['DD MMMM dddd, YYYY']: {
 			const result = converter(orj_this.date, ['day', 'year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this });
