@@ -17,6 +17,7 @@ const {
 	cached_converter_int,
 	converter_results_cache,
 	cached_dateTimeFormat_with_locale,
+	COMMON_TIMEZONES,
 } = require('./constants');
 
 const months = {};
@@ -276,25 +277,7 @@ function convertToTimezone(date, targetTimezone, sourceTimezone = global_config.
  */
 function getAvailableTimezones() {
 	try {
-		// This is a fallback method - not all environments support this
-		const commonTimezones = [
-			'UTC',
-			'Europe/London',
-			'Europe/Paris',
-			'Europe/Berlin',
-			'Europe/Istanbul',
-			'America/New_York',
-			'America/Chicago',
-			'America/Denver',
-			'America/Los_Angeles',
-			'Asia/Tokyo',
-			'Asia/Shanghai',
-			'Asia/Kolkata',
-			'Australia/Sydney',
-			'Australia/Melbourne',
-		];
-
-		return commonTimezones.filter((tz) => {
+		return COMMON_TIMEZONES.filter((tz) => {
 			try {
 				checkTimezone(tz);
 				return true;

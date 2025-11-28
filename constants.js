@@ -103,7 +103,7 @@ const format_types_regex = {
 	ss: /^([0-5]\d)$/,
 	MMM: /^[\p{L}\p{M}]+$/u,
 	MMMM: /^\p{L}+$/u,
-	ddd: /^[\p{L}\p{M}]$/,
+	ddd: /^[\p{L}\p{M}]+$/u,
 	'DD MMM YYYY': /^(0[1-9]|[12][0-9]|3[01]) [\p{L}\p{M}]+ (|17|18|19|20|21)\d\d$/u,
 	'DD MMM': /^(0[1-9]|[12][0-9]|3[01]) [\p{L}\p{M}]+$$/u,
 	'MMM YYYY': /^[\p{L}\p{M}]+ (|17|18|19|20|21)\d\d$/u,
@@ -111,7 +111,7 @@ const format_types_regex = {
 	'YYYY-MM': /^(17|18|19|20|21)\d\d-(0[1-9]|1[0-2])$/,
 	'DD MMMM dddd': /^(0[1-9]|[12][0-9]|3[01]) [\p{L}\p{M}]+ [\p{L}\p{M}]+$/u,
 	'YYYY-DD-MM': /^(17|18|19|20|21)\d\d-(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])$/,
-	'D MMMM YYYY': /^(0?[1-9]|[12][0-9]|3[01]) \p{L}+ (|17|18|19|20|21)\d\d$/,
+	'D MMMM YYYY': /^(0?[1-9]|[12][0-9]|3[01]) \p{L}+ (|17|18|19|20|21)\d\d$/u,
 	'MM/DD/YYYY': /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/(17|18|19|20|21)\d\d$/,
 	'DD/MM/YYYY': /^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[0-2])\/(17|18|19|20|21)\d\d$/,
 	'YYYY-MM-DD HH': /^(17|18|19|20|21)\d\d-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01]) ([01]\d|2[0-3])$/,
@@ -298,6 +298,23 @@ const converter_results_cache = new Map();
 const formatter_cache = new Map();
 
 const systemTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+// Common timezones list - defined once at module level for performance
+const COMMON_TIMEZONES = [
+	'UTC',
+	'Europe/London',
+	'Europe/Paris',
+	'Europe/Berlin',
+	'Europe/Istanbul',
+	'America/New_York',
+	'America/Chicago',
+	'America/Denver',
+	'America/Los_Angeles',
+	'Asia/Tokyo',
+	'Asia/Shanghai',
+	'Asia/Kolkata',
+	'Australia/Sydney',
+	'Australia/Melbourne',
+];
 
 module.exports.cache_ttl = cache_ttl;
 module.exports.timeInMilliseconds = timeInMilliseconds;
@@ -322,3 +339,4 @@ module.exports.cached_converter_int = cached_converter_int;
 module.exports.converter_results_cache = converter_results_cache;
 module.exports.formatter_cache = formatter_cache;
 module.exports.cached_dateTimeFormat_with_locale = cached_dateTimeFormat_with_locale;
+module.exports.COMMON_TIMEZONES = COMMON_TIMEZONES;
