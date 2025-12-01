@@ -490,15 +490,15 @@ describe('Index.js Coverage Tests', () => {
 		test('should format as Unix timestamp (X)', () => {
 			const date = new kk_date('2024-01-15T00:00:00Z');
 			const result = date.format('X');
-			// Unix timestamp should be numeric string
-			expect(parseInt(result)).toBeGreaterThan(1700000000);
+			// Unix timestamp for 2024-01-15T00:00:00Z is exactly 1705276800
+			expect(result).toBe(1705276800);
 		});
 
 		test('should format as millisecond timestamp (x)', () => {
 			const date = new kk_date('2024-01-15T00:00:00Z');
 			const result = date.format('x');
-			// Millisecond timestamp should be numeric string
-			expect(parseInt(result)).toBeGreaterThan(1700000000000);
+			// Millisecond timestamp for 2024-01-15T00:00:00Z is exactly 1705276800000
+			expect(result).toBe(1705276800000);
 		});
 	});
 

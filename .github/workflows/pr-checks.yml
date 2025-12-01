@@ -28,3 +28,46 @@ jobs:
         run: npm install
       - name: Run tests
         run: npm run test
+
+  timezone-tests:
+    name: Multi-Timezone Tests
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        timezone:
+          # UTC
+          - UTC
+          # Europe
+          - Europe/Istanbul
+          - Europe/London
+          - Europe/Moscow
+          # Americas
+          - America/New_York
+          - America/Los_Angeles
+          - America/Sao_Paulo
+          # Asia
+          - Asia/Tokyo
+          - Asia/Shanghai
+          - Asia/Dubai
+          - Asia/Kolkata
+          # Oceania
+          - Australia/Sydney
+          - Pacific/Auckland
+          - Pacific/Honolulu
+    steps:
+      - name: Check Out Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install packages
+        run: npm install
+      - name: Run tests in ${{ matrix.timezone }}
+        run: TZ='${{ matrix.timezone }}' npm run test
+        env:
+          TZ: ${{ matrix.timezone }}
