@@ -86,14 +86,22 @@ describe('format', () => {
 	});
 
 	test('x/X', () => {
-		// Create a date with explicit UTC timezone
+		// Unix timestamps are always UTC - no timezone conversion should occur
+		const dateFromTimestamp = new kk_date(timestamp * 1000);
+		// format('X') should return the exact same Unix timestamp in seconds
+		expect(dateFromTimestamp.format('X')).toBe(timestamp);
+		// format('x') should return the exact same Unix timestamp in milliseconds
+		expect(dateFromTimestamp.format('x')).toBe(timestamp * 1000);
+
+		// Even with .tz() applied, Unix timestamps should remain unchanged
 		const utcDate = new kk_date(timestamp * 1000).tz('UTC');
-		// Allow for timezone differences (up to 12 hours)
-		const formattedX = utcDate.format('X');
-		expect(Math.abs(formattedX - timestamp)).toBeLessThan(12 * 60 * 60);
-		// Allow for timezone differences in milliseconds
-		const formattedXMs = utcDate.format('x');
-		expect(Math.abs(formattedXMs - timestamp * 1000)).toBeLessThan(12 * 60 * 60 * 1000);
+		expect(utcDate.format('X')).toBe(timestamp);
+		expect(utcDate.format('x')).toBe(timestamp * 1000);
+
+		// Test with different timezone - should still return same UTC timestamp
+		const istanbulDate = new kk_date(timestamp * 1000).tz('Europe/Istanbul');
+		expect(istanbulDate.format('X')).toBe(timestamp);
+		expect(istanbulDate.format('x')).toBe(timestamp * 1000);
 	});
 
 	test('T between the time', () => {

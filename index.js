@@ -301,7 +301,7 @@ class KkDate {
 								const newYear = dateObj.getFullYear();
 
 								this.date = new Date(
-									`${newYear}-${newMonth}-${newDay}T${(hours % 24).toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}}`,
+									`${newYear}-${newMonth}-${newDay}T${(hours % 24).toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`,
 								);
 							} else {
 								this.date = new Date(`${year}-${month}-${day}T${timePart}`);
@@ -819,9 +819,20 @@ class KkDate {
 		const diffed = diff(this, end, type);
 		const rangeDates = [];
 		rangeDates.push(formatter(this, template));
+		const targetTimezone = this.temp_config.timezone || global_config.timezone;
+
 		for (let index = 1; index < diffed.diffTime + 1; index++) {
-			const date = new Date(this.date.getTime());
-			date.setSeconds(this.date.getSeconds() + diffed.type_value * index);
+			let date = new Date(this.date.getTime());
+
+			if (targetTimezone) {
+				const offset = getTimezoneOffset(targetTimezone, this.date);
+				const dateToModify = new Date(date.getTime() + offset);
+				dateToModify.setUTCSeconds(dateToModify.getUTCSeconds() + diffed.type_value * index);
+				date = new Date(dateToModify.getTime() - offset);
+			} else {
+				date.setSeconds(date.getSeconds() + diffed.type_value * index);
+			}
+
 			const newKkDateInstance = new KkDate(date);
 			newKkDateInstance.temp_config = this.temp_config;
 			rangeDates.push(formatter(newKkDateInstance, template));
@@ -1444,11 +1455,13 @@ function formatter(orj_this, template = null) {
 
 	switch (template) {
 		case 'x': {
-			result = parseInt(orj_this.valueOfLocal(true), 10);
+			// Unix timestamp in milliseconds - always UTC, no timezone conversion
+			result = orj_this.date.getTime();
 			break;
 		}
 		case 'X': {
-			result = parseInt(orj_this.valueOfLocal(true) / 1000, 10);
+			// Unix timestamp in seconds - always UTC, no timezone conversion
+			result = Math.floor(orj_this.date.getTime() / 1000);
 			break;
 		}
 		default: {
