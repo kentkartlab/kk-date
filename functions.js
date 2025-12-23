@@ -95,14 +95,45 @@ function getTimezoneOffset(timezone, date = new Date()) {
 			long_timezone_cache.set(timezone, formatter);
 		}
 		// Get timezone offset using Intl.DateTimeFormat with timeZoneName
-		const offsetPart = formatter.formatToParts(date).find((part) => part.type === 'timeZoneName');
+		const parts = formatter.formatToParts(date);
+		const offsetPart = parts.find((part) => part.type === 'timeZoneName');
 
 		if (!offsetPart) {
 			throw new Error('Could not determine timezone offset');
 		}
 
-		// Parse offset like "GMT-05:00" or "GMT+08:00"
-		const offsetStr = offsetPart.value.replace('GMT', '');
+		let offsetStr = offsetPart.value.replace('GMT', '');
+
+		// Handle Hermes/React Native where GMT offset is split into multiple parts
+		// e.g., [timeZoneName: "GMT"], [literal: "+"], [literal: "03"], [literal: ":"], [timeZoneName: "00"]
+		if (offsetStr === '' || offsetStr === 'GMT') {
+			// Try to reconstruct offset from split parts
+			const gmtIndex = parts.findIndex((p) => p.type === 'timeZoneName' && (p.value === 'GMT' || p.value.startsWith('GMT')));
+			if (gmtIndex !== -1) {
+				// Collect subsequent parts that form the offset
+				let reconstructed = '';
+				for (let i = gmtIndex + 1; i < parts.length; i++) {
+					const part = parts[i];
+					// Stop if we hit a non-offset part (another timeZoneName that's not numeric)
+					if (part.type === 'timeZoneName' && !/^\d+$/.test(part.value)) {
+						break;
+					}
+					// Collect literals (+, -, :, digits) and numeric timeZoneName parts
+					if (part.type === 'literal' || (part.type === 'timeZoneName' && /^\d+$/.test(part.value))) {
+						reconstructed += part.value;
+					}
+				}
+				if (reconstructed) {
+					offsetStr = reconstructed;
+				}
+			}
+		}
+
+		// If still empty or invalid, fallback
+		if (!offsetStr || offsetStr === '' || offsetStr === 'GMT') {
+			throw new Error('Invalid offset parsing - falling back');
+		}
+
 		const isNegative = offsetStr.startsWith('-');
 		const timeStr = offsetStr.replace(/[+-]/, '');
 		const [hours, minutes = '0'] = timeStr.split(':').map(Number);
