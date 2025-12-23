@@ -79,6 +79,47 @@ describe('Hermes/React Native Fallback - getTimezoneOffset', () => {
 			expect(offset).toBe(3 * 60 * 60 * 1000);
 		});
 
+		it('should fallback when longOffset returns split GMT parts (real Hermes behavior)', () => {
+			// This simulates actual Hermes behavior where timeZoneName is split:
+			// {"type": "timeZoneName", "value": "GMT"},
+			// {"type": "literal", "value": "+"},
+			// {"type": "literal", "value": "03"},
+			// {"type": "literal", "value": ":"},
+			// {"type": "timeZoneName", "value": "00"}
+			const MockDateTimeFormat = function (locale, options) {
+				if (options && options.timeZoneName === 'longOffset') {
+					return {
+						formatToParts: () => [
+							{ type: 'month', value: '12' },
+							{ type: 'literal', value: '/' },
+							{ type: 'day', value: '23' },
+							{ type: 'literal', value: '/' },
+							{ type: 'year', value: '2025' },
+							{ type: 'literal', value: ',' },
+							{ type: 'literal', value: ' ' },
+							{ type: 'timeZoneName', value: 'GMT' }, // Just "GMT", not "GMT+03:00"
+							{ type: 'literal', value: '+' },
+							{ type: 'literal', value: '03' },
+							{ type: 'literal', value: ':' },
+							{ type: 'timeZoneName', value: '00' },
+						],
+					};
+				}
+				return new originalDateTimeFormat(locale, options);
+			};
+
+			Intl.DateTimeFormat = MockDateTimeFormat;
+
+			const { timezone_cache } = require('../constants');
+			timezone_cache.clear();
+
+			const date = new Date('2025-01-15T12:00:00Z');
+			const offset = getTimezoneOffset('Europe/Istanbul', date);
+
+			// Should fallback and return correct offset
+			expect(offset).toBe(3 * 60 * 60 * 1000);
+		});
+
 		it('should fallback when longOffset throws error', () => {
 			const MockDateTimeFormat = function (locale, options) {
 				if (options && options.timeZoneName === 'longOffset') {

@@ -108,6 +108,12 @@ function getTimezoneOffset(timezone, date = new Date()) {
 		const [hours, minutes = '0'] = timeStr.split(':').map(Number);
 
 		const totalMinutes = hours * 60 + minutes;
+
+		// Check for NaN (Hermes splits timeZoneName into multiple parts)
+		if (Number.isNaN(totalMinutes)) {
+			throw new Error('Invalid offset parsing - falling back');
+		}
+
 		// For timezone conversion, we need the offset from UTC to the target timezone
 		// GMT-05:00 means the timezone is 5 hours behind UTC, so offset should be -5
 		// GMT+08:00 means the timezone is 8 hours ahead of UTC, so offset should be +8
