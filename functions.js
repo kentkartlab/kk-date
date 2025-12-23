@@ -166,7 +166,8 @@ function getTimezoneOffsetFallback(timezone, date, cacheKey) {
 			Date.UTC(parseInt(p.year, 10), parseInt(p.month, 10) - 1, parseInt(p.day, 10), hour, parseInt(p.minute, 10), parseInt(p.second, 10)) +
 			dayOffset;
 
-		const offsetMs = tzTimeAsUtc - date.getTime();
+		// Add milliseconds from original date (formatter doesn't include ms)
+		const offsetMs = tzTimeAsUtc - (date.getTime() - date.getMilliseconds());
 
 		// Cache the result
 		if (cacheKey) {
