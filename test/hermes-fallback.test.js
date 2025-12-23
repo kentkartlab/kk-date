@@ -79,7 +79,7 @@ describe('Hermes/React Native Fallback - getTimezoneOffset', () => {
 			expect(offset).toBe(3 * 60 * 60 * 1000);
 		});
 
-		it('should fallback when longOffset returns split GMT parts (real Hermes behavior)', () => {
+		it('should reconstruct offset when longOffset returns split GMT parts (real Hermes behavior)', () => {
 			// This simulates actual Hermes behavior where timeZoneName is split:
 			// {"type": "timeZoneName", "value": "GMT"},
 			// {"type": "literal", "value": "+"},
@@ -110,13 +110,14 @@ describe('Hermes/React Native Fallback - getTimezoneOffset', () => {
 
 			Intl.DateTimeFormat = MockDateTimeFormat;
 
-			const { timezone_cache } = require('../constants');
+			const { timezone_cache, long_timezone_cache } = require('../constants');
 			timezone_cache.clear();
+			long_timezone_cache.clear();
 
 			const date = new Date('2025-01-15T12:00:00Z');
 			const offset = getTimezoneOffset('Europe/Istanbul', date);
 
-			// Should fallback and return correct offset
+			// Should reconstruct offset from split parts and return correct offset
 			expect(offset).toBe(3 * 60 * 60 * 1000);
 		});
 
