@@ -162,6 +162,7 @@ date.format('ddd');  // 'Fri'
 | `MM/DD/YYYY` | US date format | `08/23/2024` |
 | `DD/MM/YYYY` | UK date format | `23/08/2024` |
 | `YYYYMMDD` | Compact date format | `20240823` |
+| `YYYYMMDDHHmmss` | Compact datetime format | `20240823103045` |
 
 ```javascript
 const date = new kk_date('2024-08-23 10:30:45');
@@ -172,6 +173,7 @@ date.format('DD-MM-YYYY'); // '23-08-2024'
 date.format('MM/DD/YYYY'); // '08/23/2024'
 date.format('DD/MM/YYYY'); // '23/08/2024'
 date.format('YYYYMMDD');   // '20240823'
+date.format('YYYYMMDDHHmmss'); // '20240823103045'
 ```
 
 ### Named Date Formats

@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - dev
+      - bug-and-new-format
     types:
       - opened
       - synchronize
@@ -24,8 +25,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: 'npm'
       - name: Install packages
-        run: npm install
+        run: npm ci
       - name: Run tests
         run: npm run test
 
@@ -65,9 +67,164 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: 'npm'
       - name: Install packages
-        run: npm install
+        run: npm ci
       - name: Run tests in ${{ matrix.timezone }}
         run: TZ='${{ matrix.timezone }}' npm run test
         env:
           TZ: ${{ matrix.timezone }}
+
+  hermes-fallback-tests:
+    name: Hermes/React Native Fallback Tests
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Out Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+      - name: Install packages
+        run: npm ci
+      - name: Run Hermes fallback tests
+        run: npx jest hermes-fallback
+      - name: Run fallback tests in multiple timezones
+        run: |
+          for tz in UTC Europe/Istanbul America/New_York Asia/Tokyo Asia/Kolkata Pacific/Auckland; do
+            echo "Testing in $tz..."
+            TZ="$tz" npx jest hermes-fallback --silent
+          done
+
+  hermes-simulation-test:
+    name: Hermes/React Native Simulation Test
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Out Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+      - name: Install packages
+        run: npm ci
+      - name: Test getTimezoneOffset with longOffset disabled (Hermes simulation)
+        run: |
+          node -e "
+          // Simulate Hermes environment: longOffset returns no timeZoneName part
+          const origDTF = Intl.DateTimeFormat;
+          global.Intl.DateTimeFormat = function(locale, options) {
+            if (options && options.timeZoneName === 'longOffset') {
+              const f = new origDTF(locale, { ...options, timeZoneName: undefined });
+              return {
+                formatToParts: (d) => f.formatToParts(d).filter(p => p.type !== 'timeZoneName')
+              };
+            }
+            return new origDTF(locale, options);
+          };
+
+          // Clear cache to force fallback
+          require('./constants').timezone_cache.clear();
+          require('./constants').long_timezone_cache.clear();
+
+          const { getTimezoneOffset } = require('./functions');
+          const date = new Date('2025-01-15T12:00:00Z');
+
+          const tests = [
+            { tz: 'UTC', expected: 0 },
+            { tz: 'Europe/Istanbul', expected: 3 * 60 * 60 * 1000 },
+            { tz: 'America/New_York', expected: -5 * 60 * 60 * 1000 },
+            { tz: 'Asia/Kolkata', expected: 5.5 * 60 * 60 * 1000 },
+            { tz: 'Asia/Kathmandu', expected: (5 * 60 + 45) * 60 * 1000 },
+          ];
+
+          console.log('Testing getTimezoneOffset with Hermes simulation (longOffset disabled)...');
+          let allPassed = true;
+
+          for (const t of tests) {
+            const offset = getTimezoneOffset(t.tz, date);
+            const ok = Math.abs(offset - t.expected) < 1000;
+            console.log(ok ? '✓' : '✗', t.tz.padEnd(20), 'offset:', (offset / 3600000).toFixed(2), 'h');
+            if (!ok) allPassed = false;
+          }
+
+          if (!allPassed) process.exit(1);
+          console.log('✓ All timezone offset tests PASSED with Hermes simulation');
+          "
+      - name: Test endOf/startOf with longOffset disabled (Hermes simulation)
+        run: |
+          node -e "
+          // Simulate Hermes: longOffset throws error
+          const origDTF = Intl.DateTimeFormat;
+          global.Intl.DateTimeFormat = function(locale, options) {
+            if (options && options.timeZoneName === 'longOffset') {
+              throw new Error('longOffset not supported in Hermes');
+            }
+            return new origDTF(locale, options);
+          };
+
+          require('./constants').timezone_cache.clear();
+          require('./constants').long_timezone_cache.clear();
+
+          const KkDate = require('./index');
+
+          const tests = [
+            { input: '2025-12-23', op: 'endOf', unit: 'months', expected: '2025-12-31' },
+            { input: '2024-02-15', op: 'endOf', unit: 'months', expected: '2024-02-29' },
+            { input: '2025-02-15', op: 'endOf', unit: 'months', expected: '2025-02-28' },
+            { input: '2025-06-15', op: 'startOf', unit: 'months', expected: '2025-06-01' },
+            { input: '2025-06-15', op: 'endOf', unit: 'years', expected: '2025-12-31' },
+          ];
+
+          console.log('Testing endOf/startOf with Hermes simulation...');
+          let allPassed = true;
+
+          for (const t of tests) {
+            const result = new KkDate(t.input)[t.op](t.unit).format('YYYY-MM-DD');
+            const ok = result === t.expected;
+            console.log(ok ? '✓' : '✗', t.input, t.op, t.unit, '->', result);
+            if (!ok) allPassed = false;
+          }
+
+          if (!allPassed) process.exit(1);
+          console.log('✓ All endOf/startOf tests PASSED with Hermes simulation');
+          "
+      - name: Test with global timezone config (Hermes simulation)
+        run: |
+          node -e "
+          const origDTF = Intl.DateTimeFormat;
+          global.Intl.DateTimeFormat = function(locale, options) {
+            if (options && options.timeZoneName === 'longOffset') {
+              return { formatToParts: () => [] };
+            }
+            return new origDTF(locale, options);
+          };
+
+          require('./constants').timezone_cache.clear();
+          require('./constants').long_timezone_cache.clear();
+
+          const KkDate = require('./index');
+
+          // Test with different global timezone configs
+          const configs = ['UTC', 'Europe/Istanbul', 'America/New_York', 'Asia/Tokyo'];
+
+          console.log('Testing with different global timezone configs (Hermes simulation)...');
+
+          for (const tz of configs) {
+            KkDate.config({ timezone: tz });
+            const result = new KkDate('2025-12-23').endOf('months').format('YYYY-MM-DD');
+            const ok = result === '2025-12-31';
+            console.log(ok ? '✓' : '✗', 'timezone:', tz.padEnd(20), 'endOf months:', result);
+            if (!ok) process.exit(1);
+          }
+
+          console.log('✓ All global timezone config tests PASSED');
+          "

@@ -61,6 +61,18 @@ describe('format', () => {
 		expect(new kk_date('20191226').format('YYYYMMDD')).toBe('20191226');
 	});
 
+	test('YYYYMMDDHHmmss parse', () => {
+		expect(new kk_date('20251223194717').format('YYYY-MM-DD HH:mm:ss')).toBe('2025-12-23 19:47:17');
+		expect(new kk_date('20240819235059').format('YYYY-MM-DD HH:mm:ss')).toBe('2024-08-19 23:50:59');
+		expect(new kk_date('20191226120000').format('YYYY-MM-DD HH:mm:ss')).toBe('2019-12-26 12:00:00');
+	});
+
+	test('YYYYMMDDHHmmss format', () => {
+		expect(new kk_date('2025-12-23 19:47:17').format('YYYYMMDDHHmmss')).toBe('20251223194717');
+		expect(new kk_date(`${test_date} ${test_time}`).format('YYYYMMDDHHmmss')).toBe('20240819235059');
+		expect(new kk_date('20191226120000').format('YYYYMMDDHHmmss')).toBe('20191226120000');
+	});
+
 	test('DD-MM-YYYY', () => {
 		expect(new kk_date(`${test_date} ${test_time}`).format('DD-MM-YYYY')).toBe('19-08-2024');
 		expect(new kk_date('19-08-2024').format('DD-MM-YYYY')).toBe('19-08-2024');
