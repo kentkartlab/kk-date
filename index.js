@@ -360,6 +360,15 @@ class KkDate {
 							const year = parts[2];
 							this.date = new Date(`${year}-${month}-${day.padStart(2, '0')} 00:00:00`); // Ensure day is padded for Date constructor
 							this.detected_format = format_types['DD MMMM YYYY'];
+						} else if (isValid(date, format_types['YYYYMMDDHHmmss'])) {
+							const year = date.substring(0, 4);
+							const month = date.substring(4, 6);
+							const day = date.substring(6, 8);
+							const hour = date.substring(8, 10);
+							const minute = date.substring(10, 12);
+							const second = date.substring(12, 14);
+							this.date = new Date(`${year}-${month}-${day} ${hour}:${minute}:${second}`);
+							this.detected_format = format_types['YYYYMMDDHHmmss'];
 						} else if (isValid(date, format_types['YYYYMMDD'])) {
 							const year = String(date.substring(0, 4), 10); // Extract year
 							const month = String(date.substring(4, 6), 10); // Extract month
@@ -1616,6 +1625,14 @@ function _formatterCore(orj_this, template, isUTC) {
 		case format_types['YYYYMMDD']: {
 			const result = converter(orj_this.date, ['day', 'month', 'year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this });
 			return `${result.year}${result.month}${result.day}`;
+		}
+		case format_types['YYYYMMDDHHmmss']: {
+			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes', 'seconds'], {
+				isUTC,
+				detectedFormat: orj_this.detected_format,
+				orj_this: orj_this,
+			});
+			return `${result.year}${result.month}${result.day}${result.hours}${result.minutes}${result.seconds}`;
 		}
 		case format_types['YYYY']: {
 			return `${converter(orj_this.date, ['year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this }).year}`;

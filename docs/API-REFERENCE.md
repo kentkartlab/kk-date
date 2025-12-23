@@ -36,6 +36,10 @@ new kk_date('2024-08-23 10:30:00')
 new kk_date('23.08.2024 10:30:00')
 new kk_date('08/23/2024 10:30:00')
 
+// Compact formats
+new kk_date('20240823')           // YYYYMMDD
+new kk_date('20240823103000')     // YYYYMMDDHHmmss
+
 // Date objects
 new kk_date(new Date())
 
@@ -130,6 +134,7 @@ console.log(date.format('YYYY-MM-DDTHH:mm:ss'));     // '2024-08-23T10:30:45'
 - `YYYY.MM.DD HH:mm` - Dotted datetime without seconds
 - `YYYY-MM-DDTHH:mm:ss` - ISO 8601 format
 - `YYYYMMDD` - Compact date format
+- `YYYYMMDDHHmmss` - Compact datetime format
 
 **Named Format Templates:**
 - `DD MMMM YYYY` - Date with full month
