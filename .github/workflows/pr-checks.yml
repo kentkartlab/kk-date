@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - dev
+      - bug-and-new-format
     types:
       - opened
       - synchronize
