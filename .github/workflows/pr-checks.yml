@@ -24,8 +24,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: 'npm'
       - name: Install packages
-        run: npm install
+        run: npm ci
       - name: Run tests
         run: npm run test
 
@@ -65,9 +66,103 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: 'npm'
       - name: Install packages
-        run: npm install
+        run: npm ci
       - name: Run tests in ${{ matrix.timezone }}
         run: TZ='${{ matrix.timezone }}' npm run test
         env:
           TZ: ${{ matrix.timezone }}
+
+  hermes-fallback-tests:
+    name: Hermes/React Native Fallback Tests
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Out Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+      - name: Install packages
+        run: npm ci
+      - name: Run Hermes fallback tests
+        run: npm test -- --testPathPattern="hermes-fallback"
+      - name: Run fallback tests in multiple timezones
+        run: |
+          for tz in UTC Europe/Istanbul America/New_York Asia/Tokyo Asia/Kolkata Pacific/Auckland; do
+            echo "Testing in $tz..."
+            TZ="$tz" npm test -- --testPathPattern="hermes-fallback" --silent
+          done
+
+  react-native-compatibility:
+    name: React Native Compatibility Check
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Out Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+      - name: Install packages
+        run: npm ci
+      - name: Test getTimezoneOffset fallback mechanism
+        run: |
+          node -e "
+          const { getTimezoneOffset } = require('./functions.js');
+
+          const testCases = [
+            { tz: 'UTC', expected: 0 },
+            { tz: 'Europe/Istanbul', expected: 3 * 60 * 60 * 1000 },
+            { tz: 'America/New_York', expected: -5 * 60 * 60 * 1000 },
+            { tz: 'Asia/Kolkata', expected: 5.5 * 60 * 60 * 1000 },
+            { tz: 'Asia/Kathmandu', expected: (5 * 60 + 45) * 60 * 1000 },
+          ];
+
+          const date = new Date('2025-01-15T12:00:00Z');
+          let allPassed = true;
+
+          for (const { tz, expected } of testCases) {
+            const offset = getTimezoneOffset(tz, date);
+            const passed = Math.abs(offset - expected) < 1000;
+            console.log(passed ? '✓' : '✗', tz, 'offset:', offset / 3600000, 'h');
+            if (!passed) allPassed = false;
+          }
+
+          if (!allPassed) process.exit(1);
+          console.log('All timezone offset tests passed!');
+          "
+      - name: Test endOf/startOf operations
+        run: |
+          node -e "
+          const KkDate = require('./index.js');
+
+          const tests = [
+            { input: '2025-12-23', op: 'endOf', unit: 'months', expected: '2025-12-31' },
+            { input: '2024-02-15', op: 'endOf', unit: 'months', expected: '2024-02-29' },
+            { input: '2025-02-15', op: 'endOf', unit: 'months', expected: '2025-02-28' },
+            { input: '2025-06-15', op: 'startOf', unit: 'months', expected: '2025-06-01' },
+            { input: '2025-06-15', op: 'endOf', unit: 'years', expected: '2025-12-31' },
+          ];
+
+          let allPassed = true;
+
+          for (const { input, op, unit, expected } of tests) {
+            const result = new KkDate(input)[op](unit).format('YYYY-MM-DD');
+            const passed = result === expected;
+            console.log(passed ? '✓' : '✗', input, op, unit, '->', result, passed ? '' : '(expected: ' + expected + ')');
+            if (!passed) allPassed = false;
+          }
+
+          if (!allPassed) process.exit(1);
+          console.log('All endOf/startOf tests passed!');
+          "

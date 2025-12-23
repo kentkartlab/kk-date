@@ -71,19 +71,19 @@ function isValidDayName(dayname) {
  * @returns {number} - Offset in milliseconds
  */
 function getTimezoneOffset(timezone, date = new Date()) {
-	try {
-		// Validate timezone
-		checkTimezone(timezone);
+	// Validate timezone first (outside try-catch for proper error handling)
+	checkTimezone(timezone);
 
-		// Check cache first
-		const cacheKey = `${timezone}_${date.getTime()}`;
-		if (timezone_cache.has(cacheKey)) {
-			const { offset, timestamp } = timezone_cache.get(cacheKey);
-			if (date.getTime() - timestamp < cache_ttl) {
-				return offset;
-			}
+	// Check cache first
+	const cacheKey = `${timezone}_${date.getTime()}`;
+	if (timezone_cache.has(cacheKey)) {
+		const { offset, timestamp } = timezone_cache.get(cacheKey);
+		if (date.getTime() - timestamp < cache_ttl) {
+			return offset;
 		}
+	}
 
+	try {
 		let formatter;
 		if (long_timezone_cache.has(timezone)) {
 			formatter = long_timezone_cache.get(timezone);
@@ -118,6 +118,63 @@ function getTimezoneOffset(timezone, date = new Date()) {
 			offset: offsetMs,
 			timestamp: date.getTime(),
 		});
+
+		return offsetMs;
+	} catch {
+		// Fallback: Use date comparison method (Hermes/React Native compatible)
+		return getTimezoneOffsetFallback(timezone, date, cacheKey);
+	}
+}
+
+/**
+ * Fallback method for timezone offset calculation
+ * Used when longOffset is not supported (e.g., React Native Hermes)
+ *
+ * @param {string} timezone - IANA timezone identifier
+ * @param {Date} date - Date for which to calculate offset
+ * @param {string} cacheKey - Cache key for storing result
+ * @returns {number} - Offset in milliseconds
+ */
+function getTimezoneOffsetFallback(timezone, date, cacheKey) {
+	try {
+		const formatter = new Intl.DateTimeFormat('en-CA', {
+			timeZone: timezone,
+			year: 'numeric',
+			month: '2-digit',
+			day: '2-digit',
+			hour: '2-digit',
+			minute: '2-digit',
+			second: '2-digit',
+			hour12: false,
+		});
+
+		const parts = formatter.formatToParts(date);
+		const p = {};
+		for (const part of parts) {
+			p[part.type] = part.value;
+		}
+
+		// Handle hour: '24' edge case (midnight)
+		let hour = parseInt(p.hour, 10);
+		let dayOffset = 0;
+		if (hour === 24) {
+			hour = 0;
+			dayOffset = 86400000; // 1 day in ms
+		}
+
+		const tzTimeAsUtc =
+			Date.UTC(parseInt(p.year, 10), parseInt(p.month, 10) - 1, parseInt(p.day, 10), hour, parseInt(p.minute, 10), parseInt(p.second, 10)) +
+			dayOffset;
+
+		const offsetMs = tzTimeAsUtc - date.getTime();
+
+		// Cache the result
+		if (cacheKey) {
+			timezone_cache.set(cacheKey, {
+				offset: offsetMs,
+				timestamp: date.getTime(),
+			});
+		}
 
 		return offsetMs;
 	} catch {
