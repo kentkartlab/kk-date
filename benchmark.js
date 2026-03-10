@@ -572,9 +572,9 @@ testScenarios.forEach((scenario) => {
 		const luxonOps = test.luxon ? calculateOpsPerSec(luxonTime, iterations) : 0;
 
 		// Calculate improvements vs each library
-		const vsMoment = ((momentTime - kkDateTime) / momentTime * 100).toFixed(1);
-		const vsDayjs = ((dayjsTime - kkDateTime) / dayjsTime * 100).toFixed(1);
-		const vsLuxon = test.luxon ? ((luxonTime - kkDateTime) / luxonTime * 100).toFixed(1) : null;
+		const vsMoment = (((momentTime - kkDateTime) / momentTime) * 100).toFixed(1);
+		const vsDayjs = (((dayjsTime - kkDateTime) / dayjsTime) * 100).toFixed(1);
+		const vsLuxon = test.luxon ? (((luxonTime - kkDateTime) / luxonTime) * 100).toFixed(1) : null;
 
 		console.log(`\n${test.name}:`);
 		console.log(`  kk-date:  ${kkDateTime.toFixed(3)}ms (${kkDateOps.toLocaleString()} ops/sec)`);
@@ -605,9 +605,9 @@ const avgDayjsTime = totalDayjsTime / testCount;
 const avgLuxonTime = totalLuxonTime / totalLuxonTest;
 
 // Calculate vs each library
-const vsMomentOverall = ((avgMomentTime - avgKkDateTime) / avgMomentTime * 100).toFixed(1);
-const vsDayjsOverall = ((avgDayjsTime - avgKkDateTime) / avgDayjsTime * 100).toFixed(1);
-const vsLuxonOverall = ((avgLuxonTime - avgKkDateTime) / avgLuxonTime * 100).toFixed(1);
+const vsMomentOverall = (((avgMomentTime - avgKkDateTime) / avgMomentTime) * 100).toFixed(1);
+const vsDayjsOverall = (((avgDayjsTime - avgKkDateTime) / avgDayjsTime) * 100).toFixed(1);
+const vsLuxonOverall = (((avgLuxonTime - avgKkDateTime) / avgLuxonTime) * 100).toFixed(1);
 
 console.log(`Average kk-date time:  ${avgKkDateTime.toFixed(3)}ms`);
 console.log(`Average Moment time:   ${avgMomentTime.toFixed(3)}ms`);
