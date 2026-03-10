@@ -301,6 +301,57 @@ date.config({
 });
 ```
 
+## 📱 React Native & Hermes Support
+
+kk-date is compatible with **React Native** using the **Hermes** JavaScript engine.
+
+**Tested Environment:**
+- Expo **54**
+- React Native **0.81**
+- Hermes engine enabled
+
+### What Works Out of the Box
+
+All core features work without any additional configuration:
+
+- Date creation, formatting, and parsing
+- `add`, `subtract`, `diff`, `startOf`, `endOf`
+- `isBefore`, `isAfter`, `isSame`, `isBetween`
+- Timezone conversions (`.tz()`)
+- `fromNow`, `toNow` relative time
+- Caching system
+
+### Hermes Intl Compatibility
+
+Hermes has a known limitation with `Intl.DateTimeFormat` — the `timeZoneName: 'longOffset'` option either splits the GMT offset across multiple parts or is not supported at all. kk-date automatically detects and handles this with a built-in fallback:
+
+```javascript
+// This works seamlessly on Hermes — no configuration needed
+const date = new kk_date('2024-08-23 10:30:00');
+const istanbul = date.tz('Europe/Istanbul');
+console.log(istanbul.format('YYYY-MM-DD HH:mm')); // 2024-08-23 13:30
+```
+
+The fallback uses a date-comparison method to calculate timezone offsets when `longOffset` is unavailable, ensuring correct DST-aware results across all timezones.
+
+### Installation (React Native)
+
+```bash
+npm install kk-date
+```
+
+No polyfills or additional packages required.
+
+```javascript
+// CommonJS (Metro bundler compatible)
+const kk_date = require('kk-date');
+
+const date = new kk_date('2024-08-23');
+console.log(date.format('DD/MM/YYYY')); // 23/08/2024
+```
+
+---
+
 ## 🌍 Browser Support
 
 - Chrome 60+ (basic functionality)
