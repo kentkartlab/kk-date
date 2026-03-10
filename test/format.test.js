@@ -165,10 +165,10 @@ describe('format', () => {
 	test('DD MMMM dddd (different lang.)', () => {
 		const currentYear = new Date().getFullYear();
 		// Test parsing (defaults to current year)
-		expect(new kk_date('15 ديسمبر Tuesday').format('YYYY-MM-DD')).toBe(`${currentYear}-12-15`);
+		expect(new kk_date('15 ديسمبر Monday').format('YYYY-MM-DD')).toBe(`${currentYear}-12-15`);
 		expect(new kk_date('31 दिसंबर Sunday').format('YYYY-MM-DD')).toBe(`${currentYear}-12-31`);
 		expect(new kk_date('31 十二月 Sunday').format('YYYY-MM-DD')).toBe(`${currentYear}-12-31`);
-		expect(new kk_date('15 ديسمبر Tuesday').config({ locale: 'tr-tr' }).format('DD MMMM YYYY dddd')).toBe(`15 Aralık ${currentYear} Pazartesi`);
+		expect(new kk_date('15 ديسمبر Monday').config({ locale: 'tr-tr' }).format('DD MMMM YYYY dddd')).toBe(`15 Aralık ${currentYear} Pazartesi`);
 	});
 
 	test('YYYY-DD-MM', () => {
