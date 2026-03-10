@@ -49,13 +49,14 @@ class KkDate {
 	/**
 	 * Constructs a KkDate instance with the given input and format.
 	 *
-	 * @param {string|Date|KkDate} date - The input value. Can be:
-	 *  - a date string,
+	 * @param {string|Date|KkDate|number} date - The input value. Can be:
+	 *  - a date string (e.g. "2024-01-15", "15.01.2024"),
 	 *  - a native Date object,
-	 *  - another KkDate instance.
+	 *  - another KkDate instance,
+	 *  - a numeric Unix timestamp (≤10 digits treated as seconds, >10 digits as milliseconds).
 	 *
-	 * @param {string} date_format - The format used to parse and validate the input.
-	 * Supported formats include: `"YYYY-MM-DD"`, `"YYYY-DD-MM"`.
+	 * @param {string} [date_format] - Optional format hint for parsing the date string.
+	 * Supported formats include: `"YYYY-MM-DD"`, `"DD.MM.YYYY"`, `"YYYY-MM-DD HH:mm:ss"`, etc.
 	 */
 	constructor(...params) {
 		let is_can_cache = true;
@@ -689,7 +690,8 @@ class KkDate {
 	/**
 	 * valueOfLocal() locale value of giving
 	 *
-	 * @returns {number|Error}
+	 * @param {boolean} [check_error=true]
+	 * @returns {number}
 	 */
 	valueOfLocal(check_error = true) {
 		if (check_error) {
@@ -805,24 +807,23 @@ class KkDate {
 		return this;
 	}
 	/**
-	 *
-	 * @param {string|Date|KkDate} start
-	 * @param {string|Date|KkDate} end
-	 * @param {'seconds'|'minutes'|'hours'|'days'|'months'|'years'} type - The unit of time type
-	 * @param {boolean} is_decimal
-	 * @returns {number|Error}
+	 * Calculates the difference between this date (start) and the given end date.
+	 * @param {string|Date|KkDate|number} end
+	 * @param {'seconds'|'minutes'|'hours'|'days'|'months'|'years'} type
+	 * @param {boolean} [is_decimal=false]
+	 * @returns {number}
 	 */
 	diff(end, type, is_decimal = false) {
 		return diff(this, end, type, is_decimal, true);
 	}
 
 	/**
-	 *
-	 * @param {string|Date|KkDate} start
-	 * @param {string|Date|KkDate} end
-	 * @param {'seconds'|'minutes'|'hours'|'days'|'months'|'years'} type - The unit of time type
-	 * @param {*} template
-	 * @returns {Array|Error}
+	 * Returns an array of formatted date strings between this date (start) and the given end date,
+	 * stepping by the given unit.
+	 * @param {string|Date|KkDate|number} end
+	 * @param {'seconds'|'minutes'|'hours'|'days'|'months'|'years'} type
+	 * @param {string} [template='YYYY-MM-DD']
+	 * @returns {string[]}
 	 */
 	diff_range(end, type, template = format_types['YYYY-MM-DD']) {
 		const diffed = diff(this, end, type);
@@ -953,10 +954,15 @@ class KkDate {
 	}
 
 	/**
-	 * date format advanced
+	 * Formats the date with multiple format templates joined by a separator.
+	 * The first argument is always the separator string.
 	 *
-	 * @param  {string} template
-	 * @returns {string|Error}
+	 * @param {string} [separator=' '] - Separator inserted between each formatted part
+	 * @param {...string} template - One or more format templates (see FormatType for valid values)
+	 * @returns {string}
+	 * @example
+	 * date.format_c(' ', 'DD', 'MMMM', 'YYYY') // → "15 January 2024"
+	 * date.format_c('-', 'YYYY', 'MM', 'DD')   // → "2024-01-15"
 	 */
 	format_c(separator = ' ', ...template) {
 		isInvalid(this.date);
@@ -968,16 +974,12 @@ class KkDate {
 	}
 
 	/**
-	 * basic formatter
+	 * Formats the date according to the given template.
+	 * Returns a `number` for `'X'` (Unix seconds) and `'x'` (Unix milliseconds).
+	 * Passing `null` or calling with no argument returns an ISO-style string with timezone offset (e.g. "2024-01-15T10:30:00+03:00").
 	 *
-	 * @param {'YYYY-MM-DD HH:mm:ss'|'YYYY-MM-DDTHH:mm:ss'|'YYYY-MM-DD HH:mm'|'YYYY-MM-DD HH'|
-	 * 'YYYY-MM-DD'|'YYYYMMDD'|'DD.MM.YYYY'|'YYYY.MM.DD HH:mm'|'YYYY.MM.DD HH'|
-	 * 'YYYY.MM.DD HH:mm:ss'|'DD.MM.YYYY HH:mm:ss'|'DD.MM.YYYY HH:mm'|'dddd'|
-	 * 'HH:mm:ss'|'HH:mm'|'X'|'x'|'DD-MM-YYYY'|'YYYY.MM.DD'|'DD-MM-YYYY HH'|
-	 * 'DD-MM-YYYY HH:mm'|'DD-MM-YYYY HH:mm:ss'|'DD MMMM YYYY'|'DD MMMM YYYY dddd'|
-	 * 'MMMM YYYY'|'DD MMMM dddd YYYY'|'MMM'|'MMMM'|'ddd'|'DD MMM YYYY'|'DD MMM'|
-	 * 'MMM YYYY'|'DD MMM YYYY HH:mm'} template - format template
-	 * @returns {string|Error}
+	 * @param {string|null} [template] - Format template. See `FormatType` for all supported values.
+	 * @returns {string|number}
 	 */
 	format(template) {
 		return formatter(this, template);
@@ -1064,7 +1066,7 @@ class KkDate {
 
 	/**
 	 * @description It divides the date string into parts and returns an object.
-	 * @param {string} time - time seconds
+	 * @param {number} time - Duration in seconds
 	 * @returns {{years: number, months: number, weeks: number, days: number, hours: number, minutes: number, seconds: number}}
 	 */
 	duration(time) {
