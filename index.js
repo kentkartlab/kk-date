@@ -1003,11 +1003,15 @@ class KkDate {
 		try {
 			if (options.locale) {
 				this.temp_config.locale = options.locale;
-				this.temp_config.rtf[options.locale] = new Intl.RelativeTimeFormat(options.locale, { numeric: 'auto' });
+				if (typeof Intl?.RelativeTimeFormat === 'function') {
+					this.temp_config.rtf[options.locale] = new Intl.RelativeTimeFormat(options.locale, { numeric: 'auto' });
+				}
 				if (cached_dateTimeFormat.temp['dddd'][options.locale]) {
 					return this;
 				}
-				new Intl.Locale(options.locale);
+				if (typeof Intl?.Locale === 'function') {
+					new Intl.Locale(options.locale);
+				}
 				if (!cached_dateTimeFormat.temp['dddd'][options.locale]) {
 					cached_dateTimeFormat.temp['dddd'][options.locale] = new Intl.DateTimeFormat(options.locale, {
 						weekday: 'long',
@@ -1312,6 +1316,9 @@ class KkDate {
 		let rtf = this.temp_config.rtf[locale] || global_config.rtf[locale];
 
 		if (!rtf) {
+			if (typeof Intl?.RelativeTimeFormat !== 'function') {
+				throw new Error(`fromNow() requires Intl.RelativeTimeFormat which is not available in this environment.`);
+			}
 			try {
 				rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
 				this.temp_config.rtf[locale] = rtf;
@@ -2098,7 +2105,9 @@ function isValidWeekStartDay(weekStartDay) {
 function config(options) {
 	try {
 		if (options.locale) {
-			new Intl.Locale(options.locale);
+			if (typeof Intl?.Locale === 'function') {
+				new Intl.Locale(options.locale);
+			}
 			global_config.locale = options.locale;
 			cached_dateTimeFormat.dddd = new Intl.DateTimeFormat(global_config.locale, {
 				weekday: 'long',
@@ -2116,10 +2125,12 @@ function config(options) {
 				isValidWeekStartDay(options.weekStartDay);
 				global_config.weekStartDay = options.weekStartDay;
 			}
-			try {
-				global_config.rtf[global_config.locale] = new Intl.RelativeTimeFormat(global_config.locale, { numeric: 'auto' });
-			} catch {
-				throw new Error('locale not valid for BCP 47 / relative time formatting');
+			if (typeof Intl?.RelativeTimeFormat === 'function') {
+				try {
+					global_config.rtf[global_config.locale] = new Intl.RelativeTimeFormat(global_config.locale, { numeric: 'auto' });
+				} catch {
+					throw new Error('locale not valid for BCP 47 / relative time formatting');
+				}
 			}
 		}
 	} catch (error) {
