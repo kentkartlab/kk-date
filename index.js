@@ -1577,6 +1577,7 @@ function _formatterCore(orj_this, template, isUTC) {
 			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes'], {
 				isUTC,
 				detectedFormat: orj_this.detected_format,
+				orj_this: orj_this,
 			});
 			return `${result.year}-${result.month}-${result.day} ${result.hours}:${result.minutes}`;
 		}
@@ -1593,6 +1594,7 @@ function _formatterCore(orj_this, template, isUTC) {
 			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes', 'seconds'], {
 				isUTC,
 				detectedFormat: orj_this.detected_format,
+				orj_this: orj_this,
 			});
 			return `${result.year}.${result.month}.${result.day} ${result.hours}:${result.minutes}:${result.seconds}`;
 		}
@@ -1600,6 +1602,7 @@ function _formatterCore(orj_this, template, isUTC) {
 			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes'], {
 				isUTC,
 				detectedFormat: orj_this.detected_format,
+				orj_this: orj_this,
 			});
 			return `${result.year}.${result.month}.${result.day} ${result.hours}:${result.minutes}`;
 		}
@@ -1931,7 +1934,7 @@ function _formatterCore(orj_this, template, isUTC) {
 			return `${result.day} ${formatted}`;
 		}
 		case format_types['D MMMM YYYY']: {
-			const day = converter(orj_this.date, ['day'], { pad: false, isUTC, detectedFormat: orj_this.detected_format }).day;
+			const day = converter(orj_this.date, ['day'], { pad: false, isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this }).day;
 			const year = converter(orj_this.date, ['year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this }).year;
 			const value = dateTimeFormat(orj_this, 'MMMM');
 			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
@@ -1946,7 +1949,7 @@ function _formatterCore(orj_this, template, isUTC) {
 			return `${day} ${formatted} ${year}`;
 		}
 		case format_types['Do MMMM YYYY']: {
-			const day = converter(orj_this.date, ['day'], { pad: false, isUTC, detectedFormat: orj_this.detected_format }).day;
+			const day = converter(orj_this.date, ['day'], { pad: false, isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this }).day;
 			const year = converter(orj_this.date, ['year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this }).year;
 			const value = dateTimeFormat(orj_this, 'MMMM');
 			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
@@ -1961,7 +1964,7 @@ function _formatterCore(orj_this, template, isUTC) {
 			return `${getOrdinal(parseInt(day, 10))} ${formatted} ${year}`;
 		}
 		case format_types['Do MMM YYYY']: {
-			const day = converter(orj_this.date, ['day'], { pad: false, isUTC, detectedFormat: orj_this.detected_format }).day;
+			const day = converter(orj_this.date, ['day'], { pad: false, isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this }).day;
 			const year = converter(orj_this.date, ['year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this }).year;
 			const value = dateTimeFormat(orj_this, 'MMM');
 			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;

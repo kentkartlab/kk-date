@@ -656,20 +656,20 @@ function converter(date, to, options = { pad: true }) {
 					result.year = partsMap.year;
 					break;
 				case 'month':
-					result.month = partsMap.month;
+					result.month = shouldPad ? partsMap.month : parseInt(partsMap.month, 10);
 					break;
 				case 'day':
-					result.day = partsMap.day;
+					result.day = shouldPad ? partsMap.day : parseInt(partsMap.day, 10);
 					break;
 				case 'hours':
 					// Fix: Convert hour 24 to 00 (midnight)
-					result.hours = partsMap.hour === '24' ? '00' : partsMap.hour;
+					result.hours = partsMap.hour === '24' ? '00' : (shouldPad ? partsMap.hour : parseInt(partsMap.hour, 10));
 					break;
 				case 'minutes':
-					result.minutes = partsMap.minute;
+					result.minutes = shouldPad ? partsMap.minute : parseInt(partsMap.minute, 10);
 					break;
 				case 'seconds':
-					result.seconds = partsMap.second;
+					result.seconds = shouldPad ? partsMap.second : parseInt(partsMap.second, 10);
 					break;
 				case 'milliseconds':
 					result.milliseconds = shouldPad
