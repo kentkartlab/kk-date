@@ -10,6 +10,8 @@ const timeInMilliseconds = {
 	seconds: 1000, // 1 second
 };
 
+const ordinal_suffix = ['th', 'st', 'nd', 'rd'];
+
 const format_types = {
 	dddd: 'dddd',
 	YYYY: 'YYYY',
@@ -342,3 +344,4 @@ module.exports.converter_results_cache = converter_results_cache;
 module.exports.formatter_cache = formatter_cache;
 module.exports.cached_dateTimeFormat_with_locale = cached_dateTimeFormat_with_locale;
 module.exports.COMMON_TIMEZONES = COMMON_TIMEZONES;
+module.exports.ordinal_suffix = ordinal_suffix;

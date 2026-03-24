@@ -24,7 +24,9 @@ const {
 	format_types_cache,
 	format_types_regex_cache,
 	formatter_cache,
+	ordinal_suffix
 } = require('./constants');
+
 
 nopeRedis.config({ defaultTtl: 1300 });
 
@@ -34,9 +36,8 @@ nopeRedis.config({ defaultTtl: 1300 });
  * @returns {string} The number with ordinal suffix
  */
 function getOrdinal(n) {
-	const s = ['th', 'st', 'nd', 'rd'];
 	const v = n % 100;
-	return n + (s[(v - 20) % 10] || s[v] || s[0]);
+	return n + (ordinal_suffix[(v - 20) % 10] || ordinal_suffix[v] || ordinal_suffix[0]);
 }
 
 /**
