@@ -18,10 +18,21 @@ const {
 	converter_results_cache,
 	cached_dateTimeFormat_with_locale,
 	COMMON_TIMEZONES,
+	ordinal_suffix,
 } = require('./constants');
 
 const months = {};
 const days = {};
+
+/**
+ * Returns ordinal suffix for a number (1st, 2nd, 3rd, 4th, etc.)
+ * @param {number} n - The number to get ordinal suffix for
+ * @returns {string} The number with ordinal suffix
+ */
+function getOrdinal(n) {
+	const v = n % 100;
+	return n + (ordinal_suffix[(v - 20) % 10] || ordinal_suffix[v] || ordinal_suffix[0]);
+}
 
 for (const key in iso6391_languages) {
 	const month_long = new Intl.DateTimeFormat(key, { month: 'long' });
@@ -663,7 +674,7 @@ function converter(date, to, options = { pad: true }) {
 					break;
 				case 'hours':
 					// Fix: Convert hour 24 to 00 (midnight)
-					result.hours = partsMap.hour === '24' ? '00' : (shouldPad ? partsMap.hour : parseInt(partsMap.hour, 10));
+					result.hours = partsMap.hour === '24' ? '00' : shouldPad ? partsMap.hour : parseInt(partsMap.hour, 10);
 					break;
 				case 'minutes':
 					result.minutes = shouldPad ? partsMap.minute : parseInt(partsMap.minute, 10);
@@ -812,3 +823,4 @@ module.exports.dateTimeFormat = dateTimeFormat;
 module.exports.converter = converter;
 module.exports.isValidMonth = isValidMonth;
 module.exports.isValidDayName = isValidDayName;
+module.exports.getOrdinal = getOrdinal;

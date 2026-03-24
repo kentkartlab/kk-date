@@ -14,6 +14,7 @@ const {
 	dateTimeFormat,
 	converter,
 	isValidMonth,
+	getOrdinal
 } = require('./functions');
 const {
 	cached_dateTimeFormat,
@@ -23,22 +24,11 @@ const {
 	global_config,
 	format_types_cache,
 	format_types_regex_cache,
-	formatter_cache,
-	ordinal_suffix
+	formatter_cache
 } = require('./constants');
 
 
 nopeRedis.config({ defaultTtl: 1300 });
-
-/**
- * Returns ordinal suffix for a number (1st, 2nd, 3rd, 4th, etc.)
- * @param {number} n - The number to get ordinal suffix for
- * @returns {string} The number with ordinal suffix
- */
-function getOrdinal(n) {
-	const v = n % 100;
-	return n + (ordinal_suffix[(v - 20) % 10] || ordinal_suffix[v] || ordinal_suffix[0]);
-}
 
 /**
  * @class KkDate
