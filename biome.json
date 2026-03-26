@@ -1,8 +1,8 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.2.3/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.4.6/schema.json",
 	"assist": { "actions": { "source": { "organizeImports": "on" } } },
 	"files": {
-		"includes": ["**"]
+		"includes": ["**", "!.claude"]
 	},
 	"linter": {
 		"enabled": true,
@@ -31,6 +31,17 @@
 			"jsxQuoteStyle": "single",
 			"quoteStyle": "single",
 			"lineWidth": 150
-		}
+		},
+		"globals": [
+			"describe",
+			"it",
+			"test",
+			"expect",
+			"beforeEach",
+			"afterEach",
+			"beforeAll",
+			"afterAll",
+			"jest"
+		]
 	}
 }

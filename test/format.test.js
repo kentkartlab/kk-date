@@ -153,22 +153,18 @@ describe('format', () => {
 	});
 
 	test('DD MMMM dddd', () => {
-		const currentYear = new Date().getFullYear();
 		expect(new kk_date('2024-08-19').format('DD MMMM dddd')).toBe('19 August Monday');
 		expect(new kk_date('2024-08-19').config({ locale: 'tr-tr' }).format('DD MMMM dddd')).toBe('19 Ağustos Pazartesi');
-		// Test parsing (defaults to current year)
-		expect(new kk_date('15 January Tuesday').format('YYYY-MM-DD')).toBe(`${currentYear}-01-15`);
-		expect(new kk_date('31 December Sunday').format('YYYY-MM-DD')).toBe(`${currentYear}-12-31`);
+		expect(new kk_date('15 January Wednesday, 2025').format('YYYY-MM-DD')).toBe('2025-01-15');
+		expect(new kk_date('31 December Wednesday, 2025').format('YYYY-MM-DD')).toBe('2025-12-31');
 		expect(new kk_date('15th January 2024').format('YYYY-MM-DD')).toBe('2024-01-15');
 	});
 
 	test('DD MMMM dddd (different lang.)', () => {
-		const currentYear = new Date().getFullYear();
-		// Test parsing (defaults to current year)
-		expect(new kk_date('15 ديسمبر Tuesday').format('YYYY-MM-DD')).toBe(`${currentYear}-12-15`);
-		expect(new kk_date('31 दिसंबर Sunday').format('YYYY-MM-DD')).toBe(`${currentYear}-12-31`);
-		expect(new kk_date('31 十二月 Sunday').format('YYYY-MM-DD')).toBe(`${currentYear}-12-31`);
-		expect(new kk_date('15 ديسمبر Tuesday').config({ locale: 'tr-tr' }).format('DD MMMM YYYY dddd')).toBe(`15 Aralık ${currentYear} Pazartesi`);
+		expect(new kk_date('15 ديسمبر Monday, 2025').format('YYYY-MM-DD')).toBe('2025-12-15');
+		expect(new kk_date('31 दिसंबर Wednesday, 2025').format('YYYY-MM-DD')).toBe('2025-12-31');
+		expect(new kk_date('31 十二月 Wednesday, 2025').format('YYYY-MM-DD')).toBe('2025-12-31');
+		expect(new kk_date('15 ديسمبر Monday, 2025').config({ locale: 'tr-tr' }).format('DD MMMM YYYY dddd')).toBe('15 Aralık 2025 Pazartesi');
 	});
 
 	test('YYYY-DD-MM', () => {

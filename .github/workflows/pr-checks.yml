@@ -11,6 +11,22 @@ on:
   workflow_dispatch:
 
 jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Out Repository
+        uses: actions/checkout@v4
+      - name: Setup node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+      - name: Install packages
+        run: npm ci
+      - name: Run lint
+        run: npm run lint
+
   unit-tests:
     name: Unit tests
     timeout-minutes: 60

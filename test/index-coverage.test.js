@@ -290,7 +290,6 @@ describe('Index.js Coverage Tests', () => {
 		});
 	});
 
-
 	describe('add() with timezone-aware operations', () => {
 		test('should add months with timezone', () => {
 			const date = new kk_date('2024-01-31T12:00:00Z');
@@ -319,7 +318,7 @@ describe('Index.js Coverage Tests', () => {
 			const date = new kk_date('2024-01-15');
 			date.set('months', 6);
 			// Month is 0-indexed internally, so 6 = July
-			expect(parseInt(date.format('MM'))).toBeGreaterThanOrEqual(6);
+			expect(parseInt(date.format('MM'), 10)).toBeGreaterThanOrEqual(6);
 		});
 
 		test('should set day', () => {
