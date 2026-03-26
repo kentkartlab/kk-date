@@ -49,7 +49,7 @@ describe('Hermes/React Native Fallback - getTimezoneOffset', () => {
 
 		it('should fallback when longOffset returns no timeZoneName part', () => {
 			// Mock DateTimeFormat to simulate Hermes behavior
-			const MockDateTimeFormat = function (locale, options) {
+			const MockDateTimeFormat = (locale, options) => {
 				if (options && options.timeZoneName === 'longOffset') {
 					return {
 						formatToParts: () => [
@@ -86,7 +86,7 @@ describe('Hermes/React Native Fallback - getTimezoneOffset', () => {
 			// {"type": "literal", "value": "03"},
 			// {"type": "literal", "value": ":"},
 			// {"type": "timeZoneName", "value": "00"}
-			const MockDateTimeFormat = function (locale, options) {
+			function MockDateTimeFormat(locale, options) {
 				if (options && options.timeZoneName === 'longOffset') {
 					return {
 						formatToParts: () => [
@@ -106,7 +106,7 @@ describe('Hermes/React Native Fallback - getTimezoneOffset', () => {
 					};
 				}
 				return new originalDateTimeFormat(locale, options);
-			};
+			}
 
 			Intl.DateTimeFormat = MockDateTimeFormat;
 
@@ -122,12 +122,12 @@ describe('Hermes/React Native Fallback - getTimezoneOffset', () => {
 		});
 
 		it('should fallback when longOffset throws error', () => {
-			const MockDateTimeFormat = function (locale, options) {
+			function MockDateTimeFormat(locale, options) {
 				if (options && options.timeZoneName === 'longOffset') {
 					throw new Error('longOffset not supported');
 				}
 				return new originalDateTimeFormat(locale, options);
-			};
+			}
 
 			Intl.DateTimeFormat = MockDateTimeFormat;
 
@@ -141,14 +141,14 @@ describe('Hermes/React Native Fallback - getTimezoneOffset', () => {
 		});
 
 		it('should handle half-hour offsets in fallback mode', () => {
-			const MockDateTimeFormat = function (locale, options) {
+			function MockDateTimeFormat(locale, options) {
 				if (options && options.timeZoneName === 'longOffset') {
 					return {
 						formatToParts: () => [], // Empty - no timeZoneName
 					};
 				}
 				return new originalDateTimeFormat(locale, options);
-			};
+			}
 
 			Intl.DateTimeFormat = MockDateTimeFormat;
 

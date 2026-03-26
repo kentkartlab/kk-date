@@ -70,11 +70,7 @@ declare class KkDate {
 	 * @param end - End date
 	 * @param unit - Unit for comparison (default: 'milliseconds')
 	 */
-	isBetween(
-		start: string | Date | KkDate | number,
-		end: string | Date | KkDate | number,
-		unit?: KkDate.TimeUnit | 'milliseconds'
-	): boolean;
+	isBetween(start: string | Date | KkDate | number, end: string | Date | KkDate | number, unit?: KkDate.TimeUnit | 'weeks' | 'milliseconds'): boolean;
 
 	/**
 	 * Returns string representation of the date
@@ -102,17 +98,20 @@ declare class KkDate {
 	toUTCString(): string;
 
 	/**
-	 * Returns locale-specific date string
+	 * Returns locale-specific date string.
+	 * Locale is controlled via `.config({ locale: 'tr' })` or globally via `KkDate.config({ locale: 'tr' })`.
 	 */
 	toLocaleDateString(options?: Intl.DateTimeFormatOptions): string;
 
 	/**
-	 * Returns locale-specific date and time string
+	 * Returns locale-specific date and time string.
+	 * Locale is controlled via `.config({ locale: 'tr' })` or globally via `KkDate.config({ locale: 'tr' })`.
 	 */
 	toLocaleString(options?: Intl.DateTimeFormatOptions): string;
 
 	/**
-	 * Returns locale-specific time string
+	 * Returns locale-specific time string.
+	 * Locale is controlled via `.config({ locale: 'tr' })` or globally via `KkDate.config({ locale: 'tr' })`.
 	 */
 	toLocaleTimeString(options?: Intl.DateTimeFormatOptions): string;
 
@@ -127,7 +126,10 @@ declare class KkDate {
 	valueOf(): number;
 
 	/**
-	 * Returns local timestamp value adjusted for timezone
+	 * Returns the local timezone-adjusted timestamp in milliseconds.
+	 * Unlike `valueOf()` (UTC ms), this applies the global timezone offset
+	 * so the value aligns with local wall-clock time.
+	 * @param check_error - If `false`, skips the invalid-date check (default: `true`)
 	 */
 	valueOfLocal(check_error?: boolean): number;
 
@@ -170,16 +172,28 @@ declare class KkDate {
 	get(type: KkDate.TimeUnit): number;
 
 	/**
-	 * Formats date with multiple templates joined by separator
-	 * @param separator - Separator between formatted parts
-	 * @param template - Format templates
+	 * Formats date with multiple templates joined by separator.
+	 * The **first argument is always the separator** — pass `' '` explicitly for a space.
+	 * @param separator - Separator inserted between each formatted part (default: `' '`)
+	 * @param template - One or more format templates
+	 * @example
+	 * date.format_c(' ', 'DD', 'MMMM', 'YYYY') // → "15 January 2024"
+	 * date.format_c('-', 'YYYY', 'MM', 'DD')    // → "2024-01-15"
+	 * date.format_c('T', 'YYYY-MM-DD', 'HH:mm:ss') // → "2024-01-15T10:30:00"
 	 */
-	format_c(separator: string, ...template: KkDate.FormatType[]): string;
+	format_c(separator?: string, ...template: KkDate.FormatType[]): string;
 
 	/**
 	 * Formats the date according to template
 	 * @param template - Format template (null returns ISO format with timezone offset)
+	 * @example
+	 * date.format('YYYY-MM-DD')    // → "2024-01-15"
+	 * date.format('X')             // → 1705276800  (Unix seconds, number)
+	 * date.format('x')             // → 1705276800000  (Unix ms, number)
+	 * date.format()                // → "2024-01-15T10:30:00+03:00"
 	 */
+	format(template: 'X'): number;
+	format(template: 'x'): number;
 	format(template?: KkDate.FormatType | null): string;
 
 	/**
@@ -245,8 +259,12 @@ declare class KkDate {
 	endOf(unit: KkDate.PeriodUnit): this;
 
 	/**
-	 * Returns relative time string from now
-	 * @example "5 minutes ago", "in 2 hours"
+	 * Returns a human-readable relative time string from now.
+	 * Output language follows the active locale (set via `.config({ locale })` or `KkDate.config({ locale })`).
+	 * @example
+	 * // date = 5 minutes ago
+	 * date.fromNow()                        // → "5 minutes ago"
+	 * date.config({ locale: 'tr' }).fromNow() // → "5 dakika önce"
 	 */
 	fromNow(): string;
 }
@@ -276,6 +294,7 @@ declare namespace KkDate {
 		| 'YYYY-MM-DD HH:mm:ss'
 		| 'YYYY-MM-DDTHH:mm:ss'
 		| 'YYYYMMDD'
+		| 'YYYYMMDDHHmmss'
 		// Year with dot separator
 		| 'YYYY.MM.DD'
 		| 'YYYY.MM.DD HH'
@@ -327,8 +346,6 @@ declare namespace KkDate {
 		| 'DD MMMM YYYY dddd'
 		| 'DD MMMM dddd YYYY'
 		| 'DD MMMM dddd, YYYY'
-		| 'DD MMM YYYY dddd'
-		| 'DD MMM dddd, YYYY'
 		| 'dddd, DD MMMM YYYY'
 		// Year first with named month
 		| 'YYYY MMM DD'
@@ -336,8 +353,7 @@ declare namespace KkDate {
 		// Timestamp formats
 		| 'X'
 		| 'x'
-		// Allow any string for custom formats
-		| string;
+		| (string & {});
 
 	/**
 	 * Week start day (0 = Sunday, 1 = Monday, etc.)

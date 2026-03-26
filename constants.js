@@ -10,6 +10,8 @@ const timeInMilliseconds = {
 	seconds: 1000, // 1 second
 };
 
+const ordinal_suffix = ['th', 'st', 'nd', 'rd'];
+
 const format_types = {
 	dddd: 'dddd',
 	YYYY: 'YYYY',
@@ -107,7 +109,7 @@ const format_types_regex = {
 	MMMM: /^\p{L}+$/u,
 	ddd: /^[\p{L}\p{M}]+$/u,
 	'DD MMM YYYY': /^(0[1-9]|[12][0-9]|3[01]) [\p{L}\p{M}]+ (|17|18|19|20|21)\d\d$/u,
-	'DD MMM': /^(0[1-9]|[12][0-9]|3[01]) [\p{L}\p{M}]+$$/u,
+	'DD MMM': /^(0[1-9]|[12][0-9]|3[01]) [\p{L}\p{M}]+$/u,
 	'MMM YYYY': /^[\p{L}\p{M}]+ (|17|18|19|20|21)\d\d$/u,
 	'DD MMM YYYY HH:mm': /^(0[1-9]|[12][0-9]|3[01]) [\p{L}\p{M}]+ (|17|18|19|20|21)\d\d ([01]\d|2[0-9]):([0-5]\d)$/u,
 	'YYYY-MM': /^(17|18|19|20|21)\d\d-(0[1-9]|1[0-2])$/,
@@ -342,3 +344,4 @@ module.exports.converter_results_cache = converter_results_cache;
 module.exports.formatter_cache = formatter_cache;
 module.exports.cached_dateTimeFormat_with_locale = cached_dateTimeFormat_with_locale;
 module.exports.COMMON_TIMEZONES = COMMON_TIMEZONES;
+module.exports.ordinal_suffix = ordinal_suffix;
