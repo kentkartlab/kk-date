@@ -1861,6 +1861,9 @@ module.exports.getTimezone = () => global_config.timezone;
 module.exports.setTimezone = (timezone) => {
 	checkTimezone(timezone);
 	global_config.timezone = timezone;
+	// Existing instances may have cached a config signature that resolved
+	// through the old global timezone — force recomputation (see formatSig).
+	format_config_version++;
 };
 module.exports.getUserTimezone = () => global_config.userTimezone;
 module.exports.setUserTimezone = (timezone) => {
