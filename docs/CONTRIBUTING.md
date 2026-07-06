@@ -177,7 +177,7 @@ All new functionality must include tests. Follow these guidelines:
        test('should throw error for invalid input', () => {
          expect(() => {
            new kk_date('invalid-date')
-         }).toThrow('Invalid date format')
+         }).toThrow('Invalid Date')
        })
      })
    })

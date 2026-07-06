@@ -18,6 +18,11 @@ Complete guide to configuring kk-date, including global settings, instance optio
 
 kk-date provides flexible configuration options at both global and instance levels. This allows you to set default behaviors for your entire application while still having the flexibility to override settings for specific use cases.
 
+> **How to read the examples below:**
+> - Outputs assume the **global/process timezone is UTC** (set via `kk_date.setTimezone('UTC')`, or run with `TZ=UTC`).
+> - Instance `config({ timezone })` and `.tz()` change only the **display** timezone — they do **not** reinterpret the input string. A naive string is always parsed in the global/system timezone.
+> - `.tz()` **mutates** the instance and returns it, so use a **fresh instance per conversion** (do not read the original after calling `.tz()` on it).
+
 ### Configuration Levels
 
 1. **Global Configuration**: Affects all new instances
@@ -31,14 +36,14 @@ kk-date provides flexible configuration options at both global and instance leve
 ```javascript
 const kk_date = require('kk-date');
 
-// Set global default timezone
+// Set global default timezone (the most recent call wins)
 kk_date.setTimezone('UTC');
 kk_date.setTimezone('America/New_York');
 kk_date.setTimezone('Europe/London');
 
 // Get current global timezone
 const currentTimezone = kk_date.getTimezone();
-console.log(currentTimezone); // 'UTC'
+console.log(currentTimezone); // 'Europe/London' (the last value set)
 ```
 
 ### Setting User Timezone
@@ -121,11 +126,12 @@ date.config({
 #### Timezone Configuration
 
 ```javascript
-// Create instance with specific timezone
+// Create instance, then display it in a specific timezone (global timezone = UTC)
 const nyDate = new kk_date('2024-08-23 10:00:00');
 nyDate.config({ timezone: 'America/New_York' });
 
-console.log(nyDate.format('HH:mm')); // '10:00' (interpreted as NY time)
+// config({ timezone }) only changes the DISPLAY zone; the 10:00 input (parsed as UTC) shows as NY local:
+console.log(nyDate.format('HH:mm')); // '06:00'
 ```
 
 #### Locale Configuration
@@ -166,12 +172,12 @@ Configuration options follow a specific priority order:
 // Global: UTC
 kk_date.setTimezone('UTC');
 
-// Instance: New York (overrides global)
+// Instance: display in New York (overrides the global display zone)
 const nyDate = new kk_date('2024-08-23 10:00:00');
 nyDate.config({ timezone: 'America/New_York' });
 
-// Result: Uses New York timezone
-console.log(nyDate.format('HH:mm')); // '10:00' (NY time)
+// Result: 10:00 UTC displayed in New York
+console.log(nyDate.format('HH:mm')); // '06:00' (NY display)
 
 // Instance: No timezone specified (uses global)
 const utcDate = new kk_date('2024-08-23 10:00:00');
@@ -218,12 +224,10 @@ console.log(date2.format('HH:mm')); // '15:00' (UTC)
 ```javascript
 // Store user's timezone preference
 kk_date.setUserTimezone('America/New_York');
+kk_date.setTimezone('UTC'); // server works in UTC
 
-// Use user timezone for display
-const serverTime = new kk_date('2024-08-23 15:00:00');
-            date.config({timezone: 'UTC'});
-
-const userTime = serverTime.tz(kk_date.getUserTimezone());
+// Convert a fresh instance to the user's timezone for display
+const userTime = new kk_date('2024-08-23 15:00:00').tz(kk_date.getUserTimezone());
 console.log('Time for user:', userTime.format('HH:mm')); // '11:00'
 ```
 
@@ -249,10 +253,11 @@ try {
 // Server always uses UTC
 kk_date.setTimezone('UTC');
 
-// Convert to user timezone for display
+// Convert to user timezone for display.
+// Use a fresh instance for the conversion — .tz() mutates the instance it is called on.
 const serverTime = new kk_date('2024-08-23 15:00:00');
 const userTimezone = 'America/New_York';
-const userTime = serverTime.tz(userTimezone);
+const userTime = new kk_date('2024-08-23 15:00:00').tz(userTimezone);
 
 console.log('Server time:', serverTime.format('HH:mm')); // '15:00'
 console.log('User time:', userTime.format('HH:mm'));     // '11:00'
@@ -290,8 +295,9 @@ function createTenantDate(dateString, tenantId) {
 const tenant1Date = createTenantDate('2024-08-23 10:00:00', 'tenant1');
 const tenant2Date = createTenantDate('2024-08-23 10:00:00', 'tenant2');
 
-console.log(tenant1Date.format('HH:mm')); // '10:00' (NY time)
-console.log(tenant2Date.format('HH:mm')); // '10:00' (London time)
+// 10:00 UTC displayed in each tenant's timezone (config({ timezone }) is display-only):
+console.log(tenant1Date.format('HH:mm')); // '06:00' (New York)
+console.log(tenant2Date.format('HH:mm')); // '11:00' (London)
 ```
 
 ## Locale Configuration
@@ -330,12 +336,12 @@ locales.forEach(locale => {
     console.log(`${locale}: ${date.format('dddd, DD MMMM YYYY')}`);
 });
 
-// Output:
+// Output (fr/es weekday & month names are lowercased by Intl):
 // en: Friday, 23 August 2024
 // tr: Cuma, 23 Ağustos 2024
 // de: Freitag, 23 August 2024
-// fr: Vendredi, 23 août 2024
-// es: Viernes, 23 agosto 2024
+// fr: vendredi, 23 août 2024
+// es: viernes, 23 agosto 2024
 ```
 
 ### Supported Locales
@@ -371,15 +377,15 @@ kk_date.config({ weekStartDay: 0 });
 ### Week Start Day Examples
 
 ```javascript
-const date = new kk_date('2024-08-23 10:00:00'); // Friday
+// Use a fresh instance for each call — startOf() mutates the instance it is called on.
 
 // Week starts on Sunday (default)
 kk_date.config({ weekStartDay: 0 });
-console.log(date.startOf('weeks').format('YYYY-MM-DD')); // '2024-08-18' (Sunday)
+console.log(new kk_date('2024-08-23 10:00:00').startOf('weeks').format('YYYY-MM-DD')); // '2024-08-18' (Sunday)
 
 // Week starts on Monday
 kk_date.config({ weekStartDay: 1 });
-console.log(date.startOf('weeks').format('YYYY-MM-DD')); // '2024-08-19' (Monday)
+console.log(new kk_date('2024-08-23 10:00:00').startOf('weeks').format('YYYY-MM-DD')); // '2024-08-19' (Monday)
 ```
 
 ### Instance-Specific Week Start Day

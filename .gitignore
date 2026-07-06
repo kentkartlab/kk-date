@@ -131,3 +131,8 @@ dist
 yarn.lock
 .DS_Store
 CLAUDE.md
+
+# Benchmark JSON output (produced by `benchmark*.js --json`; consumed by the Update Benchmark Docs workflow)
+bench-sequential.json
+bench-comprehensive.json
+bench.json

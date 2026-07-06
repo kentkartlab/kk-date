@@ -81,6 +81,9 @@
 	},
 	"homepage": "https://github.com/kentkartlab/kk-date#readme",
 	"devDependencies": {
-		"@biomejs/biome": "2.4.6"
+		"@biomejs/biome": "2.4.6",
+		"dayjs": "^1.11.19",
+		"luxon": "^3.7.2",
+		"moment-timezone": "^0.6.0"
 	}
 }

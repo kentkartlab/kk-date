@@ -8,9 +8,11 @@ kk-date is designed for speed and efficiency, featuring intelligent caching, mem
 
 ## ⚡ Performance Features
 
-### Revolutionary Memory Management (Negative Memory Usage!)
+### Memory Management (can show negative net usage)
 
-kk-date achieves **negative memory usage** (-7.39 MB), meaning it actually cleans up more memory than it uses:
+> Net memory delta is a **GC-timing artifact**, not a guarantee — from run to run it can be **positive or negative**, and **several other libraries (e.g. Luxon) also show negative values**. It depends on workload, Node version, and GC behavior. Measure with `node benchmark.js`.
+
+In our benchmarks kk-date can report **negative net memory usage**, i.e. it frees more than it allocates during the measured run:
 
 **How it works:**
 - **Object Pooling**: Reuses existing objects instead of creating new ones
@@ -102,7 +104,8 @@ function benchmarkFormatting() {
         testDate.format('YYYY-MM-DD HH:mm:ss');
         testDate.format('DD.MM.YYYY');
         testDate.format('DD MMMM YYYY');
-        testDate.format('dddd, DD MMMM YYYY HH:mm');
+        // 'dddd, DD MMMM YYYY HH:mm' is not a single supported template — compose with format_c:
+        testDate.format_c(' ', 'dddd, DD MMMM YYYY', 'HH:mm');
     }
     console.timeEnd('Date Formatting');
 }
@@ -225,9 +228,10 @@ function benchmarkValidation() {
     
     console.time('Validation Operations');
     for (let i = 0; i < iterations; i++) {
+        // The static isValid() REQUIRES a format template (otherwise it throws 'Invalid template !').
         // Test valid inputs
         validInputs.forEach(input => {
-            kk_date.isValid(input);
+            kk_date.isValid(input, 'YYYY-MM-DD');
             try {
                 new kk_date(input).isValid();
             } catch (e) {}
@@ -235,7 +239,7 @@ function benchmarkValidation() {
         
         // Test invalid inputs
         invalidInputs.forEach(input => {
-            kk_date.isValid(input);
+            kk_date.isValid(input, 'YYYY-MM-DD');
             try {
                 new kk_date(input).isValid();
             } catch (e) {}
@@ -351,7 +355,7 @@ function monitorMemoryUsage() {
 function manageCacheMemory() {
     const stats = kk_date.caching_status();
     if (stats.cacheSize > 1000) { // Arbitrary threshold
-        kk_date.clearCache();
+        kk_date.caching_flush();
         console.log('Cache cleared due to size:', stats.cacheSize);
     }
 }
@@ -373,25 +377,30 @@ node benchmark.js   # Comprehensive benchmark
 node benchmark2.js  # Sequential operations benchmark
 ```
 
-### Latest Benchmark Results (December 2024)
+### Benchmark Results (representative run — reproduced by CI on every PR)
 
-#### Sequential Operations (1000 days, 100 ops/day)
+#### Sequential Operations (1000 days, 100 ops/day — 100,000 ops per scenario)
 
-| Operation | kk-date | Moment.js | Day.js | Luxon | Performance |
-|-----------|---------|-----------|--------|-------|--------------|
-| **Date Creation & Formatting** | **284ms** | 633ms | 464ms | 564ms | **63% faster** than Day.js |
-| **Time Operations** | **201ms** | 786ms | 399ms | 2196ms | **98% faster** than Day.js |
-| **Timezone Conversions** | **338ms** | 1231ms | 14806ms | 2836ms | **43x faster** than Day.js |
-| **Complex Operations** | **477ms** | 1469ms | 905ms | 2513ms | **90% faster** than Day.js |
-| **Overall** | **1.30s** | 4.12s | 16.57s | 8.11s | **11.75x faster** than Day.js |
+<!-- BENCH:perf-seq -->
+| Operation | kk-date | Moment.js | Day.js | Luxon | vs Fastest Competitor |
+|-----------|---------|-----------|--------|-------|-----------------------|
+| **Date Creation & Formatting** | **284ms** | 667ms | 487ms | 627ms | **~72% faster** than Day.js |
+| **Time Operations** | 439ms | 754ms | **357ms** | 1580ms | **~23% slower** than Day.js |
+| **Timezone Conversions** | **304ms** | 1085ms | 12586ms | 2314ms | **~257% faster** than Moment |
+| **Complex Operations** | **524ms** | 1318ms | 825ms | 1768ms | **~57% faster** than Day.js |
+| **Overall** | **1.55s** | 3.82s | 14.25s | 6.29s | **~9.2x faster** than Day.js |
+<!-- /BENCH:perf-seq -->
 
 #### Key Performance Metrics
 
-- **84.58% faster** than the average of competing libraries
-- **95-99% faster** in timezone operations
-- **74.55% performance improvement** with caching enabled
-- **Negative memory usage** (-7.39 MB) through intelligent object pooling
-- **100% cache hit rate** for repeated operations
+*Measured in our benchmark suite on Node.js 22 and reproduced by CI on every PR (the "Performance Benchmarks" job). These are not guarantees — results vary by workload, hardware, and Node version. Reproduce them with `node benchmark.js` / `node benchmark2.js`.*
+
+- **~80% faster** than the average of competing libraries (comprehensive benchmark)
+- **~95-99% faster** in timezone operations
+- **~70% faster** with caching enabled
+- **kk-date does not win every scenario** — Day.js is faster in isolated "Time Operations"
+- **Net memory delta is GC-dependent** (often negative for several libraries); stability comes from object pooling + LRU eviction
+- **Near-100% cache hit rate** for repeated operations
 
 ### Custom Benchmark Template
 
@@ -575,7 +584,7 @@ setInterval(() => {
    // Clear cache periodically in long-running processes
    setInterval(() => {
        if (kk_date.caching_status().cacheSize > 10000) {
-           kk_date.clearCache();
+           kk_date.caching_flush();
        }
    }, 3600000); // Every hour
    ```

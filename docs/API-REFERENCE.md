@@ -2,6 +2,12 @@
 
 Complete reference for all kk-date methods, properties, and configuration options.
 
+> **Timezone note for examples:** A naive date string like `'2024-08-23 10:00:00'` is parsed in the
+> **process's local timezone**. The outputs shown below assume the process timezone is **UTC** (run with
+> `TZ=UTC`, or call `kk_date.setTimezone('UTC')`). Pass an absolute instant (ISO-8601 with `Z`) when you need
+> the same result on every machine. Some values (`toString()`, timezone abbreviations) also depend on the
+> runtime's ICU data and may differ across Node versions/platforms.
+
 ## Table of Contents
 
 - [Constructor](#constructor)
@@ -160,7 +166,8 @@ Returns a string representation of the date.
 
 ```javascript
 const date = new kk_date('2024-08-23 10:30:00');
-console.log(date.toString()); // 'Fri Aug 23 2024 10:30:00 GMT+0300 (GMT+03:00)'
+// Output depends on the process timezone and the runtime's ICU data, e.g. under UTC:
+console.log(date.toString()); // 'Fri Aug 23 2024 10:30:00 GMT+0000 (Coordinated Universal Time)'
 ```
 
 #### `toISOString()`
@@ -171,7 +178,7 @@ Returns ISO 8601 string representation.
 
 ```javascript
 const date = new kk_date('2024-08-23 10:30:00');
-console.log(date.toISOString()); // '2024-08-23T07:30:00.000Z' (adjusted to UTC)
+console.log(date.toISOString()); // '2024-08-23T10:30:00.000Z' (input parsed as UTC, see note above)
 ```
 
 ### Manipulation Methods
@@ -182,7 +189,7 @@ Adds the specified amount of time to the date.
 
 **Parameters:**
 - `amount` (number) - Amount to add
-- `unit` (string) - Time unit ('years', 'months', 'days', 'hours', 'minutes', 'seconds')
+- `unit` (string) - Time unit ('years', 'months', 'weeks', 'days', 'hours', 'minutes', 'seconds')
 
 **Returns:** (KkDate) - Modified date instance
 
@@ -260,7 +267,9 @@ const date2 = new kk_date('2024-08-23 10:30:45');
 date2.startOf('months');               // 2024-08-01 00:00:00
 
 const date3 = new kk_date('2024-08-23 10:30:45');
-date3.startOf('weeks');                // 2024-08-19 00:00:00 (Monday)
+date3.startOf('weeks');                // 2024-08-18 00:00:00 (Sunday — the default week start)
+// For a Monday-based week, set weekStartDay first:
+//   kk_date.config({ weekStartDay: 1 });  ->  startOf('weeks') === 2024-08-19 00:00:00 (Monday)
 
 const date4 = new kk_date('2024-08-23 10:30:45');
 date4.startOf('days');                 // 2024-08-23 00:00:00
@@ -288,7 +297,7 @@ const date2 = new kk_date('2024-08-23 10:30:45');
 date2.endOf('months');                 // 2024-08-31 23:59:59.999
 
 const date3 = new kk_date('2024-08-23 10:30:45');
-date3.endOf('weeks');                  // 2024-08-25 23:59:59.999 (Sunday)
+date3.endOf('weeks');                  // 2024-08-24 23:59:59.999 (Saturday — with the default Sunday week start)
 
 const date4 = new kk_date('2024-08-23 10:30:45');
 date4.endOf('days');                   // 2024-08-23 23:59:59.999
@@ -386,15 +395,18 @@ Returns the difference between two dates.
 
 **Returns:** (number) - Difference in specified unit
 
+The difference is measured as `(date - this)`, i.e. the argument minus the receiver. So when the argument is
+**later** than the receiver the result is **positive**; when it is earlier the result is negative.
+
 **Examples:**
 ```javascript
 const date1 = new kk_date('2024-08-23');
 const date2 = new kk_date('2024-08-25');
 
-date1.diff(date2, 'days');             // -2
-date2.diff(date1, 'days');             // 2
-date1.diff(date2, 'hours');            // -48
-date1.diff(date2, 'days', true);       // -2.0
+date1.diff(date2, 'days');             // 2   (date2 is 2 days after date1)
+date2.diff(date1, 'days');             // -2  (date1 is 2 days before date2)
+date1.diff(date2, 'hours');            // 48
+date1.diff(date2, 'days', true);       // 2   (asFloat returns a fractional value when not a whole number)
 ```
 
 ### Timezone Methods
@@ -477,8 +489,10 @@ Gets the timezone abbreviation.
 const date = new kk_date('2024-08-23 10:00:00');
 
 date.getTimezoneAbbreviation('America/New_York'); // 'EDT'
-date.getTimezoneAbbreviation('Europe/London');    // 'BST'
-date.getTimezoneAbbreviation('Asia/Tokyo');       // 'JST'
+// Note: the exact abbreviation comes from the runtime's ICU data. Some Node.js/ICU builds return an
+// offset-style label instead of a short name, e.g. 'GMT+1' for Europe/London and 'GMT+9' for Asia/Tokyo.
+date.getTimezoneAbbreviation('Europe/London');    // 'BST' or 'GMT+1' (runtime-dependent)
+date.getTimezoneAbbreviation('Asia/Tokyo');       // 'JST' or 'GMT+9' (runtime-dependent)
 ```
 
 ### Utility Methods
@@ -492,10 +506,11 @@ Checks if the date is valid.
 **Examples:**
 ```javascript
 const validDate = new kk_date('2024-08-23');
-const invalidDate = new kk_date('invalid');
-
 validDate.isValid();                   // true
-invalidDate.isValid();                 // false
+
+// Note: the constructor is fail-fast — `new kk_date('invalid')` THROWS immediately, so you cannot
+// reach `.isValid() === false` through it. To test a raw string without throwing, use the static
+// `kk_date.isValid(input, format)` instead (see Static Methods below).
 ```
 
 #### `getTime()`
@@ -632,6 +647,8 @@ Gets the global default timezone.
 ```javascript
 const kk_date = require('kk-date');
 
+// Defaults to the system timezone until you call setTimezone()/config({ timezone }).
+kk_date.setTimezone('UTC');
 const currentTimezone = kk_date.getTimezone();
 console.log(currentTimezone); // 'UTC'
 ```
@@ -664,6 +681,8 @@ Gets the user's preferred timezone.
 ```javascript
 const kk_date = require('kk-date');
 
+// Defaults to the system timezone until you call setUserTimezone().
+kk_date.setUserTimezone('America/New_York');
 const userTimezone = kk_date.getUserTimezone();
 console.log(userTimezone); // 'America/New_York'
 ```
@@ -709,15 +728,15 @@ kk_date.config({
 
 ### Utility Methods
 
-#### `isValid(input, format?)`
+#### `isValid(input, format)`
 
-Checks if a date input is valid.
+Checks whether a date string matches a given format template.
 
 **Note:** This is a module-level export, not a class static method.
 
 **Parameters:**
-- `input` (any) - Input to validate
-- `format` (string, optional) - Format to validate against ('YYYY-MM-DD', 'YYYY-DD-MM', etc.)
+- `input` (string) - Date string to validate
+- `format` (string, **required**) - Format to validate against ('YYYY-MM-DD', 'YYYY-DD-MM', etc.). Omitting it throws `Error: Invalid template !`.
 
 **Returns:** (boolean) - True if valid
 
@@ -725,11 +744,12 @@ Checks if a date input is valid.
 ```javascript
 const kk_date = require('kk-date');
 
-kk_date.isValid('2024-08-23');        // true
-kk_date.isValid('invalid');            // false
-kk_date.isValid(new Date());           // true
-kk_date.isValid('2024-23-08', 'YYYY-DD-MM'); // true
-kk_date.isValid('2024-23-08', 'YYYY-MM-DD'); // false
+// A format template is REQUIRED. Calling isValid() with only one argument throws
+// `Error: Invalid template !`, and passing a non-string (e.g. a Date) returns false.
+kk_date.isValid('2024-08-23', 'YYYY-MM-DD');  // true
+kk_date.isValid('invalid', 'YYYY-MM-DD');     // false
+kk_date.isValid('2024-23-08', 'YYYY-DD-MM');  // true
+kk_date.isValid('2024-23-08', 'YYYY-MM-DD');  // false
 ```
 
 #### `getTimezoneOffset(timezone, date?)`
@@ -858,7 +878,7 @@ The library throws descriptive errors for invalid operations:
 try {
     const date = new kk_date('invalid');
 } catch (error) {
-    console.log(error.message); // 'Invalid date format'
+    console.log(error.message); // 'Invalid Date'
 }
 
 try {

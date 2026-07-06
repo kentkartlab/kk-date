@@ -738,6 +738,13 @@ class KkDate {
 					dateToModify.setDate(dateToModify.getDate() + defined_amount);
 				}
 				break;
+			case 'weeks':
+				if (targetTimezone) {
+					dateToModify.setUTCDate(dateToModify.getUTCDate() + defined_amount * 7);
+				} else {
+					dateToModify.setDate(dateToModify.getDate() + defined_amount * 7);
+				}
+				break;
 			case 'minutes':
 				if (targetTimezone) {
 					dateToModify.setUTCMinutes(dateToModify.getUTCMinutes() + defined_amount);
@@ -2117,10 +2124,6 @@ function config(options) {
 			cached_dateTimeFormat.MMM = new Intl.DateTimeFormat(global_config.locale, {
 				month: 'short',
 			});
-			if (typeof options.weekStartDay === 'number') {
-				isValidWeekStartDay(options.weekStartDay);
-				global_config.weekStartDay = options.weekStartDay;
-			}
 			if (typeof Intl?.RelativeTimeFormat === 'function') {
 				try {
 					global_config.rtf[global_config.locale] = new Intl.RelativeTimeFormat(global_config.locale, { numeric: 'auto' });
@@ -2131,6 +2134,10 @@ function config(options) {
 		}
 	} catch (error) {
 		throw new Error(error.message || 'locale not valid for BCP 47 / config');
+	}
+	if (typeof options.weekStartDay === 'number') {
+		isValidWeekStartDay(options.weekStartDay);
+		global_config.weekStartDay = options.weekStartDay;
 	}
 	if (options.timezone && global_config.timezone !== options.timezone) {
 		checkTimezone(options.timezone);
