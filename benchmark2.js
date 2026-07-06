@@ -16,6 +16,12 @@ const timezone = require('dayjs/plugin/timezone');
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
+// `--json` mode: emit only machine-readable JSON (suppress human-readable output).
+// Used by scripts/update-benchmark-docs.js / the "Update Benchmark Docs" workflow.
+const JSON_MODE = process.argv.includes('--json');
+const _rawLog = console.log;
+if (JSON_MODE) console.log = () => {};
+
 // Test configuration
 const DAYS_TO_TEST = 1000;
 const ITERATIONS_PER_DAY = 100;
@@ -211,7 +217,7 @@ for (let index = 0; index < dates.length; index++) {
 	// Show progress
 	if (index % progressInterval === 0) {
 		progress = Math.floor((index / DAYS_TO_TEST) * 100);
-		process.stdout.write(`\rProgress: ${'█'.repeat(Math.floor(progress / 5))}${'░'.repeat(20 - Math.floor(progress / 5))} ${progress}%`);
+		if (!JSON_MODE) process.stdout.write(`\rProgress: ${'█'.repeat(Math.floor(progress / 5))}${'░'.repeat(20 - Math.floor(progress / 5))} ${progress}%`);
 	}
 
 	for (const scenario of scenarios) {
@@ -299,3 +305,22 @@ console.log(`RSS: ${(memUsage.rss / 1024 / 1024).toFixed(2)} MB`);
 console.log(`Heap Used: ${(memUsage.heapUsed / 1024 / 1024).toFixed(2)} MB`);
 
 console.log('\n✨ Benchmark completed!');
+
+if (JSON_MODE) {
+	const cleanName = (n) => n.replace(/^[^A-Za-z]+/, '').trim();
+	const scenariosJson = {};
+	for (const scenario of scenarios) {
+		scenariosJson[cleanName(scenario.name)] = {
+			'kk-date': results.kkdate[scenario.name],
+			Moment: results.moment[scenario.name],
+			'Day.js': results.dayjs[scenario.name],
+			Luxon: results.luxon[scenario.name],
+		};
+	}
+	const totalOps = DAYS_TO_TEST * ITERATIONS_PER_DAY * scenarios.length;
+	const overallJson = {};
+	for (const [lib, time] of Object.entries(totalTimes)) {
+		overallJson[lib] = { ms: time, ops: Math.round(totalOps / (time / 1000)) };
+	}
+	_rawLog(JSON.stringify({ type: 'sequential', scenarios: scenariosJson, overall: overallJson }, null, 2));
+}

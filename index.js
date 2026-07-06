@@ -22,13 +22,55 @@ const {
 	timeInMilliseconds,
 	format_types_regex,
 	global_config,
-	format_types_cache,
 	format_types_regex_cache,
 	formatter_cache
 } = require('./constants');
 
 
 nopeRedis.config({ defaultTtl: 1300 });
+
+// Mirrors nope-redis service status. When caching is disabled (the default), we skip all
+// cache reads/writes so no cache-key string, Date clone, or Promise is allocated on the hot path.
+let cachingEnabled = false;
+
+/**
+ * Builds a local-time Date from already-split numeric date parts using the numeric Date
+ * constructor, which skips the engine's (much slower) string date parser.
+ *
+ * Guarded on a 4-digit year: the parse regexes' `(|17|18|19|20|21)\d\d` empty-alternative also
+ * matches 2-digit years, for which the numeric constructor maps to 19xx and would accept inputs
+ * that the legacy string form rejects. 2-digit years fall back to the exact legacy string so
+ * behavior is preserved.
+ *
+ * @param {string} year
+ * @param {string} month - 1-based month
+ * @param {string} day
+ * @returns {Date}
+ */
+function fastLocalDate(year, month, day) {
+	if (year.length === 4) {
+		return new Date(+year, +month - 1, +day, 0, 0, 0, 0);
+	}
+	return new Date(`${year}-${month}-${day} 00:00:00`);
+}
+
+/**
+ * Like {@link fastLocalDate} but with a time component. `timePart` is the raw "HH:mm[:ss]" slice;
+ * seconds default to 0 when absent. Same 4-digit-year guard and legacy fallback.
+ *
+ * @param {string} year
+ * @param {string} month - 1-based month
+ * @param {string} day
+ * @param {string} timePart - "HH:mm" or "HH:mm:ss"
+ * @returns {Date}
+ */
+function fastLocalDateTime(year, month, day, timePart) {
+	if (year.length === 4) {
+		const [h, mi, s] = timePart.split(':');
+		return new Date(+year, +month - 1, +day, +h, +mi || 0, +s || 0, 0);
+	}
+	return new Date(`${year}-${month}-${day}T${timePart}`);
+}
 
 /**
  * @class KkDate
@@ -60,7 +102,9 @@ class KkDate {
 		} else {
 			const date = params[0];
 			let forced_format_founded = false;
-			cached = nopeRedis.getItem(date instanceof Date || Number.isInteger(date) ? null : `${date}`);
+			if (cachingEnabled) {
+				cached = nopeRedis.getItem(date instanceof Date || Number.isInteger(date) ? null : `${date}`);
+			}
 			if (typeof params[1] === 'string' && !cached) {
 				if (!format_types_regex[params[1]]) {
 					throw new Error(`Unsupported Format! ${params[1]} !`);
@@ -71,13 +115,13 @@ class KkDate {
 				if (params[1] === format_types['YYYY-DD-MM']) {
 					is_can_cache = true;
 					const [year, day, month] = date.split('-');
-					this.date = new Date(`${year}-${month}-${day} 00:00:00`);
+					this.date = fastLocalDate(year, month, day);
 					forced_format_founded = true;
 					this.detected_format = 'YYYY-DD-MM';
 				} else if (params[1] === format_types['YYYY-MM-DD']) {
 					is_can_cache = true;
 					const [year, month, day] = date.split('-');
-					this.date = new Date(`${year}-${month}-${day} 00:00:00`);
+					this.date = fastLocalDate(year, month, day);
 					forced_format_founded = true;
 					this.detected_format = 'YYYY-MM-DD';
 				}
@@ -106,17 +150,22 @@ class KkDate {
 					this.detected_format = 'now';
 				} else if (isValid(date, format_types['YYYY-MM-DD'])) {
 					const [year, month, day] = date.split('-');
-					this.date = new Date(`${year}-${month}-${day} 00:00:00`);
+					this.date = fastLocalDate(year, month, day);
 					this.detected_format = 'YYYY-MM-DD';
 				} else {
 					is_can_cache = true;
+					// Time-only formats are all <= 15 chars ("hh:mm:ss.SSS AM"); any longer string is a
+					// date/datetime, so skip the six time-format regex tests for it. The typeof guard keeps
+					// non-string inputs (e.g. null) falling through to the invalid-date fallback below.
 					if (
-						isValid(date, format_types['HH:mm:ss.SSS']) ||
-						isValid(date, format_types['HH:mm:ss']) ||
-						isValid(date, format_types['HH:mm']) ||
-						isValid(date, format_types['hh:mm']) ||
-						isValid(date, format_types['hh:mm:ss']) ||
-						isValid(date, format_types['hh:mm:ss.SSS'])
+						typeof date === 'string' &&
+						date.length <= 15 &&
+						(isValid(date, format_types['HH:mm:ss.SSS']) ||
+							isValid(date, format_types['HH:mm:ss']) ||
+							isValid(date, format_types['HH:mm']) ||
+							isValid(date, format_types['hh:mm']) ||
+							isValid(date, format_types['hh:mm:ss']) ||
+							isValid(date, format_types['hh:mm:ss.SSS']))
 					) {
 						let [hours, minutes, seconds] = date.split(':').map((n) => parseInt(n, 10));
 						const milliseconds = parseInt(date.split('.')[1] || 0, 10);
@@ -171,6 +220,13 @@ class KkDate {
 						if (typeof date === 'string' && date.includes('T') && date.endsWith('Z')) {
 							this.date = new Date(date);
 							this.detected_format = 'ISO8601';
+						} else if (typeof date === 'string' && date.charCodeAt(4) === 45 && date.charCodeAt(7) === 45 && date.charCodeAt(10) === 84) {
+							// ISO datetime without a Z/offset suffix, matched precisely by shape "____-__-__T…"
+							// (dashes at index 4 & 7, 'T' at 10) so weekday-name inputs like "Tuesday, …" are not
+							// caught. No ladder format uses a 'T' date/time separator, so these previously fell all
+							// the way through to the new Date(`${date}`) fallback; short-circuit to the identical
+							// parse (detected_format stays null, matching the old behavior).
+							this.date = new Date(date);
 						} else if (isValid(date, format_types['DD.MM.YYYY HH:mm:ss'])) {
 							const [datePart, timePart] = date.split(' ');
 							const [day, month, year] = datePart.split('.');
@@ -178,7 +234,7 @@ class KkDate {
 							if (hours >= 24) {
 								const extraDays = Math.floor(hours / 24);
 
-								const dateObj = new Date(`${year}-${month}-${day} 00:00:00`);
+								const dateObj = fastLocalDate(year, month, day);
 								dateObj.setDate(dateObj.getDate() + extraDays);
 
 								const newDay = String(dateObj.getDate()).padStart(2, '0');
@@ -189,7 +245,7 @@ class KkDate {
 									`${newYear}-${newMonth}-${newDay}T${(hours % 24).toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`,
 								);
 							} else {
-								this.date = new Date(`${year}-${month}-${day}T${timePart}`);
+								this.date = fastLocalDateTime(year, month, day, timePart);
 							}
 							this.detected_format = format_types['DD.MM.YYYY HH:mm:ss'];
 						} else if (isValid(date, format_types['DD.MM.YYYY HH:mm'])) {
@@ -199,7 +255,7 @@ class KkDate {
 							if (hours >= 24) {
 								const extraDays = Math.floor(hours / 24);
 
-								const dateObj = new Date(`${year}-${month}-${day} 00:00:00`);
+								const dateObj = fastLocalDate(year, month, day);
 								dateObj.setDate(dateObj.getDate() + extraDays);
 
 								const newDay = String(dateObj.getDate()).padStart(2, '0');
@@ -210,12 +266,12 @@ class KkDate {
 									`${newYear}-${newMonth}-${newDay}T${(hours % 24).toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`,
 								);
 							} else {
-								this.date = new Date(`${year}-${month}-${day}T${timePart}`);
+								this.date = fastLocalDateTime(year, month, day, timePart);
 							}
 							this.detected_format = format_types['DD.MM.YYYY HH:mm'];
 						} else if (isValid(date, format_types['DD.MM.YYYY'])) {
 							const [day, month, year] = date.split('.');
-							this.date = new Date(`${year}-${month}-${day} 00:00:00`);
+							this.date = fastLocalDate(year, month, day);
 							this.detected_format = format_types['DD.MM.YYYY'];
 						} else if (isValid(date, format_types['YYYY-MM-DD HH:mm:ss'])) {
 							const [datePart, timePart] = date.split(' ');
@@ -223,7 +279,7 @@ class KkDate {
 							const [hours, minutes, seconds] = timePart.split(':').map(Number);
 							if (hours >= 24) {
 								const extraDays = Math.floor(hours / 24);
-								const dateObj = new Date(`${year}-${month}-${day} 00:00:00`);
+								const dateObj = fastLocalDate(year, month, day);
 								dateObj.setDate(dateObj.getDate() + extraDays);
 
 								const newDay = String(dateObj.getDate()).padStart(2, '0');
@@ -234,7 +290,7 @@ class KkDate {
 									`${newYear}-${newMonth}-${newDay}T${(hours % 24).toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`,
 								);
 							} else {
-								this.date = new Date(`${year}-${month}-${day}T${timePart}`);
+								this.date = fastLocalDateTime(year, month, day, timePart);
 							}
 							this.detected_format = format_types['YYYY-MM-DD HH:mm:ss'];
 						} else if (isValid(date, format_types['YYYY-MM-DD HH:mm'])) {
@@ -243,7 +299,7 @@ class KkDate {
 							const [hours, minutes] = timePart.split(':').map(Number);
 							if (hours >= 24) {
 								const extraDays = Math.floor(hours / 24);
-								const dateObj = new Date(`${year}-${month}-${day} 00:00:00`);
+								const dateObj = fastLocalDate(year, month, day);
 								dateObj.setDate(dateObj.getDate() + extraDays);
 
 								const newDay = String(dateObj.getDate()).padStart(2, '0');
@@ -254,7 +310,7 @@ class KkDate {
 									`${newYear}-${newMonth}-${newDay}T${(hours % 24).toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`,
 								);
 							} else {
-								this.date = new Date(`${year}-${month}-${day}T${timePart}`);
+								this.date = fastLocalDateTime(year, month, day, timePart);
 							}
 							this.detected_format = format_types['YYYY-MM-DD HH:mm'];
 						} else if (isValid(date, format_types['YYYY.MM.DD HH:mm:ss'])) {
@@ -264,7 +320,7 @@ class KkDate {
 							if (hours >= 24) {
 								const extraDays = Math.floor(hours / 24);
 
-								const dateObj = new Date(`${year}-${month}-${day} 00:00:00`);
+								const dateObj = fastLocalDate(year, month, day);
 								dateObj.setDate(dateObj.getDate() + extraDays);
 
 								const newDay = String(dateObj.getDate()).padStart(2, '0');
@@ -275,7 +331,7 @@ class KkDate {
 									`${newYear}-${newMonth}-${newDay}T${(hours % 24).toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`,
 								);
 							} else {
-								this.date = new Date(`${year}-${month}-${day}T${timePart}`);
+								this.date = fastLocalDateTime(year, month, day, timePart);
 							}
 							this.detected_format = format_types['YYYY.MM.DD HH:mm:ss'];
 						} else if (isValid(date, format_types['YYYY.MM.DD HH:mm'])) {
@@ -285,7 +341,7 @@ class KkDate {
 							if (hours >= 24) {
 								const extraDays = Math.floor(hours / 24);
 
-								const dateObj = new Date(`${year}-${month}-${day} 00:00:00`);
+								const dateObj = fastLocalDate(year, month, day);
 								dateObj.setDate(dateObj.getDate() + extraDays);
 
 								const newDay = String(dateObj.getDate()).padStart(2, '0');
@@ -296,12 +352,12 @@ class KkDate {
 									`${newYear}-${newMonth}-${newDay}T${(hours % 24).toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`,
 								);
 							} else {
-								this.date = new Date(`${year}-${month}-${day}T${timePart}`);
+								this.date = fastLocalDateTime(year, month, day, timePart);
 							}
 							this.detected_format = format_types['YYYY.MM.DD HH:mm'];
 						} else if (isValid(date, format_types['DD-MM-YYYY'])) {
 							const [day, month, year] = date.split('-');
-							this.date = new Date(`${year}-${month}-${day} 00:00:00`);
+							this.date = fastLocalDate(year, month, day);
 							this.detected_format = format_types['DD-MM-YYYY'];
 						} else if (isValid(date, format_types['DD-MM-YYYY HH:mm:ss'])) {
 							const [datePart, timePart] = date.split(' ');
@@ -310,7 +366,7 @@ class KkDate {
 							if (hours >= 24) {
 								const extraDays = Math.floor(hours / 24);
 
-								const dateObj = new Date(`${year}-${month}-${day} 00:00:00`);
+								const dateObj = fastLocalDate(year, month, day);
 								dateObj.setDate(dateObj.getDate() + extraDays);
 
 								const newDay = String(dateObj.getDate()).padStart(2, '0');
@@ -321,7 +377,7 @@ class KkDate {
 									`${newYear}-${newMonth}-${newDay}T${(hours % 24).toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`,
 								);
 							} else {
-								this.date = new Date(`${year}-${month}-${day}T${timePart}`);
+								this.date = fastLocalDateTime(year, month, day, timePart);
 							}
 							this.detected_format = format_types['DD-MM-YYYY HH:mm:ss'];
 						} else if (isValid(date, format_types['DD-MM-YYYY HH:mm'])) {
@@ -331,7 +387,7 @@ class KkDate {
 							if (hours >= 24) {
 								const extraDays = Math.floor(hours / 24);
 
-								const dateObj = new Date(`${year}-${month}-${day} 00:00:00`);
+								const dateObj = fastLocalDate(year, month, day);
 								dateObj.setDate(dateObj.getDate() + extraDays);
 
 								const newDay = String(dateObj.getDate()).padStart(2, '0');
@@ -342,7 +398,7 @@ class KkDate {
 									`${newYear}-${newMonth}-${newDay}T${(hours % 24).toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`,
 								);
 							} else {
-								this.date = new Date(`${year}-${month}-${day}T${timePart}`);
+								this.date = fastLocalDateTime(year, month, day, timePart);
 							}
 							this.detected_format = format_types['DD-MM-YYYY HH:mm'];
 						} else if (isValid(date, format_types['DD MMMM YYYY'])) {
@@ -365,11 +421,14 @@ class KkDate {
 							const year = String(date.substring(0, 4), 10); // Extract year
 							const month = String(date.substring(4, 6), 10); // Extract month
 							const day = String(date.substring(6, 8), 10); // Extract day
-							this.date = new Date(`${year}-${month}-${day} 00:00:00`);
+							// substring() always yields a 4-char year, so guard on the full 8-char input:
+							// a short (2-digit-year) match keeps the legacy string form, which rejects it.
+							this.date =
+								date.length === 8 ? new Date(+year, +month - 1, +day, 0, 0, 0, 0) : new Date(`${year}-${month}-${day} 00:00:00`);
 							this.detected_format = format_types['YYYYMMDD'];
 						} else if (isValid(date, format_types['YYYY-MM'])) {
 							const [year, month] = date.split('-');
-							this.date = new Date(`${year}-${month}-01 00:00:00`);
+							this.date = fastLocalDate(year, month, '01');
 							this.detected_format = format_types['YYYY-MM'];
 						} else if (isValid(date, format_types['DD MMMM dddd'])) {
 							const currentYear = new Date().getFullYear();
@@ -380,7 +439,7 @@ class KkDate {
 							this.detected_format = format_types['DD MMMM dddd'];
 						} else if (isValid(date, format_types['YYYY-DD-MM'])) {
 							const [year, day, month] = date.split('-');
-							this.date = new Date(`${year}-${month}-${day} 00:00:00`);
+							this.date = fastLocalDate(year, month, day);
 							this.detected_format = format_types['YYYY-DD-MM'];
 						} else if (isValid(date, format_types['D MMMM YYYY'])) {
 							const parts = date.split(' '); // e.g., ['1', 'January', '2024'] or ['01', 'January', '2024']
@@ -389,14 +448,14 @@ class KkDate {
 							const month = isValidMonth(parts[1]);
 							this.date = new Date(`${year}-${month}-${day.padStart(2, '0')} 00:00:00`); // Ensure day is padded for Date constructor
 							this.detected_format = format_types['D MMMM YYYY'];
-						} else if (isValid(date, format_types['YYYY MMM DD']) || isValid(date, format_types['YYYY MMMM DD'])) {
+						} else if (isValid(date, format_types['YYYY MMM DD'])) {
 							const parts = date.split(' ');
 							const year = parts[0];
 							const month = isValidMonth(parts[1]);
 							const day = parts[2];
 							this.date = new Date(`${year}-${month}-${day.padStart(2, '0')} 00:00:00`); // Ensure day is padded for Date constructor
 							this.detected_format = format_types['YYYY MMM DD'];
-						} else if (isValid(date, format_types['Do MMM YYYY']) || isValid(date, format_types['Do MMM YYYY'])) {
+						} else if (isValid(date, format_types['Do MMM YYYY'])) {
 							const parts = date.split(' ');
 							const day = parseInt(parts[0], 10).toString();
 							const month = isValidMonth(parts[1]);
@@ -436,8 +495,8 @@ class KkDate {
 				this.date = new Date(cached.getTime());
 			} else {
 				isInvalid(this.date);
-				if (is_can_cache) {
-					nopeRedis.setItemAsync(`${date}`, new Date(this.date.getTime()));
+				if (is_can_cache && cachingEnabled) {
+					nopeRedis.setItemSync(`${date}`, new Date(this.date.getTime()));
 				}
 			}
 		}
@@ -736,6 +795,13 @@ class KkDate {
 					dateToModify.setUTCDate(dateToModify.getUTCDate() + defined_amount);
 				} else {
 					dateToModify.setDate(dateToModify.getDate() + defined_amount);
+				}
+				break;
+			case 'weeks':
+				if (targetTimezone) {
+					dateToModify.setUTCDate(dateToModify.getUTCDate() + defined_amount * 7);
+				} else {
+					dateToModify.setDate(dateToModify.getDate() + defined_amount * 7);
 				}
 				break;
 			case 'minutes':
@@ -1437,48 +1503,38 @@ function diff(start, end, type, is_decimal = false, turn_difftime = false) {
 function formatter(orj_this, template = null) {
 	isInvalid(orj_this.date);
 
-	// Cache key for formatter results
 	const timestamp = orj_this.date.getTime();
+
+	// Unix timestamp templates need only the timestamp — return before building the (heavier) cache key.
+	if (template === 'x') {
+		// Unix timestamp in milliseconds - always UTC, no timezone conversion
+		return timestamp;
+	}
+	if (template === 'X') {
+		// Unix timestamp in seconds - always UTC, no timezone conversion
+		return Math.floor(timestamp / 1000);
+	}
+
+	// Cache key for formatter results
 	const timezone = orj_this.temp_config.timezone || global_config.timezone || 'none';
 	const locale = orj_this.temp_config.locale || global_config.locale || 'none';
 	const cacheKey = `${template}_${timestamp}_${timezone}_${locale}_${orj_this.detected_format || 'none'}`;
 
-	// Check cache first
-	if (formatter_cache.has(cacheKey)) {
-		return formatter_cache.get(cacheKey);
+	// Check cache first (single lookup)
+	const cachedResult = formatter_cache.get(cacheKey);
+	if (cachedResult !== undefined) {
+		return cachedResult;
 	}
 
 	// Limit cache size to prevent memory leaks
 	if (formatter_cache.size > 10000) {
-		// Clear half of the cache when limit is reached
-		const keysToDelete = Array.from(formatter_cache.keys()).slice(0, 5000);
-		for (const key of keysToDelete) {
-			formatter_cache.delete(key);
-		}
+		formatter_cache.clear();
 	}
-
-	let result;
 
 	// Determine if this is a UTC date (ISO8601 format) or if timezone is explicitly UTC
 	const isUTC = orj_this.detected_format === 'ISO8601' || timezone === 'UTC';
 
-	switch (template) {
-		case 'x': {
-			// Unix timestamp in milliseconds - always UTC, no timezone conversion
-			result = orj_this.date.getTime();
-			break;
-		}
-		case 'X': {
-			// Unix timestamp in seconds - always UTC, no timezone conversion
-			result = Math.floor(orj_this.date.getTime() / 1000);
-			break;
-		}
-		default: {
-			// Store result in cache and return
-			result = _formatterCore(orj_this, template, isUTC);
-			break;
-		}
-	}
+	const result = _formatterCore(orj_this, template, isUTC);
 
 	// Store result in cache
 	formatter_cache.set(cacheKey, result);
@@ -1495,7 +1551,7 @@ function _formatterCore(orj_this, template, isUTC) {
 				return cache;
 			}
 			const value = formatter.value.format(orj_this.date);
-			nopeRedis.setItemAsync(cache_key, value);
+			nopeRedis.setItemSync(cache_key, value);
 			return value;
 		}
 		case format_types.DD: {
@@ -1713,7 +1769,7 @@ function _formatterCore(orj_this, template, isUTC) {
 				formatted = cache;
 			} else {
 				formatted = value.value.format(orj_this.date);
-				nopeRedis.setItemAsync(cache_key, formatted);
+				nopeRedis.setItemSync(cache_key, formatted);
 			}
 			const result = converter(orj_this.date, ['day', 'year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this });
 			return `${result.day} ${formatted} ${result.year}`;
@@ -1728,7 +1784,7 @@ function _formatterCore(orj_this, template, isUTC) {
 				return cache;
 			}
 			const formatted = `${result.day} ${monthValue.value.format(orj_this.date)} ${result.year} ${dayValue.value.format(orj_this.date)}`;
-			nopeRedis.setItemAsync(cache_key, formatted);
+			nopeRedis.setItemSync(cache_key, formatted);
 			return formatted;
 		}
 		case format_types['DD MMM YYYY dddd']: {
@@ -1741,7 +1797,7 @@ function _formatterCore(orj_this, template, isUTC) {
 				return cache;
 			}
 			const formatted = `${result.day} ${monthValue.value.format(orj_this.date)} ${result.year} ${dayValue.value.format(orj_this.date)}`;
-			nopeRedis.setItemAsync(cache_key, formatted);
+			nopeRedis.setItemSync(cache_key, formatted);
 			return formatted;
 		}
 		case format_types['MMMM YYYY']: {
@@ -1753,7 +1809,7 @@ function _formatterCore(orj_this, template, isUTC) {
 				formatted = cache;
 			} else {
 				formatted = value.value.format(orj_this.date);
-				nopeRedis.setItemAsync(cache_key, formatted);
+				nopeRedis.setItemSync(cache_key, formatted);
 			}
 			const result = converter(orj_this.date, ['year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this });
 			return `${formatted} ${result.year}`;
@@ -1768,7 +1824,7 @@ function _formatterCore(orj_this, template, isUTC) {
 				return cache;
 			}
 			const formatted = `${result.day} ${monthValue.value.format(orj_this.date)} ${dayValue.value.format(orj_this.date)} ${result.year}`;
-			nopeRedis.setItemAsync(cache_key, formatted);
+			nopeRedis.setItemSync(cache_key, formatted);
 			return formatted;
 		}
 		case format_types['DD MMM dddd, YYYY']: {
@@ -1781,7 +1837,7 @@ function _formatterCore(orj_this, template, isUTC) {
 				return cache;
 			}
 			const formatted = `${result.day} ${monthValue.value.format(orj_this.date)} ${dayValue.value.format(orj_this.date)}, ${result.year}`;
-			nopeRedis.setItemAsync(cache_key, formatted);
+			nopeRedis.setItemSync(cache_key, formatted);
 			return formatted;
 		}
 		case format_types['MMM']: {
@@ -1792,7 +1848,7 @@ function _formatterCore(orj_this, template, isUTC) {
 				return cache;
 			}
 			const value = formatter.value.format(orj_this.date);
-			nopeRedis.setItemAsync(cache_key, value);
+			nopeRedis.setItemSync(cache_key, value);
 			return value;
 		}
 		case format_types['MMMM']: {
@@ -1803,7 +1859,7 @@ function _formatterCore(orj_this, template, isUTC) {
 				return cache;
 			}
 			const value = formatter.value.format(orj_this.date);
-			nopeRedis.setItemAsync(cache_key, value);
+			nopeRedis.setItemSync(cache_key, value);
 			return value;
 		}
 		case format_types['ddd']: {
@@ -1814,7 +1870,7 @@ function _formatterCore(orj_this, template, isUTC) {
 				return cache;
 			}
 			const value = formatter.value.format(orj_this.date);
-			nopeRedis.setItemAsync(cache_key, value);
+			nopeRedis.setItemSync(cache_key, value);
 			return value;
 		}
 		case format_types['DD MMM YYYY']: {
@@ -1827,7 +1883,7 @@ function _formatterCore(orj_this, template, isUTC) {
 				formatted = cache;
 			} else {
 				formatted = value.value.format(orj_this.date);
-				nopeRedis.setItemAsync(cache_key, formatted);
+				nopeRedis.setItemSync(cache_key, formatted);
 			}
 			return `${result.day} ${formatted} ${result.year}`;
 		}
@@ -1841,7 +1897,7 @@ function _formatterCore(orj_this, template, isUTC) {
 				formatted = cache;
 			} else {
 				formatted = value.value.format(orj_this.date);
-				nopeRedis.setItemAsync(cache_key, formatted);
+				nopeRedis.setItemSync(cache_key, formatted);
 			}
 			return `${result.day} ${formatted}`;
 		}
@@ -1854,7 +1910,7 @@ function _formatterCore(orj_this, template, isUTC) {
 				formatted = cache;
 			} else {
 				formatted = value.value.format(orj_this.date);
-				nopeRedis.setItemAsync(cache_key, formatted);
+				nopeRedis.setItemSync(cache_key, formatted);
 			}
 			return `${formatted} ${converter(orj_this.date, ['year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this }).year}`;
 		}
@@ -1868,7 +1924,7 @@ function _formatterCore(orj_this, template, isUTC) {
 				return cache;
 			}
 			const formatted = `${dayValue.value.format(orj_this.date)}, ${result.day} ${monthValue.value.format(orj_this.date)} ${result.year}`;
-			nopeRedis.setItemAsync(cache_key, formatted);
+			nopeRedis.setItemSync(cache_key, formatted);
 			return formatted;
 		}
 		case format_types['DD MMM YYYY HH:mm']: {
@@ -1885,7 +1941,7 @@ function _formatterCore(orj_this, template, isUTC) {
 				formatted = cache;
 			} else {
 				formatted = value.value.format(orj_this.date);
-				nopeRedis.setItemAsync(cache_key, formatted);
+				nopeRedis.setItemSync(cache_key, formatted);
 			}
 			return `${result.day} ${formatted} ${result.year} ${result.hours}:${result.minutes}`;
 		}
@@ -1903,7 +1959,7 @@ function _formatterCore(orj_this, template, isUTC) {
 				return cache;
 			}
 			const result = `${day} ${monthValue.value.format(orj_this.date)} ${dayValue.value.format(orj_this.date)}`;
-			nopeRedis.setItemAsync(cache_key, result);
+			nopeRedis.setItemSync(cache_key, result);
 			return result;
 		}
 		case format_types['YYYY-DD-MM']: {
@@ -1920,7 +1976,7 @@ function _formatterCore(orj_this, template, isUTC) {
 				formatted = cache;
 			} else {
 				formatted = value.value.format(orj_this.date);
-				nopeRedis.setItemAsync(cache_key, formatted);
+				nopeRedis.setItemSync(cache_key, formatted);
 			}
 			return `${result.day} ${formatted}`;
 		}
@@ -1935,7 +1991,7 @@ function _formatterCore(orj_this, template, isUTC) {
 				formatted = cache;
 			} else {
 				formatted = value.value.format(orj_this.date);
-				nopeRedis.setItemAsync(cache_key, formatted);
+				nopeRedis.setItemSync(cache_key, formatted);
 			}
 			return `${day} ${formatted} ${year}`;
 		}
@@ -1950,7 +2006,7 @@ function _formatterCore(orj_this, template, isUTC) {
 				formatted = cache;
 			} else {
 				formatted = value.value.format(orj_this.date);
-				nopeRedis.setItemAsync(cache_key, formatted);
+				nopeRedis.setItemSync(cache_key, formatted);
 			}
 			return `${getOrdinal(parseInt(day, 10))} ${formatted} ${year}`;
 		}
@@ -1965,7 +2021,7 @@ function _formatterCore(orj_this, template, isUTC) {
 				formatted = cache;
 			} else {
 				formatted = value.value.format(orj_this.date);
-				nopeRedis.setItemAsync(cache_key, formatted);
+				nopeRedis.setItemSync(cache_key, formatted);
 			}
 			return `${getOrdinal(parseInt(day, 10))} ${formatted} ${year}`;
 		}
@@ -1979,7 +2035,7 @@ function _formatterCore(orj_this, template, isUTC) {
 				return cache;
 			}
 			const formatted = `${result.day} ${monthValue.value.format(orj_this.date)} ${dayValue.value.format(orj_this.date)}, ${result.year}`;
-			nopeRedis.setItemAsync(cache_key, formatted);
+			nopeRedis.setItemSync(cache_key, formatted);
 			return formatted;
 		}
 		case format_types['YYYY MMM DD']: {
@@ -1992,7 +2048,7 @@ function _formatterCore(orj_this, template, isUTC) {
 				formatted = cache;
 			} else {
 				formatted = value.value.format(orj_this.date);
-				nopeRedis.setItemAsync(cache_key, formatted);
+				nopeRedis.setItemSync(cache_key, formatted);
 			}
 			return `${result.year} ${formatted} ${result.day}`;
 		}
@@ -2006,7 +2062,7 @@ function _formatterCore(orj_this, template, isUTC) {
 				formatted = cache;
 			} else {
 				formatted = value.value.format(orj_this.date);
-				nopeRedis.setItemAsync(cache_key, formatted);
+				nopeRedis.setItemSync(cache_key, formatted);
 			}
 			return `${result.year} ${formatted} ${result.day}`;
 		}
@@ -2059,16 +2115,11 @@ function isValid(date_string, template) {
 		return true;
 	}
 
-	// Cache format_types lookup to avoid repeated property access
-	const formatType = format_types_cache.has(template);
-	if (!formatType) {
-		throw new Error('Invalid template !');
-	}
-
-	// Cache regex lookup to avoid repeated property access
+	// Single Map lookup: format_types and format_types_regex share the same keys (except 'dddd',
+	// handled above), so a missing regex means the template is unknown.
 	const regex = format_types_regex_cache.get(template);
 	if (!regex) {
-		throw new Error('Unsupported template for validation !');
+		throw new Error('Invalid template !');
 	}
 
 	// Direct return for better performance
@@ -2117,10 +2168,6 @@ function config(options) {
 			cached_dateTimeFormat.MMM = new Intl.DateTimeFormat(global_config.locale, {
 				month: 'short',
 			});
-			if (typeof options.weekStartDay === 'number') {
-				isValidWeekStartDay(options.weekStartDay);
-				global_config.weekStartDay = options.weekStartDay;
-			}
 			if (typeof Intl?.RelativeTimeFormat === 'function') {
 				try {
 					global_config.rtf[global_config.locale] = new Intl.RelativeTimeFormat(global_config.locale, { numeric: 'auto' });
@@ -2131,6 +2178,10 @@ function config(options) {
 		}
 	} catch (error) {
 		throw new Error(error.message || 'locale not valid for BCP 47 / config');
+	}
+	if (typeof options.weekStartDay === 'number') {
+		isValidWeekStartDay(options.weekStartDay);
+		global_config.weekStartDay = options.weekStartDay;
 	}
 	if (options.timezone && global_config.timezone !== options.timezone) {
 		checkTimezone(options.timezone);
@@ -2151,8 +2202,10 @@ function caching(options = { status: false, defaultTtl: null }) {
 	if (typeof options.status === 'boolean') {
 		if (options.status) {
 			nopeRedis.SERVICE_START();
+			cachingEnabled = true;
 		} else {
 			nopeRedis.SERVICE_KILL_SYNC();
+			cachingEnabled = false;
 		}
 	}
 	if (typeof options.defaultTtl === 'number') {

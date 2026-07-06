@@ -1,9 +1,12 @@
 {
 	"name": "kk-date",
-	"version": "4.1.3",
+	"version": "4.2.0",
 	"description": "kk-date is a fastest JavaScript library that parses, validations, manipulates, and displays dates and times. If you use Moment.js or Day.js already you can easily use kk-date.",
 	"main": "index.js",
 	"types": "index.d.ts",
+	"engines": {
+		"node": ">=22"
+	},
 	"scripts": {
 		"test": "npx jest",
 		"test:coverage": "npx jest --coverage",
@@ -81,6 +84,9 @@
 	},
 	"homepage": "https://github.com/kentkartlab/kk-date#readme",
 	"devDependencies": {
-		"@biomejs/biome": "2.4.6"
+		"@biomejs/biome": "2.4.6",
+		"dayjs": "^1.11.19",
+		"luxon": "^3.7.2",
+		"moment-timezone": "^0.6.0"
 	}
 }

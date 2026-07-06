@@ -38,6 +38,12 @@ const timezone = require('dayjs/plugin/timezone');
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
+// `--json` mode: emit only machine-readable JSON (suppress human-readable output).
+// Used by scripts/update-benchmark-docs.js / the "Update Benchmark Docs" workflow.
+const JSON_MODE = process.argv.includes('--json');
+const _rawLog = console.log;
+if (JSON_MODE) console.log = () => {};
+
 // Enable caching for better performance
 KkDate.caching({ status: false, defaultTtl: 3600 });
 
@@ -657,9 +663,11 @@ const memoryTest = () => {
 	console.log(`  Moment:   ${momentMemory.toFixed(2)} MB`);
 	console.log(`  Day.js:   ${dayjsMemory.toFixed(2)} MB`);
 	console.log(`  Luxon:    ${luxonMemory.toFixed(2)} MB`);
+
+	return { 'kk-date': kkDateMemory, Moment: momentMemory, 'Day.js': dayjsMemory, Luxon: luxonMemory };
 };
 
-memoryTest();
+const memResult = memoryTest();
 
 // Cache performance test for all scenarios
 console.log('\n⚡ CACHE PERFORMANCE TEST');
@@ -705,9 +713,11 @@ const cacheTestAllScenarios = () => {
 	console.log(`Average without cache: ${avgNoCacheTime.toFixed(3)}ms`);
 	console.log(`Average with cache:    ${avgWithCacheTime.toFixed(3)}ms`);
 	console.log(`Cache impact:          ${cacheImprovement}% performance improvement`);
+
+	return { withoutMs: avgNoCacheTime, withMs: avgWithCacheTime, improvementPct: parseFloat(cacheImprovement) };
 };
 
-cacheTestAllScenarios();
+const cacheResult = cacheTestAllScenarios();
 
 // Cache statistics
 const cacheStats = KkDate.caching_status();
@@ -725,3 +735,24 @@ console.log(`Heap Total: ${(memUsage.heapTotal / 1024 / 1024).toFixed(2)} MB`);
 
 console.log('\n✨ Benchmark completed!');
 KkDate.caching({ status: false });
+
+if (JSON_MODE) {
+	_rawLog(
+		JSON.stringify(
+			{
+				type: 'comprehensive',
+				overall: {
+					avgMs: { 'kk-date': avgKkDateTime, Moment: avgMomentTime, 'Day.js': avgDayjsTime, Luxon: avgLuxonTime },
+					kkDateFasterPct: { Moment: parseFloat(vsMomentOverall), 'Day.js': parseFloat(vsDayjsOverall), Luxon: parseFloat(vsLuxonOverall) },
+				},
+				memory: memResult,
+				cache: {
+					...cacheResult,
+					hitRatioPct: (cacheStats.totalHits / (cacheStats.totalHits + cacheStats.cacheSize)) * 100,
+				},
+			},
+			null,
+			2,
+		),
+	);
+}

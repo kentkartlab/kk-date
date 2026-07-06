@@ -89,8 +89,8 @@ date.format('DD'); // '23'
 const date = new kk_date('2024-08-23 22:30:45');
 
 date.format('HH'); // '22'
-// For 12-hour format, use combined formats:
-date.format('hh:mm'); // '10:30' (12-hour format with AM/PM)
+// For 12-hour format, use combined formats (an AM/PM suffix is always appended):
+date.format('hh:mm'); // '10:30 PM'
 ```
 
 ### Minute Templates
@@ -232,16 +232,16 @@ date.format('YYYY MMMM DD'); // '2024 August 23'
 |----------|-------------|---------|
 | `HH:mm:ss` | 24-hour time with seconds | `10:30:45` |
 | `HH:mm` | 24-hour time without seconds | `10:30` |
-| `hh:mm:ss` | 12-hour time with seconds | `10:30:45` |
-| `hh:mm` | 12-hour time without seconds | `10:30` |
+| `hh:mm:ss` | 12-hour time with seconds (AM/PM suffix) | `10:30:45 AM` |
+| `hh:mm` | 12-hour time without seconds (AM/PM suffix) | `10:30 AM` |
 
 ```javascript
 const date = new kk_date('2024-08-23 10:30:45');
 
 date.format('HH:mm:ss'); // '10:30:45'
 date.format('HH:mm');    // '10:30'
-date.format('hh:mm:ss'); // '10:30:45'
-date.format('hh:mm');    // '10:30'
+date.format('hh:mm:ss'); // '10:30:45 AM'
+date.format('hh:mm');    // '10:30 AM'
 ```
 
 ### Time with Milliseconds
@@ -249,13 +249,13 @@ date.format('hh:mm');    // '10:30'
 | Template | Description | Example |
 |----------|-------------|---------|
 | `HH:mm:ss.SSS` | 24-hour time with milliseconds | `10:30:45.123` |
-| `hh:mm:ss.SSS` | 12-hour time with milliseconds | `10:30:45.123` |
+| `hh:mm:ss.SSS` | 12-hour time with milliseconds (AM/PM suffix) | `10:30:45.123 AM` |
 
 ```javascript
 const date = new kk_date('2024-08-23 10:30:45.123');
 
 date.format('HH:mm:ss.SSS'); // '10:30:45.123'
-date.format('hh:mm:ss.SSS'); // '10:30:45.123'
+date.format('hh:mm:ss.SSS'); // '10:30:45.123 AM'
 ```
 
 ### Individual Time Components
@@ -289,7 +289,6 @@ date.format('HH:mm:ss.SSS'); // '10:30:45.123'
 | `DD.MM.YYYY HH:mm:ss` | European datetime format | `23.08.2024 10:30:45` |
 | `DD.MM.YYYY HH:mm` | European datetime without seconds | `23.08.2024 10:30` |
 | `DD-MM-YYYY HH:mm:ss` | European datetime with dashes | `23-08-2024 10:30:45` |
-| `MM/DD/YYYY HH:mm:ss` | US datetime format | `08/23/2024 10:30:45` |
 | `YYYY.MM.DD HH:mm:ss` | Dotted datetime format | `2024.08.23 10:30:45` |
 | `YYYY.MM.DD HH:mm` | Dotted datetime without seconds | `2024.08.23 10:30` |
 
@@ -301,7 +300,6 @@ date.format('YYYY-MM-DD HH:mm');    // '2024-08-23 10:30'
 date.format('DD.MM.YYYY HH:mm:ss'); // '23.08.2024 10:30:45'
 date.format('DD.MM.YYYY HH:mm');    // '23.08.2024 10:30'
 date.format('DD-MM-YYYY HH:mm:ss'); // '23-08-2024 10:30:45'
-date.format('MM/DD/YYYY HH:mm:ss'); // '08/23/2024 10:30:45'
 date.format('YYYY.MM.DD HH:mm:ss'); // '2024.08.23 10:30:45'
 date.format('YYYY.MM.DD HH:mm');    // '2024.08.23 10:30'
 ```
@@ -322,7 +320,6 @@ date.format('YYYY-MM-DDTHH:mm:ss'); // '2024-08-23T10:30:45'
 
 | Template | Description | Example |
 |----------|-------------|---------|
-| `DD MMMM YYYY HH:mm` | Date with full month and time | `23 August 2024 10:30` |
 | `DD MMMM dddd, YYYY` | Date with weekday and comma | `23 August Friday, 2024` |
 | `YYYY MMM DD` | Year-month-day format | `2024 Aug 23` |
 | `YYYY MMMM DD` | Year-fullmonth-day format | `2024 August 23` |
@@ -330,7 +327,6 @@ date.format('YYYY-MM-DDTHH:mm:ss'); // '2024-08-23T10:30:45'
 ```javascript
 const date = new kk_date('2024-08-23 10:30:45');
 
-date.format('DD MMMM YYYY HH:mm');   // '23 August 2024 10:30'
 date.format('DD MMMM dddd, YYYY');   // '23 August Friday, 2024'
 date.format('YYYY MMM DD');          // '2024 Aug 23'
 date.format('YYYY MMMM DD');         // '2024 August 23'
@@ -342,59 +338,65 @@ date.format('YYYY MMMM DD');         // '2024 August 23'
 |----------|-------------|---------|
 | `YYYY-MM-DD HH:mm` | Compact datetime | `2024-08-23 10:30` |
 | `DD.MM.YYYY HH:mm` | European compact | `23.08.2024 10:30` |
-| `MM/DD/YYYY HH:mm` | US compact | `08/23/2024 10:30` |
 
 ```javascript
 const date = new kk_date('2024-08-23 10:30:45');
 
 date.format('YYYY-MM-DD HH:mm'); // '2024-08-23 10:30'
 date.format('DD.MM.YYYY HH:mm'); // '23.08.2024 10:30'
-date.format('MM/DD/YYYY HH:mm'); // '08/23/2024 10:30'
 ```
 
 ## Custom Formatting
 
-### Combining Templates
+> **Important:** `format()` matches the **whole** template string against a fixed set of supported patterns
+> (see the tables above). It does **not** interpolate tokens inside arbitrary text — passing an unsupported
+> string such as `'YYYY/MM/DD at HH:mm'` or `'Today is dddd'` throws `Error: template is not right`.
+> To build a custom string, format the pieces you need and combine them in JavaScript, or use `format_c()`.
 
-You can combine any templates to create custom formats:
+### Combining Templates with `format_c(separator, ...templates)`
+
+`format_c()` formats several supported templates and joins them with a separator:
 
 ```javascript
 const date = new kk_date('2024-08-23 10:30:45');
 
-// Custom formats
-date.format('YYYY/MM/DD at HH:mm');     // '2024/08/23 at 10:30'
-date.format('Today is dddd');           // 'Today is Friday'
-date.format('Time: HH:mm:ss on DD MMM'); // 'Time: 10:30:45 on 23 Aug'
+date.format_c(' ', 'YYYY-MM-DD', 'HH:mm:ss');           // '2024-08-23 10:30:45'
+date.format_c('T', 'YYYY-MM-DD', 'HH:mm:ss');            // '2024-08-23T10:30:45'
+date.format_c('-', 'DD', 'MM', 'YYYY');                  // '23-08-2024'
+date.format_c(' ', 'dddd, DD MMMM YYYY', 'HH:mm');       // 'Friday, 23 August 2024 10:30'
 ```
 
-### Special Characters
+### Building Strings with Surrounding Text
 
-You can include any characters in your format string:
+For labels or sentences, concatenate formatted parts in plain JavaScript:
 
 ```javascript
 const date = new kk_date('2024-08-23 10:30:45');
 
-date.format('Date: YYYY-MM-DD');        // 'Date: 2024-08-23'
-date.format('Time: HH:mm:ss');          // 'Time: 10:30:45'
-date.format('Created on DD/MM/YYYY');   // 'Created on 23/08/2024'
+`Date: ${date.format('YYYY-MM-DD')}`;        // 'Date: 2024-08-23'
+`Time: ${date.format('HH:mm:ss')}`;          // 'Time: 10:30:45'
+`Created on ${date.format('DD/MM/YYYY')}`;   // 'Created on 23/08/2024'
 ```
 
 ### Conditional Formatting
 
-You can create conditional formats based on date properties:
+Branch in JavaScript, then format the pieces you need:
 
 ```javascript
 const date = new kk_date('2024-08-23 10:30:45');
 
-// Different formats for different times
+// Different greetings for different times
 const hour = parseInt(date.format('HH'), 10);
+const time = date.format('HH:mm');
+let greeting;
 if (hour < 12) {
-    console.log(date.format('Good morning! It\'s HH:mm')); // 'Good morning! It's 10:30'
+    greeting = `Good morning! It's ${time}`;   // "Good morning! It's 10:30"
 } else if (hour < 18) {
-    console.log(date.format('Good afternoon! It\'s HH:mm')); // 'Good afternoon! It's 10:30'
+    greeting = `Good afternoon! It's ${time}`;
 } else {
-    console.log(date.format('Good evening! It\'s HH:mm')); // 'Good evening! It's 10:30'
+    greeting = `Good evening! It's ${time}`;
 }
+console.log(greeting);
 ```
 
 ## Locale Support
@@ -413,7 +415,7 @@ const date = new kk_date('2024-08-23 10:30:45');
 
 // Turkish month and weekday names
 date.format('DD MMMM YYYY'); // '23 Ağustos 2024'
-date.format('dddd, DD MMMM'); // 'Cuma, 23 Ağustos'
+date.format('dddd, DD MMMM YYYY'); // 'Cuma, 23 Ağustos 2024'
 ```
 
 ### Available Locales
@@ -447,12 +449,12 @@ locales.forEach(locale => {
     console.log(`${locale}: ${date.format('dddd, DD MMMM YYYY')}`);
 });
 
-// Output:
+// Output (weekday/month names come from Intl; fr/es return them lowercased):
 // en: Friday, 23 August 2024
 // tr: Cuma, 23 Ağustos 2024
 // de: Freitag, 23 August 2024
-// fr: Vendredi, 23 août 2024
-// es: Viernes, 23 agosto 2024
+// fr: vendredi, 23 août 2024
+// es: viernes, 23 agosto 2024
 ```
 
 
@@ -463,7 +465,7 @@ locales.forEach(locale => {
 #### 1. File Naming
 
 ```javascript
-const date = new kk_date();
+const date = new kk_date('2024-08-23 14:30:45'); // use new kk_date() for the current time
 
 // Create timestamped filenames
 const dateStr = date.format('YYYYMMDD');
@@ -499,7 +501,8 @@ const date = new kk_date('2024-08-23 10:30:45');
 // Display formats
 const displayDate = date.format('DD MMMM YYYY');
 const displayTime = date.format('HH:mm');
-const displayDateTime = date.format('dddd, DD MMMM YYYY at HH:mm');
+// 'at' is arbitrary text, so build the combined string in JS (format() has no token interpolation):
+const displayDateTime = `${date.format('dddd, DD MMMM YYYY')} at ${date.format('HH:mm')}`;
 
 console.log(`Date: ${displayDate}`);           // Date: 23 August 2024
 console.log(`Time: ${displayTime}`);           // Time: 10:30
@@ -518,7 +521,7 @@ const apiResponse = {
     created_at: date.format('YYYY-MM-DDTHH:mm:ss'),
     display_date: date.format('DD MMMM YYYY'),
     display_time: date.format('HH:mm'),
-    timestamp: date.getTime()
+    timestamp: date.getTime() // input parsed as UTC (see timezone note); system-timezone-dependent
 };
 
 console.log(JSON.stringify(apiResponse, null, 2));
@@ -528,7 +531,7 @@ console.log(JSON.stringify(apiResponse, null, 2));
 //   "created_at": "2024-08-23T10:30:45",
 //   "display_date": "23 August 2024",
 //   "display_time": "10:30",
-//   "timestamp": 1724407200000
+//   "timestamp": 1724409045000
 // }
 ```
 
@@ -550,10 +553,11 @@ console.log(`Event time: ${eventTime}`); // Event time: 10:30
 #### 6. Logging
 
 ```javascript
-const date = new kk_date();
+const date = new kk_date('2024-08-23 14:30:45.123'); // use new kk_date() for the current time
 
 // Log formats
-const logTimestamp = date.format('YYYY-MM-DD HH:mm:ss.SSS');
+// Note: there is no single 'YYYY-MM-DD HH:mm:ss.SSS' template — compose it with format_c().
+const logTimestamp = date.format_c(' ', 'YYYY-MM-DD', 'HH:mm:ss.SSS');
 const logDate = date.format('DD/MM/YYYY');
 const logTime = date.format('HH:mm:ss');
 
@@ -587,18 +591,19 @@ console.log(date.format(DATETIME_FORMAT));
 
 ### Error Handling
 
-The `format()` method handles invalid templates gracefully:
+The `format()` method **throws** on an unsupported template (`Error: template is not right`), so wrap
+untrusted templates in a try/catch:
 
 ```javascript
 const date = new kk_date('2024-08-23 10:30:45');
 
 try {
-    // Invalid template
+    // Unsupported template -> throws
     const result = date.format('INVALID_TEMPLATE');
     console.log(result);
 } catch (error) {
-    console.log('Format error:', error.message);
-    // Fallback to default format
+    console.log('Format error:', error.message); // 'template is not right'
+    // Fallback to a supported template
     console.log(date.format('YYYY-MM-DD HH:mm:ss'));
 }
 ```
