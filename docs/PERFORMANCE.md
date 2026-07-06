@@ -384,11 +384,11 @@ node benchmark2.js  # Sequential operations benchmark
 <!-- BENCH:perf-seq -->
 | Operation | kk-date | Moment.js | Day.js | Luxon | vs Fastest Competitor |
 |-----------|---------|-----------|--------|-------|-----------------------|
-| **Date Creation & Formatting** | **190ms** | 1128ms | 726ms | 905ms | **~281% faster** than Day.js |
-| **Time Operations** | **426ms** | 1256ms | 556ms | 2733ms | **~31% faster** than Day.js |
-| **Timezone Conversions** | **416ms** | 3285ms | 18959ms | 4450ms | **~690% faster** than Moment |
-| **Complex Operations** | **337ms** | 2510ms | 1230ms | 2920ms | **~265% faster** than Day.js |
-| **Overall** | **1.37s** | 8.18s | 21.47s | 11.01s | **~15.7x faster** than Day.js |
+| **Date Creation & Formatting** | **198ms** | 1443ms | 833ms | 1093ms | **~322% faster** than Day.js |
+| **Time Operations** | **528ms** | 1631ms | 653ms | 2853ms | **~24% faster** than Day.js |
+| **Timezone Conversions** | **461ms** | 3344ms | 23137ms | 4903ms | **~626% faster** than Moment |
+| **Complex Operations** | **490ms** | 3232ms | 1572ms | 3390ms | **~221% faster** than Day.js |
+| **Overall** | **1.68s** | 9.65s | 26.19s | 12.24s | **~15.6x faster** than Day.js |
 <!-- /BENCH:perf-seq -->
 
 #### Key Performance Metrics
@@ -396,9 +396,9 @@ node benchmark2.js  # Sequential operations benchmark
 *Measured in our benchmark suite on Node.js 26 and reproduced by CI on every PR (the "Performance Benchmarks" job). These are not guarantees — results vary by workload, hardware, and Node version. Reproduce them with `node benchmark.js` / `node benchmark2.js`.*
 
 <!-- BENCH:perf-metrics -->
-- **~84% faster** than the average of competing libraries (comprehensive benchmark)
+- **~89% faster** than the average of competing libraries (comprehensive benchmark)
 - **up to ~98% faster** in timezone operations
-- **~72% faster** with caching enabled
+- **~60% faster** with caching enabled
 - **kk-date does not win every scenario** — Day.js is faster in isolated "Time Operations"
 - **Net memory delta is GC-dependent** (often negative for several libraries); stability comes from object pooling + LRU eviction
 - **Near-100% cache hit rate** for repeated operations
