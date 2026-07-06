@@ -52,27 +52,36 @@ NODE_ENV=test npm test
 
 ## Test Structure
 
-### Test File Organization (499 Total Tests)
+### Test File Organization (523 Total Tests)
 
 ```
 test/
 ├── add.test.js                    # Addition operations
 ├── beforeAfter.test.js            # Before/after comparisons
+├── comprehensive-timezone-formats.test.js # All format templates (24 combinations)
+├── cross-platform-timezone.test.js # Cross-platform compatibility
+├── dynamic-format.test.js         # Dynamic template compiler (token combos, [bracket] literals, cache invalidation)
+├── format-parity.test.js          # Byte-parity contract replayed from test/fixtures/format-parity.json
 ├── format.test.js                 # Formatting functionality (including overflow time)
 ├── fromNow.test.js                # Relative time calculations
+├── functions-coverage.test.js     # Coverage tests for functions.js utilities
+├── hermes-fallback.test.js        # Hermes/React Native timezone fallback
+├── index-coverage.test.js         # Coverage tests for index.js
 ├── other.test.js                  # Miscellaneous functionality
 ├── startEndOf.test.js             # Start/end of period operations
 ├── time-formatting.test.js        # Time-specific formatting tests
 ├── time-operations.test.js        # Date manipulation tests
 ├── time-parsing.test.js           # Various date/time parsing scenarios
 ├── timezone.test.js               # Basic timezone functionality
-├── validInvalid.test.js           # Date validation
-├── weekStartDay.test.js           # Week start day functionality
 ├── user-timezone-scenarios.test.js # Real-world timezone scenarios
-├── comprehensive-timezone-formats.test.js # All format templates (24 combinations)
 ├── real-world-timezone.test.js    # Real-world timezone examples
-└── cross-platform-timezone.test.js # Cross-platform compatibility
+├── validInvalid.test.js           # Date validation
+└── weekStartDay.test.js           # Week start day functionality
 ```
+
+The `format-parity.json` fixture was generated from the pre-refactor (switch-case) formatter via
+`scripts/generate-format-fixtures.js`. It is the byte-parity contract for formatter refactors —
+do NOT regenerate it in the same change that intentionally alters formatter output.
 
 ### Test File Template
 
