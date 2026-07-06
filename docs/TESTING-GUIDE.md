@@ -52,7 +52,7 @@ NODE_ENV=test npm test
 
 ## Test Structure
 
-### Test File Organization (322 Total Tests)
+### Test File Organization (499 Total Tests)
 
 ```
 test/
@@ -105,7 +105,7 @@ describe('Feature Name', () => {
         test('should throw error for invalid input', () => {
             expect(() => {
                 new kk_date('invalid-date');
-            }).toThrow('Invalid date format');
+            }).toThrow('Invalid Date');
         });
     });
 });
@@ -175,18 +175,20 @@ expect(date.getTime()).toBe(1724407200000);
 // Array assertions
 expect(['2024-08-23', '2024-08-24']).toContain(date.format('YYYY-MM-DD'));
 
-// Object assertions
+// Object assertions (getTimezoneInfo also returns standardOffset & daylightOffset)
 expect(date.getTimezoneInfo('America/New_York')).toEqual({
     timezone: 'America/New_York',
     offset: -14400000,
     isDST: true,
-    abbreviation: 'EDT'
+    abbreviation: 'EDT',
+    standardOffset: -18000000,
+    daylightOffset: -14400000
 });
 
 // Error assertions
 expect(() => {
     new kk_date('invalid-date');
-}).toThrow('Invalid date format');
+}).toThrow('Invalid Date');
 
 // Async assertions
 test('should handle async operations', async () => {
@@ -258,10 +260,11 @@ describe('Integration Tests', () => {
             const utcDate = new kk_date('2024-08-23 10:00:00');
             utcDate.config({timezone: 'UTC'});
 
-            // Convert to multiple timezones
-            const nyTime = utcDate.tz('America/New_York');
-            const tokyoTime = utcDate.tz('Asia/Tokyo');
-            const londonTime = utcDate.tz('Europe/London');
+            // Convert to multiple timezones.
+            // Use a fresh instance per conversion — .tz() mutates the instance it is called on.
+            const nyTime = new kk_date('2024-08-23 10:00:00').tz('America/New_York');
+            const tokyoTime = new kk_date('2024-08-23 10:00:00').tz('Asia/Tokyo');
+            const londonTime = new kk_date('2024-08-23 10:00:00').tz('Europe/London');
 
             // Verify conversions
             expect(nyTime.format('HH:mm')).toBe('06:00');
@@ -285,14 +288,14 @@ describe('Integration Tests', () => {
                 time: date.format('HH:mm:ss'),
                 datetime: date.format('YYYY-MM-DD HH:mm:ss'),
                 iso: date.format('YYYY-MM-DDTHH:mm:ss'),
-                custom: date.format('DD MMMM YYYY, dddd')
+                custom: date.format('DD MMMM dddd, YYYY')
             };
 
             expect(formats.date).toBe('2024-08-23');
             expect(formats.time).toBe('10:30:45');
             expect(formats.datetime).toBe('2024-08-23 10:30:45');
             expect(formats.iso).toBe('2024-08-23T10:30:45');
-            expect(formats.custom).toBe('23 August 2024, Friday');
+            expect(formats.custom).toBe('23 August Friday, 2024');
         });
     });
 });
@@ -304,13 +307,15 @@ describe('Integration Tests', () => {
 describe('Edge Cases', () => {
     describe('DST Transitions', () => {
         test('should handle spring forward', () => {
-            const dstDate = new kk_date('2024-03-10 02:00:00');
+            // 07:00 UTC on 2024-03-10 is just after New York springs forward to EDT.
+            const dstDate = new kk_date('2024-03-10T07:00:00.000Z');
             const nyTime = dstDate.tz('America/New_York');
             expect(nyTime.format('HH:mm')).toBe('03:00'); // EDT
         });
 
         test('should handle fall back', () => {
-            const dstDate = new kk_date('2024-11-03 02:00:00');
+            // 06:00 UTC on 2024-11-03 is exactly when New York falls back to EST.
+            const dstDate = new kk_date('2024-11-03T06:00:00.000Z');
             const nyTime = dstDate.tz('America/New_York');
             expect(nyTime.format('HH:mm')).toBe('01:00'); // EST
         });
@@ -338,7 +343,7 @@ describe('Edge Cases', () => {
         test('should handle invalid date string', () => {
             expect(() => {
                 new kk_date('not-a-date');
-            }).toThrow('Invalid date format');
+            }).toThrow('Invalid Date');
         });
     });
 
@@ -355,8 +360,10 @@ describe('Edge Cases', () => {
         });
 
         test('should handle non-leap years', () => {
+            // Feb 29 in a non-leap year is NOT rejected — it rolls over to March 1 and is valid.
             const nonLeapYear = new kk_date('2023-02-29 10:00:00');
-            expect(nonLeapYear.isValid()).toBe(false);
+            expect(nonLeapYear.isValid()).toBe(true);
+            expect(nonLeapYear.format('YYYY-MM-DD')).toBe('2023-03-01');
         });
     });
 });

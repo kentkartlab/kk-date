@@ -16,12 +16,12 @@ Advanced features, performance tips, and best practices for kk-date.
 
 ### Caching Strategies
 
-kk-date provides a powerful caching system that delivers **74.55% performance improvement** when enabled:
+kk-date provides a caching system that, in our benchmarks on Node.js 26, delivered up to **~70% faster** repeated operations (results vary by workload):
 
 ```javascript
 const kk_date = require('kk-date');
 
-// Enable caching for maximum performance (74.55% faster!)
+// Enable caching for maximum performance (~70% faster in our benchmarks)
 kk_date.caching({ status: true, defaultTtl: 3600 });
 
 // Monitor cache performance
@@ -31,18 +31,16 @@ console.log('Cache hit rate:', hitRate + '%'); // Typically 99%+
 
 // First conversion - initial computation
 const date = new kk_date('2024-08-23 10:00:00');
-const first = date.tz('America/New_York'); // ~77ms
+const first = date.tz('America/New_York'); // first call: computed
 
 // Subsequent conversions - cached results
-const second = date.tz('America/New_York'); // ~20ms (74% faster!)
-const third = date.tz('America/New_York');  // ~20ms (cached)
+const second = date.tz('America/New_York'); // much faster: served from cache
+const third = date.tz('America/New_York');  // cached
 ```
 
 **Performance Gains with Caching:**
-- **Timezone conversions**: 95-99% faster
-- **Date formatting**: 75% faster
-- **Complex operations**: 80% faster
-- **Big Data (1M operations)**: 95% faster
+
+Caching mainly helps **repeated** operations (the same input parsed/formatted/converted again) — in our benchmarks roughly a **~70% aggregate speedup** with a **~100% cache hit ratio**. Distinct-input / first-time operations are already fast without caching. See the auto-updated tables in the [README](../README.md#-performance-benchmarks) / [Performance Guide](PERFORMANCE.md) for current per-scenario numbers.
 
 ### Object Pooling
 
@@ -75,7 +73,9 @@ const dates = [
     '2024-08-23 12:00:00'
 ];
 
-// Batch timezone conversion
+// Batch timezone conversion.
+// (Naive inputs are parsed in the process timezone; the outputs below assume UTC, i.e. TZ=UTC
+// or kk_date.setTimezone('UTC'). Use '...Z' instants for results independent of the machine.)
 const convertedDates = dates.map(dateStr => {
     const date = new kk_date(dateStr);
     return date.tz('America/New_York').format('HH:mm');
@@ -107,9 +107,11 @@ console.log(date.format(FORMATS.DATETIME)); // '2024-08-23 10:30:45'
 
 ## Memory Management
 
-### Revolutionary Negative Memory Usage
+### Memory Usage
 
-kk-date achieves **negative memory usage** (-7.39 MB), actually cleaning up more memory than it uses:
+> The net memory delta is a **GC-timing artifact**, not a guarantee — from run to run it can be **positive or negative**, and **several other libraries (e.g. Luxon) also show negative values**. It depends on workload, Node version, and GC behavior; reproduce it with `node benchmark.js` before relying on it.
+
+In our benchmarks kk-date can report **negative net memory usage** because it frees more than it allocates during the measured run:
 
 ```javascript
 // Measurement shows negative memory usage!
@@ -123,7 +125,7 @@ for (let i = 0; i < 100000; i++) {
 
 const after = process.memoryUsage().heapUsed;
 const memoryUsed = (after - before) / 1024 / 1024;
-console.log('Memory used:', memoryUsed); // -7.39 MB!
+console.log('Memory used:', memoryUsed); // GC-dependent; can be positive or negative from run to run
 ```
 
 **How it works:**
@@ -282,14 +284,15 @@ function extendKkDate() {
     // Add custom method to prototype
     kk_date.prototype.toRelativeTime = function() {
         const now = new kk_date();
+        // diff is measured as (now - this): positive when `this` is in the past.
         const diff = this.diff(now, 'minutes');
         
         if (Math.abs(diff) < 1) {
             return 'just now';
-        } else if (diff < 0) {
-            return `${Math.abs(diff)} minutes ago`;
+        } else if (diff > 0) {
+            return `${diff} minutes ago`;
         } else {
-            return `in ${diff} minutes`;
+            return `in ${Math.abs(diff)} minutes`;
         }
     };
     
@@ -340,25 +343,26 @@ const customFormatters = {
     // Relative time formatting
     relative: (date) => {
         const now = new kk_date();
+        // diff is measured as (now - date): negative when `date` is in the future.
         const diff = date.diff(now, 'days');
         
         if (diff === 0) {
             return 'Today';
-        } else if (diff === 1) {
-            return 'Tomorrow';
         } else if (diff === -1) {
+            return 'Tomorrow';
+        } else if (diff === 1) {
             return 'Yesterday';
-        } else if (diff > 0) {
-            return `In ${diff} days`;
+        } else if (diff < 0) {
+            return `In ${Math.abs(diff)} days`;
         } else {
-            return `${Math.abs(diff)} days ago`;
+            return `${diff} days ago`;
         }
     },
     
-    // Age calculation
+    // Age calculation: date.diff(now) === (now - date), positive for a past birthdate
     age: (date) => {
         const now = new kk_date();
-        const years = now.diff(date, 'years');
+        const years = date.diff(now, 'years');
         return `${years} years old`;
     },
     
@@ -514,7 +518,8 @@ const event = new Event({
 
 await event.save();
 
-// Get user time
+// Get user time (illustrative — requires the event times to already be stored as UTC instants;
+// the numbers below assume startTime was saved as 18:00 UTC, i.e. 2 PM New York):
 const userTime = event.getUserTime('Europe/London');
 console.log(userTime); // { startTime: '2024-08-23 19:00', endTime: '2024-08-23 20:00' }
 ```
@@ -535,8 +540,9 @@ kk_date.config({ locale: 'en' });
     });
     
     test('timezone conversion with DST', () => {
-        // Test DST transition
-        const dstDate = new kk_date('2024-03-10 02:00:00');
+        // 07:00 UTC on 2024-03-10 is just after New York springs forward to EDT.
+        // (Use an absolute instant so the result does not depend on the process timezone.)
+        const dstDate = new kk_date('2024-03-10T07:00:00.000Z');
         const nyTime = dstDate.tz('America/New_York');
         
         expect(nyTime.format('HH:mm')).toBe('03:00'); // EDT
@@ -560,7 +566,7 @@ kk_date.config({ locale: 'en' });
     test('error handling for invalid input', () => {
         expect(() => {
             new kk_date('invalid-date');
-        }).toThrow('Invalid date format');
+        }).toThrow('Invalid Date');
     });
     
     test('performance with caching', () => {

@@ -85,12 +85,12 @@ function getTimezoneOffset(timezone, date = new Date()) {
 	// Validate timezone first (outside try-catch for proper error handling)
 	checkTimezone(timezone);
 
-	// Check cache first
+	// Check cache first (single lookup)
 	const cacheKey = `${timezone}_${date.getTime()}`;
-	if (timezone_cache.has(cacheKey)) {
-		const { offset, timestamp } = timezone_cache.get(cacheKey);
-		if (date.getTime() - timestamp < cache_ttl) {
-			return offset;
+	const cachedOffset = timezone_cache.get(cacheKey);
+	if (cachedOffset !== undefined) {
+		if (date.getTime() - cachedOffset.timestamp < cache_ttl) {
+			return cachedOffset.offset;
 		}
 	}
 
@@ -611,30 +611,28 @@ function converter(date, to, options = { pad: true }) {
 		targetTimezone = orj_this.temp_config.timezone || global_config.timezone;
 	}
 
-	// Create cache key for this specific conversion
 	const timestamp = date.getTime();
-	const cacheKey = `${timestamp}_${to.join(',')}_${shouldPad}_${isUTC}_${targetTimezone || 'none'}_${detectedFormat || 'none'}`;
 
-	// Check cache first
-	if (converter_results_cache.has(cacheKey)) {
-		return converter_results_cache.get(cacheKey);
-	}
-
-	// Limit cache size to prevent memory leaks
-	if (converter_results_cache.size > 10000) {
-		// Clear half of the cache when limit is reached
-		const keysToDelete = Array.from(converter_results_cache.keys()).slice(0, 5000);
-		for (const key of keysToDelete) {
-			converter_results_cache.delete(key);
+	// Timezone-aware (Intl) path — taken only when a real zone conversion is needed: a non-UTC
+	// target that differs from the machine zone, a UTC instant (isUTC/ISO8601) that must be
+	// display-converted, or an 'Xx' timestamp (needs the '24'->'00' handling below). When the
+	// target equals the system zone for a local wall-clock date, the native getHours()/getMonth()
+	// accessors already yield identical output far more cheaply, so we fall through to the native
+	// path — which skips the cache entirely (distinct-timestamp workloads never reuse it, and
+	// repeated calls are already memoized upstream by formatter_cache).
+	if (targetTimezone && targetTimezone !== 'UTC' && (targetTimezone !== systemTimezone || isUTC || detectedFormat === 'Xx')) {
+		// Cache only this (expensive) Intl path.
+		const cacheKey = `${timestamp}_${to.join(',')}_${shouldPad}_${isUTC}_${targetTimezone}_${detectedFormat || 'none'}`;
+		const cachedResult = converter_results_cache.get(cacheKey);
+		if (cachedResult !== undefined) {
+			return cachedResult;
 		}
-	}
+		if (converter_results_cache.size > 10000) {
+			converter_results_cache.clear();
+		}
 
-	const result = {};
-
-	// Use timezone-aware formatting if targetTimezone is specified and not UTC
-	// For ISO8601 UTC timestamps with .tz() calls, we also need timezone formatting
-	if (targetTimezone && targetTimezone !== 'UTC') {
 		// Use Intl.DateTimeFormat for timezone-aware formatting
+		const result = {};
 		let formatter = null;
 		const partsMap = {};
 
@@ -695,8 +693,9 @@ function converter(date, to, options = { pad: true }) {
 		return result;
 	}
 
-	// Fast path: Use direct Date methods for most cases
+	// Native fast path — no cache: recompute is a handful of getters, cheaper than keying the cache.
 	if (detectedFormat !== 'Xx' || !global_config.timezone || global_config.timezone === 'UTC') {
+		const result = {};
 		// Standard formatting - much faster
 		const len = to.length;
 		for (let i = 0; i < len; i++) {
@@ -737,11 +736,20 @@ function converter(date, to, options = { pad: true }) {
 				}
 			}
 		}
-		converter_results_cache.set(cacheKey, result);
 		return result;
 	}
 
-	// Timezone-aware formatting only when absolutely necessary
+	// Timezone-aware fallback ('Xx' with a non-UTC global tz and an explicit UTC target).
+	// Cached — formatToParts is expensive.
+	const result = {};
+	const cacheKey = `${timestamp}_${to.join(',')}_${shouldPad}_${isUTC}_${targetTimezone || 'none'}_${detectedFormat || 'none'}`;
+	const cachedFallback = converter_results_cache.get(cacheKey);
+	if (cachedFallback !== undefined) {
+		return cachedFallback;
+	}
+	if (converter_results_cache.size > 10000) {
+		converter_results_cache.clear();
+	}
 	const useTimezone = targetTimezone || global_config.timezone;
 
 	// Cache the DateTimeFormat instance for performance
