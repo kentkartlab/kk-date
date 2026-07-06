@@ -29,7 +29,7 @@ jobs:
     outputs:
       js: ${{ steps.filter.outputs.js }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -71,7 +71,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout target ref
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           # pull_request: check out the PR branch so the refreshed docs can be pushed back.
           # workflow_dispatch: check out the supplied ref (defaults to the branch the dispatch ran from).
@@ -80,7 +80,7 @@ jobs:
           persist-credentials: true
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 26
           cache: 'npm'
@@ -101,7 +101,7 @@ jobs:
 
       - name: Upload benchmark JSON artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: benchmark-results
           path: |
