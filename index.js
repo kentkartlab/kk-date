@@ -1011,26 +1011,6 @@ class KkDate {
 	}
 
 	/**
-	 * Formats the date with multiple format templates joined by a separator.
-	 * The first argument is always the separator string.
-	 *
-	 * @param {string} [separator=' '] - Separator inserted between each formatted part
-	 * @param {...string} template - One or more format templates (see FormatType for valid values)
-	 * @returns {string}
-	 * @example
-	 * date.format_c(' ', 'DD', 'MMMM', 'YYYY') // → "15 January 2024"
-	 * date.format_c('-', 'YYYY', 'MM', 'DD')   // → "2024-01-15"
-	 */
-	format_c(separator = ' ', ...template) {
-		isInvalid(this.date);
-		const result = [];
-		for (let index = 0; index < template.length; index++) {
-			result.push(formatter(this, template[index]));
-		}
-		return result.join(separator);
-	}
-
-	/**
 	 * Formats the date according to the given template.
 	 * Templates are compiled dynamically, so any combination of the supported tokens works
 	 * (YYYY MM DD D Do HH hh mm ss SSS MMMM MMM dddd ddd A a), with [bracketed] literal text.

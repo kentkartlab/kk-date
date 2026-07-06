@@ -104,8 +104,8 @@ function benchmarkFormatting() {
         testDate.format('YYYY-MM-DD HH:mm:ss');
         testDate.format('DD.MM.YYYY');
         testDate.format('DD MMMM YYYY');
-        // 'dddd, DD MMMM YYYY HH:mm' is not a single supported template — compose with format_c:
-        testDate.format_c(' ', 'dddd, DD MMMM YYYY', 'HH:mm');
+        // Templates are compiled dynamically — any token combination works directly:
+        testDate.format('dddd, DD MMMM YYYY HH:mm');
     }
     console.timeEnd('Date Formatting');
 }

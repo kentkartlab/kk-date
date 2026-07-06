@@ -260,9 +260,9 @@ describe('Time Operations Tests', () => {
 		test('format time with custom separator', () => {
 			const time = new kk_date('12:30:45');
 
-			expect(time.format_c(' ', 'HH', 'mm', 'ss')).toBe('12 30 45');
-			expect(time.format_c('-', 'HH', 'mm', 'ss')).toBe('12-30-45');
-			expect(time.format_c(':', 'HH', 'mm')).toBe('12:30');
+			expect(time.format('HH mm ss')).toBe('12 30 45');
+			expect(time.format('HH-mm-ss')).toBe('12-30-45');
+			expect(time.format('HH:mm')).toBe('12:30');
 		});
 
 		test('format time with locale', () => {

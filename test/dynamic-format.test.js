@@ -86,8 +86,8 @@ describe('dynamic format templates', () => {
 		expect(ny.format('YYYYMMDDHHmm')).toBe(`${ny.format('YYYYMMDD')}${ny.format('HHmm')}`);
 	});
 
-	test('format_c and diff_range accept dynamic templates', () => {
-		expect(new kk_date(test_datetime).format_c(' ', 'YYYYMM', 'HHmm')).toBe('202408 2350');
+	test('diff_range accepts dynamic templates', () => {
+		expect(new kk_date(test_datetime).format('YYYYMM HHmm')).toBe('202408 2350');
 		expect(new kk_date('2024-01-01').diff_range('2024-01-03', 'days', 'YYYY [d]DD')).toEqual(['2024 d01', '2024 d02', '2024 d03']);
 	});
 });

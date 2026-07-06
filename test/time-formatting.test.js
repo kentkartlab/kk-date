@@ -222,16 +222,16 @@ describe('Time Formatting and Parsing Tests', () => {
 		test('custom separator formatting', () => {
 			const time = new kk_date('12:30:45');
 
-			expect(time.format_c(' ', 'HH', 'mm', 'ss')).toBe('12 30 45');
-			expect(time.format_c('-', 'HH', 'mm', 'ss')).toBe('12-30-45');
-			expect(time.format_c(':', 'HH', 'mm')).toBe('12:30');
+			expect(time.format('HH mm ss')).toBe('12 30 45');
+			expect(time.format('HH-mm-ss')).toBe('12-30-45');
+			expect(time.format('HH:mm')).toBe('12:30');
 		});
 
 		test('mixed format components', () => {
 			const dateTime = new kk_date('2024-08-19 12:30:45');
 
-			expect(dateTime.format_c(' ', 'YYYY', 'MM', 'DD', 'HH:mm:ss')).toBe('2024 08 19 12:30:45');
-			expect(dateTime.format_c(' | ', 'DD.MM.YYYY', 'HH:mm')).toBe('19.08.2024 | 12:30');
+			expect(dateTime.format('YYYY MM DD HH:mm:ss')).toBe('2024 08 19 12:30:45');
+			expect(dateTime.format('DD.MM.YYYY | HH:mm')).toBe('19.08.2024 | 12:30');
 		});
 	});
 

@@ -172,18 +172,6 @@ declare class KkDate {
 	get(type: KkDate.TimeUnit): number;
 
 	/**
-	 * Formats date with multiple templates joined by separator.
-	 * The **first argument is always the separator** — pass `' '` explicitly for a space.
-	 * @param separator - Separator inserted between each formatted part (default: `' '`)
-	 * @param template - One or more format templates
-	 * @example
-	 * date.format_c(' ', 'DD', 'MMMM', 'YYYY') // → "15 January 2024"
-	 * date.format_c('-', 'YYYY', 'MM', 'DD')    // → "2024-01-15"
-	 * date.format_c('T', 'YYYY-MM-DD', 'HH:mm:ss') // → "2024-01-15T10:30:00"
-	 */
-	format_c(separator?: string, ...template: KkDate.FormatType[]): string;
-
-	/**
 	 * Formats the date according to template.
 	 * Templates are compiled dynamically: any combination of the supported tokens
 	 * (YYYY MM DD D Do HH hh mm ss SSS MMMM MMM dddd ddd A a) works, with

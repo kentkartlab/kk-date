@@ -394,17 +394,23 @@ Rules:
 - Dynamic templates apply to **formatting only**. The constructor's `date_format` argument and
   `kk_date.isValid()` still accept only the predefined patterns listed above.
 
-### Combining Templates with `format_c(separator, ...templates)`
+### Migrating from `format_c()` (removed)
 
-`format_c()` formats several supported templates and joins them with a separator:
+`format_c()` was removed: dynamic templates cover every use case in a single `format()` call.
+Join the old template arguments with the separator; bracket the separator if it could be read
+as a token:
 
 ```javascript
 const date = new kk_date('2024-08-23 10:30:45');
 
-date.format_c(' ', 'YYYY-MM-DD', 'HH:mm:ss');           // '2024-08-23 10:30:45'
-date.format_c('T', 'YYYY-MM-DD', 'HH:mm:ss');            // '2024-08-23T10:30:45'
-date.format_c('-', 'DD', 'MM', 'YYYY');                  // '23-08-2024'
-date.format_c(' ', 'dddd, DD MMMM YYYY', 'HH:mm');       // 'Friday, 23 August 2024 10:30'
+// before: date.format_c(' ', 'YYYY-MM-DD', 'HH:mm:ss')
+date.format('YYYY-MM-DD HH:mm:ss');                      // '2024-08-23 10:30:45'
+
+// before: date.format_c('T', 'YYYY-MM-DD', 'HH:mm:ss')
+date.format('YYYY-MM-DDTHH:mm:ss');                      // '2024-08-23T10:30:45'
+
+// before: date.format_c('-', 'DD', 'MM', 'YYYY')
+date.format('DD-MM-YYYY');                               // '23-08-2024'
 ```
 
 ### Building Strings with Surrounding Text
@@ -596,19 +602,16 @@ console.log(`Event time: ${eventTime}`); // Event time: 10:30
 ```javascript
 const date = new kk_date('2024-08-23 14:30:45.123'); // use new kk_date() for the current time
 
-// Log formats
-// Note: there is no single 'YYYY-MM-DD HH:mm:ss.SSS' template — compose it with format_c().
-const logTimestamp = date.format_c(' ', 'YYYY-MM-DD', 'HH:mm:ss.SSS');
+// Log formats — dynamic templates handle any combination directly
+const logTimestamp = date.format('YYYY-MM-DD HH:mm:ss.SSS');
 const logDate = date.format('DD/MM/YYYY');
 const logTime = date.format('HH:mm:ss');
 
 console.log(`[${logTimestamp}] INFO: Application started`);
 // [2024-08-23 14:30:45.123] INFO: Application started
 
-// For filename, combine separate format calls
-const logDateFile = date.format('YYYYMMDD');
-const logTimeFile = date.format('HH:mm:ss').replace(/:/g, '');
-console.log(`Log file: ${logDateFile}_${logTimeFile}.log`);
+// Filenames work the same way
+console.log(`Log file: ${date.format('YYYYMMDD[_]HHmmss')}.log`);
 // Log file: 20240823_143045.log
 ```
 

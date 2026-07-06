@@ -547,25 +547,6 @@ const date = new kk_date('2024-08-23 10:00:00');
 console.log(date.valueOf()); // 1724407200000
 ```
 
-#### `format_c(separator, ...templates)`
-
-Advanced formatting method that allows multiple templates with custom separator.
-
-**Parameters:**
-- `separator` (string, optional) - Separator between formatted parts (default: ' ')
-- `...templates` (string[]) - Format templates to apply
-
-**Returns:** (string) - Formatted string
-
-**Examples:**
-```javascript
-const date = new kk_date('2024-08-23 10:30:45');
-
-date.format_c(' ', 'YYYY-MM-DD', 'HH:mm:ss'); // '2024-08-23 10:30:45'
-date.format_c('T', 'YYYY-MM-DD', 'HH:mm:ss');  // '2024-08-23T10:30:45'
-date.format_c('-', 'DD', 'MM', 'YYYY');        // '23-08-2024'
-```
-
 #### `diff_range(startDate, endDate, unit?)`
 
 Calculates the difference between a date range.
