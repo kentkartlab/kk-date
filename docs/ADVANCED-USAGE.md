@@ -16,7 +16,7 @@ Advanced features, performance tips, and best practices for kk-date.
 
 ### Caching Strategies
 
-kk-date provides a caching system that, in our benchmarks on Node.js 22, delivered up to **~70% faster** repeated operations (results vary by workload):
+kk-date provides a caching system that, in our benchmarks on Node.js 26, delivered up to **~70% faster** repeated operations (results vary by workload):
 
 ```javascript
 const kk_date = require('kk-date');

@@ -20,7 +20,7 @@ jobs:
       - name: Setup node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 26
           cache: 'npm'
       - name: Install packages
         run: npm ci
@@ -28,9 +28,15 @@ jobs:
         run: npm run lint
 
   unit-tests:
-    name: Unit tests
+    name: Unit tests (Node ${{ matrix.node-version }})
     timeout-minutes: 60
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Supported range: Node 22+. (Node 20/21 have a known date-arithmetic
+        # incompatibility; Node <18 cannot run the Jest 30 test runner.)
+        node-version: [22, 24, 26]
     steps:
       - name: Check Out Repository
         uses: actions/checkout@v4
@@ -39,7 +45,7 @@ jobs:
       - name: Setup node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ matrix.node-version }}
           cache: 'npm'
       - name: Install packages
         run: npm ci
@@ -81,7 +87,7 @@ jobs:
       - name: Setup node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 26
           cache: 'npm'
       - name: Install packages
         run: npm ci
@@ -102,7 +108,7 @@ jobs:
       - name: Setup node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 26
           cache: 'npm'
       - name: Install packages
         run: npm ci
@@ -127,7 +133,7 @@ jobs:
       - name: Setup node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 26
           cache: 'npm'
       - name: Install packages
         run: npm ci

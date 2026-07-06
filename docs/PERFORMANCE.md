@@ -393,7 +393,7 @@ node benchmark2.js  # Sequential operations benchmark
 
 #### Key Performance Metrics
 
-*Measured in our benchmark suite on Node.js 22 and reproduced by CI on every PR (the "Performance Benchmarks" job). These are not guarantees — results vary by workload, hardware, and Node version. Reproduce them with `node benchmark.js` / `node benchmark2.js`.*
+*Measured in our benchmark suite on Node.js 26 and reproduced by CI on every PR (the "Performance Benchmarks" job). These are not guarantees — results vary by workload, hardware, and Node version. Reproduce them with `node benchmark.js` / `node benchmark2.js`.*
 
 - **~80% faster** than the average of competing libraries (comprehensive benchmark)
 - **~95-99% faster** in timezone operations

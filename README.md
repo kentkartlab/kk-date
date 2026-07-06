@@ -8,7 +8,7 @@ A blazing-fast JavaScript date library with intelligent caching, automatic DST d
 
 ## 🌟 Why Choose kk-date?
 
-### Performance & Efficiency *(measured on Node.js 22; reproduced by CI, results vary)*
+### Performance & Efficiency *(measured on Node.js 26; reproduced by CI, results vary)*
 - **⚡ Lightning Fast** - Over 40x faster timezone operations than Day.js
 - **🚀 ~80% Faster Overall** - Wins most scenarios vs Moment.js, Day.js, and Luxon (Day.js is faster in isolated "Time Operations")
 - **💾 Memory Efficient** - Object pooling + LRU cache eviction keep long-running processes stable
@@ -376,7 +376,7 @@ console.log(date.format('DD/MM/YYYY')); // 23/08/2024
 
 ## 📊 Performance Benchmarks
 
-> **Note:** All performance figures in this README come from our own benchmark suite on Node.js 22 and are **reproduced by CI on every PR** (the "Performance Benchmarks" job runs `benchmark.js` + `benchmark2.js` and uploads the results). They are **not guarantees** — results vary by workload, hardware, Node version, and caching. Reproduce locally with `node benchmark.js` / `node benchmark2.js`. kk-date wins most scenarios but not all (e.g. Day.js is faster in isolated "Time Operations").
+> **Note:** All performance figures in this README come from our own benchmark suite on Node.js 26 and are **reproduced by CI on every PR** (the "Performance Benchmarks" job runs `benchmark.js` + `benchmark2.js` and uploads the results). They are **not guarantees** — results vary by workload, hardware, Node version, and caching. Reproduce locally with `node benchmark.js` / `node benchmark2.js`. kk-date wins most scenarios but not all (e.g. Day.js is faster in isolated "Time Operations").
 
 ### Real-World Sequential Operations (1000 days, 100 operations/day)
 
@@ -387,7 +387,7 @@ Our benchmark simulates real-world usage by processing 1000 sequential days with
 node benchmark2.js
 ```
 
-**Representative run (Node.js 22) — reproduced by CI on every PR (see the "Performance Benchmarks" job artifacts). Numbers vary run-to-run.** Totals are for 100,000 operations per scenario:
+**Representative run (Node.js 26) — reproduced by CI on every PR (see the "Performance Benchmarks" job artifacts). Numbers vary run-to-run.** Totals are for 100,000 operations per scenario:
 
 <!-- BENCH:readme-seq -->
 | Operation | kk-date | Moment.js | Day.js | Luxon | vs Fastest Competitor |
