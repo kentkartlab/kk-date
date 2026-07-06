@@ -97,6 +97,9 @@ class KkDate {
 		let cached = false;
 		this.detected_format = null;
 		this.temp_config = {};
+		// Formatter config-signature cache slot (-1 = not computed yet); see formatSig().
+		this._fmt_sig = -1;
+		this._fmt_sig_v = -1;
 		if (params.length === 0) {
 			this.date = new Date();
 			this.detected_format = 'now';
@@ -129,6 +132,17 @@ class KkDate {
 			}
 			if (!forced_format_founded && !cached) {
 				is_can_cache = false;
+				// Cheap shape probes for the detection ladder below: every guarded regex pins its
+				// first separator to index 2 or 4 (2-digit day / 2-or-4-digit year), so a mismatched
+				// charCode skips the regex test entirely. Non-string inputs keep the unguarded
+				// legacy path (isValid coerces them), so behavior is unchanged.
+				const is_str_input = typeof date === 'string';
+				const probe2 = is_str_input ? date.charCodeAt(2) : 0;
+				const probe4 = is_str_input ? date.charCodeAt(4) : 0;
+				const maybe_dash = !is_str_input || probe2 === 45 || probe4 === 45;
+				const maybe_dot = !is_str_input || probe2 === 46 || probe4 === 46;
+				const maybe_space = !is_str_input || date.indexOf(' ') !== -1;
+				const maybe_compact = !is_str_input || date.length === 14 || date.length === 12 || date.length === 8 || date.length === 6;
 				if (Number.isInteger(date)) {
 					const stringed_date_length = `${date}`.length;
 					if (stringed_date_length <= 10) {
@@ -149,7 +163,7 @@ class KkDate {
 					// Clone from Date object - preserve the exact time
 					this.date = new Date(date.getTime());
 					this.detected_format = 'now';
-				} else if (isValid(date, format_types['YYYY-MM-DD'])) {
+				} else if (maybe_dash && isValid(date, format_types['YYYY-MM-DD'])) {
 					const [year, month, day] = date.split('-');
 					this.date = fastLocalDate(year, month, day);
 					this.detected_format = 'YYYY-MM-DD';
@@ -161,6 +175,7 @@ class KkDate {
 					if (
 						typeof date === 'string' &&
 						date.length <= 15 &&
+						probe2 === 58 &&
 						(isValid(date, format_types['HH:mm:ss.SSS']) ||
 							isValid(date, format_types['HH:mm:ss']) ||
 							isValid(date, format_types['HH:mm']) ||
@@ -228,7 +243,7 @@ class KkDate {
 							// the way through to the new Date(`${date}`) fallback; short-circuit to the identical
 							// parse (detected_format stays null, matching the old behavior).
 							this.date = new Date(date);
-						} else if (isValid(date, format_types['DD.MM.YYYY HH:mm:ss'])) {
+						} else if (maybe_dot && isValid(date, format_types['DD.MM.YYYY HH:mm:ss'])) {
 							const [datePart, timePart] = date.split(' ');
 							const [day, month, year] = datePart.split('.');
 							const [hours, minutes, seconds] = timePart.split(':').map(Number);
@@ -249,7 +264,7 @@ class KkDate {
 								this.date = fastLocalDateTime(year, month, day, timePart);
 							}
 							this.detected_format = format_types['DD.MM.YYYY HH:mm:ss'];
-						} else if (isValid(date, format_types['DD.MM.YYYY HH:mm'])) {
+						} else if (maybe_dot && isValid(date, format_types['DD.MM.YYYY HH:mm'])) {
 							const [datePart, timePart] = date.split(' ');
 							const [day, month, year] = datePart.split('.');
 							const [hours, minutes] = timePart.split(':').map(Number);
@@ -270,11 +285,11 @@ class KkDate {
 								this.date = fastLocalDateTime(year, month, day, timePart);
 							}
 							this.detected_format = format_types['DD.MM.YYYY HH:mm'];
-						} else if (isValid(date, format_types['DD.MM.YYYY'])) {
+						} else if (maybe_dot && isValid(date, format_types['DD.MM.YYYY'])) {
 							const [day, month, year] = date.split('.');
 							this.date = fastLocalDate(year, month, day);
 							this.detected_format = format_types['DD.MM.YYYY'];
-						} else if (isValid(date, format_types['YYYY-MM-DD HH:mm:ss'])) {
+						} else if (maybe_dash && isValid(date, format_types['YYYY-MM-DD HH:mm:ss'])) {
 							const [datePart, timePart] = date.split(' ');
 							const [year, month, day] = datePart.split('-');
 							const [hours, minutes, seconds] = timePart.split(':').map(Number);
@@ -294,7 +309,7 @@ class KkDate {
 								this.date = fastLocalDateTime(year, month, day, timePart);
 							}
 							this.detected_format = format_types['YYYY-MM-DD HH:mm:ss'];
-						} else if (isValid(date, format_types['YYYY-MM-DD HH:mm'])) {
+						} else if (maybe_dash && isValid(date, format_types['YYYY-MM-DD HH:mm'])) {
 							const [datePart, timePart] = date.split(' ');
 							const [year, month, day] = datePart.split('-');
 							const [hours, minutes] = timePart.split(':').map(Number);
@@ -314,7 +329,7 @@ class KkDate {
 								this.date = fastLocalDateTime(year, month, day, timePart);
 							}
 							this.detected_format = format_types['YYYY-MM-DD HH:mm'];
-						} else if (isValid(date, format_types['YYYY.MM.DD HH:mm:ss'])) {
+						} else if (maybe_dot && isValid(date, format_types['YYYY.MM.DD HH:mm:ss'])) {
 							const [datePart, timePart] = date.split(' ');
 							const [year, month, day] = datePart.split('.');
 							const [hours, minutes, seconds] = timePart.split(':').map(Number);
@@ -335,7 +350,7 @@ class KkDate {
 								this.date = fastLocalDateTime(year, month, day, timePart);
 							}
 							this.detected_format = format_types['YYYY.MM.DD HH:mm:ss'];
-						} else if (isValid(date, format_types['YYYY.MM.DD HH:mm'])) {
+						} else if (maybe_dot && isValid(date, format_types['YYYY.MM.DD HH:mm'])) {
 							const [datePart, timePart] = date.split(' ');
 							const [year, month, day] = datePart.split('.');
 							const [hours, minutes] = timePart.split(':').map(Number);
@@ -356,11 +371,11 @@ class KkDate {
 								this.date = fastLocalDateTime(year, month, day, timePart);
 							}
 							this.detected_format = format_types['YYYY.MM.DD HH:mm'];
-						} else if (isValid(date, format_types['DD-MM-YYYY'])) {
+						} else if (maybe_dash && isValid(date, format_types['DD-MM-YYYY'])) {
 							const [day, month, year] = date.split('-');
 							this.date = fastLocalDate(year, month, day);
 							this.detected_format = format_types['DD-MM-YYYY'];
-						} else if (isValid(date, format_types['DD-MM-YYYY HH:mm:ss'])) {
+						} else if (maybe_dash && isValid(date, format_types['DD-MM-YYYY HH:mm:ss'])) {
 							const [datePart, timePart] = date.split(' ');
 							const [day, month, year] = datePart.split('-');
 							const [hours, minutes, seconds] = timePart.split(':').map(Number);
@@ -381,7 +396,7 @@ class KkDate {
 								this.date = fastLocalDateTime(year, month, day, timePart);
 							}
 							this.detected_format = format_types['DD-MM-YYYY HH:mm:ss'];
-						} else if (isValid(date, format_types['DD-MM-YYYY HH:mm'])) {
+						} else if (maybe_dash && isValid(date, format_types['DD-MM-YYYY HH:mm'])) {
 							const [datePart, timePart] = date.split(' ');
 							const [day, month, year] = datePart.split('-');
 							const [hours, minutes] = timePart.split(':').map(Number);
@@ -402,14 +417,14 @@ class KkDate {
 								this.date = fastLocalDateTime(year, month, day, timePart);
 							}
 							this.detected_format = format_types['DD-MM-YYYY HH:mm'];
-						} else if (isValid(date, format_types['DD MMMM YYYY'])) {
+						} else if (maybe_space && isValid(date, format_types['DD MMMM YYYY'])) {
 							const parts = date.split(' ');
 							const day = parseInt(parts[0], 10).toString();
 							const month = isValidMonth(parts[1]);
 							const year = parts[2];
 							this.date = new Date(`${year}-${month}-${day.padStart(2, '0')} 00:00:00`); // Ensure day is padded for Date constructor
 							this.detected_format = format_types['DD MMMM YYYY'];
-						} else if (isValid(date, format_types['YYYYMMDDHHmmss'])) {
+						} else if (maybe_compact && isValid(date, format_types['YYYYMMDDHHmmss'])) {
 							const year = date.substring(0, 4);
 							const month = date.substring(4, 6);
 							const day = date.substring(6, 8);
@@ -418,7 +433,7 @@ class KkDate {
 							const second = date.substring(12, 14);
 							this.date = new Date(`${year}-${month}-${day} ${hour}:${minute}:${second}`);
 							this.detected_format = format_types['YYYYMMDDHHmmss'];
-						} else if (isValid(date, format_types['YYYYMMDD'])) {
+						} else if (maybe_compact && isValid(date, format_types['YYYYMMDD'])) {
 							const year = String(date.substring(0, 4), 10); // Extract year
 							const month = String(date.substring(4, 6), 10); // Extract month
 							const day = String(date.substring(6, 8), 10); // Extract day
@@ -426,29 +441,29 @@ class KkDate {
 							// a short (2-digit-year) match keeps the legacy string form, which rejects it.
 							this.date = date.length === 8 ? new Date(+year, +month - 1, +day, 0, 0, 0, 0) : new Date(`${year}-${month}-${day} 00:00:00`);
 							this.detected_format = format_types['YYYYMMDD'];
-						} else if (isValid(date, format_types['YYYY-MM'])) {
+						} else if (maybe_dash && isValid(date, format_types['YYYY-MM'])) {
 							const [year, month] = date.split('-');
 							this.date = fastLocalDate(year, month, '01');
 							this.detected_format = format_types['YYYY-MM'];
-						} else if (isValid(date, format_types['DD MMMM dddd'])) {
+						} else if (maybe_space && isValid(date, format_types['DD MMMM dddd'])) {
 							const currentYear = new Date().getFullYear();
 							const parts = date.split(' '); // e.g., ['01', 'January', 'Monday']
 							const day = parts[0];
 							const month = isValidMonth(parts[1]);
 							this.date = new Date(`${currentYear}-${month}-${day} 00:00:00`);
 							this.detected_format = format_types['DD MMMM dddd'];
-						} else if (isValid(date, format_types['YYYY-DD-MM'])) {
+						} else if (maybe_dash && isValid(date, format_types['YYYY-DD-MM'])) {
 							const [year, day, month] = date.split('-');
 							this.date = fastLocalDate(year, month, day);
 							this.detected_format = format_types['YYYY-DD-MM'];
-						} else if (isValid(date, format_types['D MMMM YYYY'])) {
+						} else if (maybe_space && isValid(date, format_types['D MMMM YYYY'])) {
 							const parts = date.split(' '); // e.g., ['1', 'January', '2024'] or ['01', 'January', '2024']
 							const day = parts[0];
 							const year = parts[2];
 							const month = isValidMonth(parts[1]);
 							this.date = new Date(`${year}-${month}-${day.padStart(2, '0')} 00:00:00`); // Ensure day is padded for Date constructor
 							this.detected_format = format_types['D MMMM YYYY'];
-						} else if (isValid(date, format_types['YYYY MMM DD'])) {
+						} else if (maybe_space && isValid(date, format_types['YYYY MMM DD'])) {
 							const parts = date.split(' ');
 							const year = parts[0];
 							const month = isValidMonth(parts[1]);
@@ -462,21 +477,21 @@ class KkDate {
 							const year = parts[2];
 							this.date = new Date(`${year}-${month}-${day.padStart(2, '0')} 00:00:00`); // Ensure day is padded for Date constructor
 							this.detected_format = format_types['Do MMM YYYY'];
-						} else if (isValid(date, format_types['DD MMMM dddd, YYYY'])) {
+						} else if (maybe_space && isValid(date, format_types['DD MMMM dddd, YYYY'])) {
 							const parts = date.split(' ');
 							const day = parseInt(parts[0], 10).toString();
 							const month = isValidMonth(parts[1]);
 							const year = parts[3];
 							this.date = new Date(`${year}-${month}-${day.padStart(2, '0')} 00:00:00`); // Ensure day is padded for Date constructor
 							this.detected_format = format_types['YYYY.MM.DD HH:mm'];
-						} else if (isValid(date, format_types['dddd, DD MMMM YYYY'])) {
+						} else if (maybe_space && isValid(date, format_types['dddd, DD MMMM YYYY'])) {
 							const parts = date.split(' ');
 							const day = parseInt(parts[1], 10).toString();
 							const month = isValidMonth(parts[2]);
 							const year = parts[3];
 							this.date = new Date(`${year}-${month}-${day.padStart(2, '0')} 00:00:00`); // Ensure day is padded for Date constructor
 							this.detected_format = format_types['dddd, DD MMMM YYYY'];
-						} else if (isValid(date, format_types['DD MMMM'])) {
+						} else if (maybe_space && isValid(date, format_types['DD MMMM'])) {
 							const currentYear = new Date().getFullYear();
 							const parts = date.split(' ');
 							const day = parts[0];
@@ -1037,6 +1052,7 @@ class KkDate {
 		if (options.timezone) {
 			this.temp_config.timezone = options.timezone;
 			this.temp_config.rtf = {};
+			this._fmt_sig = -1;
 		}
 		if (typeof options.weekStartDay === 'number') {
 			isValidWeekStartDay(options.weekStartDay);
@@ -1045,6 +1061,7 @@ class KkDate {
 		try {
 			if (options.locale) {
 				this.temp_config.locale = options.locale;
+				this._fmt_sig = -1;
 				if (typeof Intl?.RelativeTimeFormat === 'function') {
 					this.temp_config.rtf[options.locale] = new Intl.RelativeTimeFormat(options.locale, { numeric: 'auto' });
 				}
@@ -1121,6 +1138,7 @@ class KkDate {
 	tz(timezone) {
 		checkTimezone(timezone);
 		this.temp_config.timezone = timezone;
+		this._fmt_sig = -1;
 		this.date = parseWithTimezone(this);
 		return this;
 	}
@@ -1477,6 +1495,38 @@ function diff(start, end, type, is_decimal = false, turn_difftime = false) {
 	};
 }
 
+// Formatter result cache, two levels: outer key is the template (an interned
+// literal, cheap to hash), inner key packs timestamp and config signature into
+// one number — no per-call key string is built on the hot path.
+// A config signature interns the resolved (timezone, locale, detected_format)
+// tuple to a small int, cached per instance and recomputed when the instance's
+// temp_config or the global config changes (format_config_version).
+let formatter_cache_count = 0;
+let format_config_version = 0;
+const format_sig_intern = new Map();
+
+function formatSig(orj_this) {
+	const timezone = orj_this.temp_config.timezone || global_config.timezone || 'none';
+	const locale = orj_this.temp_config.locale || global_config.locale || 'none';
+	const key = `${timezone}_${locale}_${orj_this.detected_format || 'none'}`;
+	let sig = format_sig_intern.get(key);
+	if (sig === undefined) {
+		if (format_sig_intern.size >= 1024) {
+			// Sig ids are baked into cached sub-keys and per-instance caches:
+			// reset everything together so stale ids can never collide.
+			format_sig_intern.clear();
+			formatter_cache.clear();
+			formatter_cache_count = 0;
+			format_config_version++;
+		}
+		sig = format_sig_intern.size;
+		format_sig_intern.set(key, sig);
+	}
+	orj_this._fmt_sig = sig;
+	orj_this._fmt_sig_v = format_config_version;
+	return sig;
+}
+
 /**
  *
  * @param {Date} this.date
@@ -1488,7 +1538,7 @@ function formatter(orj_this, template = null) {
 
 	const timestamp = orj_this.date.getTime();
 
-	// Unix timestamp templates need only the timestamp — return before building the (heavier) cache key.
+	// Unix timestamp templates need only the timestamp — return before touching the cache.
 	if (template === 'x') {
 		// Unix timestamp in milliseconds - always UTC, no timezone conversion
 		return timestamp;
@@ -1498,29 +1548,42 @@ function formatter(orj_this, template = null) {
 		return Math.floor(timestamp / 1000);
 	}
 
-	// Cache key for formatter results
-	const timezone = orj_this.temp_config.timezone || global_config.timezone || 'none';
-	const locale = orj_this.temp_config.locale || global_config.locale || 'none';
-	const cacheKey = `${template}_${timestamp}_${timezone}_${locale}_${orj_this.detected_format || 'none'}`;
+	let sig = orj_this._fmt_sig;
+	if (sig < 0 || orj_this._fmt_sig_v !== format_config_version) {
+		sig = formatSig(orj_this);
+	}
+	// |timestamp| < 2^43 (±year ~2248) packs losslessly into ts*1024+sig; anything
+	// beyond falls back to a string sub-key.
+	const subKey = timestamp < 8796093022208 && timestamp > -8796093022208 ? timestamp * 1024 + sig : `${timestamp}_${sig}`;
 
-	// Check cache first (single lookup)
-	const cachedResult = formatter_cache.get(cacheKey);
-	if (cachedResult !== undefined) {
-		return cachedResult;
+	let byTemplate = formatter_cache.get(template);
+	if (byTemplate !== undefined) {
+		const cachedResult = byTemplate.get(subKey);
+		if (cachedResult !== undefined) {
+			return cachedResult;
+		}
+	} else {
+		byTemplate = new Map();
+		formatter_cache.set(template, byTemplate);
 	}
 
-	// Limit cache size to prevent memory leaks
-	if (formatter_cache.size > 10000) {
+	// Limit total cached results to prevent memory leaks
+	if (formatter_cache_count > 10000) {
 		formatter_cache.clear();
+		formatter_cache_count = 0;
+		byTemplate = new Map();
+		formatter_cache.set(template, byTemplate);
 	}
 
 	// Determine if this is a UTC date (ISO8601 format) or if timezone is explicitly UTC
+	const timezone = orj_this.temp_config.timezone || global_config.timezone;
 	const isUTC = orj_this.detected_format === 'ISO8601' || timezone === 'UTC';
 
 	const result = _formatterCore(orj_this, template, isUTC);
 
 	// Store result in cache
-	formatter_cache.set(cacheKey, result);
+	byTemplate.set(subKey, result);
+	formatter_cache_count++;
 	return result;
 }
 
@@ -1733,6 +1796,11 @@ function config(options) {
 	if (options.timezone && global_config.timezone !== options.timezone) {
 		checkTimezone(options.timezone);
 		global_config.timezone = options.timezone;
+	}
+	if (options.locale || options.timezone) {
+		// Existing instances may have cached a config signature that resolved
+		// through the old global timezone/locale — force recomputation.
+		format_config_version++;
 	}
 	return true;
 }

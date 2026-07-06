@@ -92,6 +92,25 @@ describe('dynamic format templates', () => {
 	});
 });
 
+describe('formatter cache invalidation', () => {
+	test('reflects global config changes on already-formatted instances', () => {
+		const date = new kk_date('2024-08-19 23:50:59');
+		expect(date.format('HH:mm')).toBe('23:50');
+		kk_date.config({ timezone: 'Europe/Istanbul' });
+		expect(date.format('HH:mm')).toBe('02:50');
+		kk_date.config({ timezone: 'UTC' });
+		expect(date.format('HH:mm')).toBe('23:50');
+	});
+
+	test('tz() reformats without stale cache hits', () => {
+		const utc = new kk_date('2024-08-19 23:50:59');
+		expect(utc.format('HH:mm')).toBe('23:50');
+		const istanbul = new kk_date('2024-08-19 23:50:59').tz('Europe/Istanbul');
+		expect(istanbul.format('HH:mm')).toBe('02:50');
+		expect(utc.format('HH:mm')).toBe('23:50');
+	});
+});
+
 describe('compileFormat', () => {
 	test('compiles tokens, literals and fields', () => {
 		const compiled = compileFormat('YYYY-MM');
