@@ -130,6 +130,55 @@ function cacheBullets(comp) {
 	].join('\n');
 }
 
+// Headline stats derived from both benchmark JSONs (used by the prose-bullet regions).
+function derived(seq, comp) {
+	const fp = comp.overall.kkDateFasterPct; // kk-date is X% faster than each competitor (comprehensive)
+	const avgFaster = round((fp.Moment + fp['Day.js'] + fp.Luxon) / 3);
+	const tz = seq.scenarios['Timezone Conversions'];
+	const kkTz = tz['kk-date'];
+	// "% faster" here = how much LESS time kk-date takes than a competitor: (1 - kk/comp) * 100.
+	const tzMaxFaster = round(Math.max(...COMPETS.map((c) => (1 - kkTz / tz[c]) * 100)));
+	const tzX = tz['Day.js'] / kkTz; // kk-date is this many TIMES faster than Day.js at tz conversion
+	const tzXfloor = Math.floor(tzX / 10) * 10; // stable "over Nx" (only moves when it crosses a decade)
+	const tzXpct = round(tzX - 1) * 100; // Day.js takes ~this many % MORE time
+	const cachePct = round(comp.cache.improvementPct);
+	return { avgFaster, tzMaxFaster, tzXfloor, tzXpct, cachePct };
+}
+
+function whyBullets(seq, comp) {
+	const d = derived(seq, comp);
+	return [
+		`- **⚡ Lightning Fast** - Over ${d.tzXfloor}x faster timezone operations than Day.js`,
+		`- **🚀 ~${d.avgFaster}% Faster Overall** - Wins most scenarios vs Moment.js, Day.js, and Luxon (Day.js is faster in isolated "Time Operations")`,
+		'- **💾 Memory Efficient** - Object pooling + LRU cache eviction keep long-running processes stable',
+		`- **⚙️ Smart Caching** - ~${d.cachePct}% faster repeated operations with built-in caching`,
+	].join('\n');
+}
+
+function advantagesBullets(seq, comp) {
+	const d = derived(seq, comp);
+	return [
+		`- **⚡ ~${d.avgFaster}% faster** than the average of competing libraries (comprehensive benchmark)`,
+		`- **🚀 up to ~${d.tzMaxFaster}% faster** in timezone operations (critical for global apps)`,
+		'- **📊 Big-data ready** - efficient for bulk/1M-operation workloads',
+		'- **💾 Stable memory** - object pooling + LRU eviction; net heap delta is GC-dependent (often negative)',
+		`- **⚙️ ~${d.cachePct}% boost** with smart caching enabled`,
+		`- **🌍 Over ${d.tzXfloor}x faster** (≈${d.tzXpct}%) than Day.js in timezone conversions`,
+	].join('\n');
+}
+
+function perfMetricsBullets(seq, comp) {
+	const d = derived(seq, comp);
+	return [
+		`- **~${d.avgFaster}% faster** than the average of competing libraries (comprehensive benchmark)`,
+		`- **up to ~${d.tzMaxFaster}% faster** in timezone operations`,
+		`- **~${d.cachePct}% faster** with caching enabled`,
+		'- **kk-date does not win every scenario** — Day.js is faster in isolated "Time Operations"',
+		'- **Net memory delta is GC-dependent** (often negative for several libraries); stability comes from object pooling + LRU eviction',
+		'- **Near-100% cache hit rate** for repeated operations',
+	].join('\n');
+}
+
 // ---- marker replacement ----
 function replaceRegion(content, id, body) {
 	const start = `<!-- BENCH:${id} -->`;
@@ -159,6 +208,15 @@ function main() {
 	if (comp?.memory) readme = replaceRegion(readme, 'readme-memory', memoryTable(comp));
 	if (comp?.cache) readme = replaceRegion(readme, 'readme-cache', cacheBullets(comp));
 	if (!comp) console.warn('  ! no comprehensive benchmark data — skipped memory/cache');
+
+	// Prose headline bullets need BOTH benchmarks (avg-faster + timezone + cache).
+	if (seq?.scenarios && comp?.overall && comp?.cache) {
+		readme = replaceRegion(readme, 'readme-why', whyBullets(seq, comp));
+		readme = replaceRegion(readme, 'readme-advantages', advantagesBullets(seq, comp));
+		perf = replaceRegion(perf, 'perf-metrics', perfMetricsBullets(seq, comp));
+	} else {
+		console.warn('  ! need both benchmarks for headline bullets — skipped why/advantages/metrics');
+	}
 
 	fs.writeFileSync(README, readme);
 	fs.writeFileSync(PERF, perf);

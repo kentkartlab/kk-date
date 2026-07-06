@@ -384,23 +384,25 @@ node benchmark2.js  # Sequential operations benchmark
 <!-- BENCH:perf-seq -->
 | Operation | kk-date | Moment.js | Day.js | Luxon | vs Fastest Competitor |
 |-----------|---------|-----------|--------|-------|-----------------------|
-| **Date Creation & Formatting** | **254ms** | 1545ms | 915ms | 1248ms | **~260% faster** than Day.js |
-| **Time Operations** | **548ms** | 1753ms | 730ms | 3162ms | **~33% faster** than Day.js |
-| **Timezone Conversions** | **474ms** | 3485ms | 23790ms | 5064ms | **~635% faster** than Moment |
-| **Complex Operations** | **489ms** | 3375ms | 1700ms | 3741ms | **~248% faster** than Day.js |
-| **Overall** | **1.76s** | 10.16s | 27.14s | 13.21s | **~15.4x faster** than Day.js |
+| **Date Creation & Formatting** | **284ms** | 667ms | 487ms | 627ms | **~72% faster** than Day.js |
+| **Time Operations** | 439ms | 754ms | **357ms** | 1580ms | **~23% slower** than Day.js |
+| **Timezone Conversions** | **304ms** | 1085ms | 12586ms | 2314ms | **~257% faster** than Moment |
+| **Complex Operations** | **524ms** | 1318ms | 825ms | 1768ms | **~57% faster** than Day.js |
+| **Overall** | **1.55s** | 3.82s | 14.25s | 6.29s | **~9.2x faster** than Day.js |
 <!-- /BENCH:perf-seq -->
 
 #### Key Performance Metrics
 
 *Measured in our benchmark suite on Node.js 26 and reproduced by CI on every PR (the "Performance Benchmarks" job). These are not guarantees — results vary by workload, hardware, and Node version. Reproduce them with `node benchmark.js` / `node benchmark2.js`.*
 
-- **~80% faster** than the average of competing libraries (comprehensive benchmark)
-- **~95-99% faster** in timezone operations
-- **~70% faster** with caching enabled
+<!-- BENCH:perf-metrics -->
+- **~82% faster** than the average of competing libraries (comprehensive benchmark)
+- **up to ~98% faster** in timezone operations
+- **~69% faster** with caching enabled
 - **kk-date does not win every scenario** — Day.js is faster in isolated "Time Operations"
 - **Net memory delta is GC-dependent** (often negative for several libraries); stability comes from object pooling + LRU eviction
 - **Near-100% cache hit rate** for repeated operations
+<!-- /BENCH:perf-metrics -->
 
 ### Custom Benchmark Template
 

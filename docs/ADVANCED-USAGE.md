@@ -31,18 +31,16 @@ console.log('Cache hit rate:', hitRate + '%'); // Typically 99%+
 
 // First conversion - initial computation
 const date = new kk_date('2024-08-23 10:00:00');
-const first = date.tz('America/New_York'); // ~77ms
+const first = date.tz('America/New_York'); // first call: computed
 
 // Subsequent conversions - cached results
-const second = date.tz('America/New_York'); // ~20ms (74% faster!)
-const third = date.tz('America/New_York');  // ~20ms (cached)
+const second = date.tz('America/New_York'); // much faster: served from cache
+const third = date.tz('America/New_York');  // cached
 ```
 
 **Performance Gains with Caching:**
-- **Timezone conversions**: 95-99% faster
-- **Date formatting**: 75% faster
-- **Complex operations**: 80% faster
-- **Big Data (1M operations)**: 95% faster
+
+Caching mainly helps **repeated** operations (the same input parsed/formatted/converted again) — in our benchmarks roughly a **~70% aggregate speedup** with a **~100% cache hit ratio**. Distinct-input / first-time operations are already fast without caching. See the auto-updated tables in the [README](../README.md#-performance-benchmarks) / [Performance Guide](PERFORMANCE.md) for current per-scenario numbers.
 
 ### Object Pooling
 
