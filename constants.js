@@ -301,6 +301,30 @@ const cached_converter_int = {};
 const converter_results_cache = new Map();
 const formatter_cache = new Map();
 
+// Dynamic formatter: part kinds of a compiled template. Each compiled part is
+// { t: <one of these ints>, v: <string> } — produced by compileFormat() in functions.js.
+// Numeric fields get one kind each so the formatter core reads converter results
+// with direct named property loads instead of a dynamic values[key] access.
+const format_part_types = Object.freeze({
+	LITERAL: 0,
+	YEAR: 1,
+	MONTH: 2,
+	DAY: 3,
+	HOURS: 4,
+	MINUTES: 5,
+	SECONDS: 6,
+	MILLISECONDS: 7,
+	NAME: 8,
+	HOUR12: 9,
+	DAY_UNPADDED: 10,
+	DAY_ORDINAL: 11,
+	MERIDIEM_UPPER: 12,
+	MERIDIEM_LOWER: 13,
+});
+
+// template string -> frozen compiled template (see getCompiledTemplate in functions.js)
+const compiled_templates = new Map();
+
 const systemTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 // Common timezones list - defined once at module level for performance
 const COMMON_TIMEZONES = [
@@ -345,3 +369,5 @@ module.exports.formatter_cache = formatter_cache;
 module.exports.cached_dateTimeFormat_with_locale = cached_dateTimeFormat_with_locale;
 module.exports.COMMON_TIMEZONES = COMMON_TIMEZONES;
 module.exports.ordinal_suffix = ordinal_suffix;
+module.exports.format_part_types = format_part_types;
+module.exports.compiled_templates = compiled_templates;

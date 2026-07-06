@@ -184,10 +184,15 @@ declare class KkDate {
 	format_c(separator?: string, ...template: KkDate.FormatType[]): string;
 
 	/**
-	 * Formats the date according to template
+	 * Formats the date according to template.
+	 * Templates are compiled dynamically: any combination of the supported tokens
+	 * (YYYY MM DD D Do HH hh mm ss SSS MMMM MMM dddd ddd A a) works, with
+	 * [bracketed] literal text. A template without any token throws.
 	 * @param template - Format template (null returns ISO format with timezone offset)
 	 * @example
 	 * date.format('YYYY-MM-DD')    // → "2024-01-15"
+	 * date.format('YYYYMM')        // → "202401"
+	 * date.format('[saat] HH:mm') // → "saat 10:30"
 	 * date.format('X')             // → 1705276800  (Unix seconds, number)
 	 * date.format('x')             // → 1705276800000  (Unix ms, number)
 	 * date.format()                // → "2024-01-15T10:30:00+03:00"

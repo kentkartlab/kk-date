@@ -14,7 +14,8 @@ const {
 	dateTimeFormat,
 	converter,
 	isValidMonth,
-	getOrdinal
+	getOrdinal,
+	getCompiledTemplate,
 } = require('./functions');
 const {
 	cached_dateTimeFormat,
@@ -23,9 +24,9 @@ const {
 	format_types_regex,
 	global_config,
 	format_types_regex_cache,
-	formatter_cache
+	formatter_cache,
+	format_part_types,
 } = require('./constants');
-
 
 nopeRedis.config({ defaultTtl: 1300 });
 
@@ -423,8 +424,7 @@ class KkDate {
 							const day = String(date.substring(6, 8), 10); // Extract day
 							// substring() always yields a 4-char year, so guard on the full 8-char input:
 							// a short (2-digit-year) match keeps the legacy string form, which rejects it.
-							this.date =
-								date.length === 8 ? new Date(+year, +month - 1, +day, 0, 0, 0, 0) : new Date(`${year}-${month}-${day} 00:00:00`);
+							this.date = date.length === 8 ? new Date(+year, +month - 1, +day, 0, 0, 0, 0) : new Date(`${year}-${month}-${day} 00:00:00`);
 							this.detected_format = format_types['YYYYMMDD'];
 						} else if (isValid(date, format_types['YYYY-MM'])) {
 							const [year, month] = date.split('-');
@@ -1032,10 +1032,13 @@ class KkDate {
 
 	/**
 	 * Formats the date according to the given template.
+	 * Templates are compiled dynamically, so any combination of the supported tokens works
+	 * (YYYY MM DD D Do HH hh mm ss SSS MMMM MMM dddd ddd A a), with [bracketed] literal text.
+	 * A template with no recognizable token throws `Error('template is not right')`.
 	 * Returns a `number` for `'X'` (Unix seconds) and `'x'` (Unix milliseconds).
 	 * Passing `null` or calling with no argument returns an ISO-style string with timezone offset (e.g. "2024-01-15T10:30:00+03:00").
 	 *
-	 * @param {string|null} [template] - Format template. See `FormatType` for all supported values.
+	 * @param {string|null} [template] - Format template, e.g. 'YYYY-MM-DD', 'YYYYMM', '[saat] HH:mm'
 	 * @returns {string|number}
 	 */
 	format(template) {
@@ -1542,564 +1545,128 @@ function formatter(orj_this, template = null) {
 }
 
 function _formatterCore(orj_this, template, isUTC) {
-	switch (template) {
-		case format_types.dddd: {
-			const formatter = dateTimeFormat(orj_this, template);
-			const cache_key = `${template}_${formatter.id}_${orj_this.date.getTime()}`;
-			const cache = nopeRedis.getItem(cache_key);
-			if (cache) {
-				return cache;
-			}
-			const value = formatter.value.format(orj_this.date);
-			nopeRedis.setItemSync(cache_key, value);
-			return value;
-		}
-		case format_types.DD: {
-			return converter(orj_this.date, ['day'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this }).day;
-		}
-		case format_types.MM: {
-			return converter(orj_this.date, ['month'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this }).month;
-		}
-		case format_types['DD-MM-YYYY']: {
-			const result = converter(orj_this.date, ['day', 'month', 'year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this });
-			return `${result.day}-${result.month}-${result.year}`;
-		}
-		case format_types['DD-MM-YYYY HH:mm']: {
-			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes'], {
-				isUTC,
-				detectedFormat: orj_this.detected_format,
-				orj_this: orj_this,
-			});
-			return `${result.day}-${result.month}-${result.year} ${result.hours}:${result.minutes}`;
-		}
-		case format_types['DD-MM-YYYY HH:mm:ss']: {
-			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes', 'seconds'], {
-				isUTC,
-				detectedFormat: orj_this.detected_format,
-				orj_this: orj_this,
-			});
-			return `${result.day}-${result.month}-${result.year} ${result.hours}:${result.minutes}:${result.seconds}`;
-		}
-		case format_types['DD.MM.YYYY']: {
-			const result = converter(orj_this.date, ['day', 'month', 'year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this });
-			return `${result.day}.${result.month}.${result.year}`;
-		}
-		case format_types['MM/DD/YYYY']: {
-			const result = converter(orj_this.date, ['day', 'month', 'year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this });
-			return `${result.month}/${result.day}/${result.year}`;
-		}
-		case format_types['DD/MM/YYYY']: {
-			const result = converter(orj_this.date, ['day', 'month', 'year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this });
-			return `${result.day}/${result.month}/${result.year}`;
-		}
-		case format_types['DD.MM.YYYY HH:mm:ss']: {
-			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes', 'seconds'], {
-				isUTC,
-				detectedFormat: orj_this.detected_format,
-				orj_this: orj_this,
-			});
-			return `${result.day}.${result.month}.${result.year} ${result.hours}:${result.minutes}:${result.seconds}`;
-		}
-		case format_types['DD.MM.YYYY HH:mm']: {
-			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes'], {
-				isUTC,
-				detectedFormat: orj_this.detected_format,
-				orj_this: orj_this,
-			});
-			return `${result.day}.${result.month}.${result.year} ${result.hours}:${result.minutes}`;
-		}
-		case format_types['YYYY-MM-DD']: {
-			const result = converter(orj_this.date, ['day', 'month', 'year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this });
-			return `${result.year}-${result.month}-${result.day}`;
-		}
-		case format_types['YYYY-MM-DD HH:mm:ss']: {
-			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes', 'seconds'], {
-				isUTC,
-				detectedFormat: orj_this.detected_format,
-				orj_this: orj_this,
-			});
-			return `${result.year}-${result.month}-${result.day} ${result.hours}:${result.minutes}:${result.seconds}`;
-		}
-		case format_types['YYYY-MM-DD HH:mm']: {
-			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes'], {
-				isUTC,
-				detectedFormat: orj_this.detected_format,
-				orj_this: orj_this,
-			});
-			return `${result.year}-${result.month}-${result.day} ${result.hours}:${result.minutes}`;
-		}
-		case format_types['YYYY-MM-DDTHH:mm:ss']: {
-			// ISO format - use UTC
-			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes', 'seconds'], {
-				isUTC,
-				detectedFormat: orj_this.detected_format,
-				orj_this: orj_this,
-			});
-			return `${result.year}-${result.month}-${result.day}T${result.hours}:${result.minutes}:${result.seconds}`;
-		}
-		case format_types['YYYY.MM.DD HH:mm:ss']: {
-			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes', 'seconds'], {
-				isUTC,
-				detectedFormat: orj_this.detected_format,
-				orj_this: orj_this,
-			});
-			return `${result.year}.${result.month}.${result.day} ${result.hours}:${result.minutes}:${result.seconds}`;
-		}
-		case format_types['YYYY.MM.DD HH:mm']: {
-			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes'], {
-				isUTC,
-				detectedFormat: orj_this.detected_format,
-				orj_this: orj_this,
-			});
-			return `${result.year}.${result.month}.${result.day} ${result.hours}:${result.minutes}`;
-		}
-		case format_types['YYYY-MM-DD HH']: {
-			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours'], {
-				isUTC,
-				detectedFormat: orj_this.detected_format,
-				orj_this: orj_this,
-			});
-			return `${result.year}-${result.month}-${result.day} ${result.hours}`;
-		}
-		case format_types['DD-MM-YYYY HH']: {
-			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours'], {
-				isUTC,
-				detectedFormat: orj_this.detected_format,
-				orj_this: orj_this,
-			});
-			return `${result.day}-${result.month}-${result.year} ${result.hours}`;
-		}
-		case format_types['YYYY.MM.DD HH']: {
-			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours'], {
-				isUTC,
-				detectedFormat: orj_this.detected_format,
-				orj_this: orj_this,
-			});
-			return `${result.year}.${result.month}.${result.day} ${result.hours}`;
-		}
-		case format_types['YYYY.MM.DD']: {
-			const result = converter(orj_this.date, ['day', 'month', 'year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this });
-			return `${result.year}.${result.month}.${result.day}`;
-		}
-		case format_types['YYYYMMDD']: {
-			const result = converter(orj_this.date, ['day', 'month', 'year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this });
-			return `${result.year}${result.month}${result.day}`;
-		}
-		case format_types['YYYYMMDDHHmmss']: {
-			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes', 'seconds'], {
-				isUTC,
-				detectedFormat: orj_this.detected_format,
-				orj_this: orj_this,
-			});
-			return `${result.year}${result.month}${result.day}${result.hours}${result.minutes}${result.seconds}`;
-		}
-		case format_types['YYYY']: {
-			return `${converter(orj_this.date, ['year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this }).year}`;
-		}
-		case format_types['HH:mm:ss.SSS']: {
-			const result = converter(orj_this.date, ['hours', 'minutes', 'seconds', 'milliseconds'], {
-				isUTC,
-				detectedFormat: orj_this.detected_format,
-				orj_this: orj_this,
-			});
-			return `${result.hours}:${result.minutes}:${result.seconds}.${result.milliseconds}`;
-		}
-		case format_types['HH:mm:ss']: {
-			const result = converter(orj_this.date, ['hours', 'minutes', 'seconds'], {
-				isUTC,
-				detectedFormat: orj_this.detected_format,
-				orj_this: orj_this,
-			});
-			return `${result.hours}:${result.minutes}:${result.seconds}`;
-		}
-		case format_types['HH:mm']: {
-			const result = converter(orj_this.date, ['hours', 'minutes'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this });
-			return `${result.hours}:${result.minutes}`;
-		}
-		case format_types['mm']: {
-			return `${converter(orj_this.date, ['minutes'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this }).minutes}`;
-		}
-		case format_types['ss']: {
-			return `${converter(orj_this.date, ['seconds'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this }).seconds}`;
-		}
-		case format_types['HH']: {
-			return `${converter(orj_this.date, ['hours'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this }).hours}`;
-		}
-		case format_types['hh:mm:ss']: {
-			const result = converter(orj_this.date, ['hours', 'minutes', 'seconds'], {
-				isUTC,
-				detectedFormat: orj_this.detected_format,
-				orj_this: orj_this,
-			});
-			let hours = parseInt(result.hours, 10);
-			const ampm = hours >= 12 ? 'PM' : 'AM';
-			hours = hours % 12;
-			if (hours === 0) hours = 12;
-			const formattedHours = hours < 10 ? `0${hours}` : String(hours);
-			return `${formattedHours}:${result.minutes}:${result.seconds} ${ampm}`;
-		}
-		case format_types['hh:mm']: {
-			const result = converter(orj_this.date, ['hours', 'minutes'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this });
-			let hours = parseInt(result.hours, 10);
-			const ampm = hours >= 12 ? 'PM' : 'AM';
-			hours = hours % 12;
-			if (hours === 0) hours = 12;
-			const formattedHours = hours < 10 ? `0${hours}` : String(hours);
-			return `${formattedHours}:${result.minutes} ${ampm}`;
-		}
-		case format_types['hh:mm:ss.SSS']: {
-			const result = converter(orj_this.date, ['hours', 'minutes', 'seconds', 'milliseconds'], {
-				isUTC,
-				detectedFormat: orj_this.detected_format,
-				orj_this: orj_this,
-			});
-			let hours = parseInt(result.hours, 10);
-			const ampm = hours >= 12 ? 'PM' : 'AM';
-			hours = hours % 12;
-			if (hours === 0) hours = 12;
-			const formattedHours = hours < 10 ? `0${hours}` : String(hours);
-			return `${formattedHours}:${result.minutes}:${result.seconds}.${result.milliseconds} ${ampm}`;
-		}
-		case format_types['DD MMMM YYYY']: {
-			const value = dateTimeFormat(orj_this, 'MMMM');
-			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
-			const cache = nopeRedis.getItem(cache_key);
-			let formatted = null;
-			if (cache) {
-				formatted = cache;
-			} else {
-				formatted = value.value.format(orj_this.date);
-				nopeRedis.setItemSync(cache_key, formatted);
-			}
-			const result = converter(orj_this.date, ['day', 'year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this });
-			return `${result.day} ${formatted} ${result.year}`;
-		}
-		case format_types['DD MMMM YYYY dddd']: {
-			const result = converter(orj_this.date, ['day', 'year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this });
-			const monthValue = dateTimeFormat(orj_this, 'MMMM');
-			const dayValue = dateTimeFormat(orj_this, 'dddd');
-			const cache_key = `${template}_${monthValue.id}_${dayValue.id}_${orj_this.date.getTime()}`;
-			const cache = nopeRedis.getItem(cache_key);
-			if (cache) {
-				return cache;
-			}
-			const formatted = `${result.day} ${monthValue.value.format(orj_this.date)} ${result.year} ${dayValue.value.format(orj_this.date)}`;
-			nopeRedis.setItemSync(cache_key, formatted);
-			return formatted;
-		}
-		case format_types['DD MMM YYYY dddd']: {
-			const result = converter(orj_this.date, ['day', 'year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this });
-			const monthValue = dateTimeFormat(orj_this, 'MMM');
-			const dayValue = dateTimeFormat(orj_this, 'dddd');
-			const cache_key = `${template}_${monthValue.id}_${dayValue.id}_${orj_this.date.getTime()}`;
-			const cache = nopeRedis.getItem(cache_key);
-			if (cache) {
-				return cache;
-			}
-			const formatted = `${result.day} ${monthValue.value.format(orj_this.date)} ${result.year} ${dayValue.value.format(orj_this.date)}`;
-			nopeRedis.setItemSync(cache_key, formatted);
-			return formatted;
-		}
-		case format_types['MMMM YYYY']: {
-			const value = dateTimeFormat(orj_this, 'MMMM');
-			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
-			const cache = nopeRedis.getItem(cache_key);
-			let formatted = null;
-			if (cache) {
-				formatted = cache;
-			} else {
-				formatted = value.value.format(orj_this.date);
-				nopeRedis.setItemSync(cache_key, formatted);
-			}
-			const result = converter(orj_this.date, ['year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this });
-			return `${formatted} ${result.year}`;
-		}
-		case format_types['DD MMMM dddd YYYY']: {
-			const result = converter(orj_this.date, ['day', 'year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this });
-			const monthValue = dateTimeFormat(orj_this, 'MMMM');
-			const dayValue = dateTimeFormat(orj_this, 'dddd');
-			const cache_key = `${template}_${monthValue.id}_${dayValue.id}_${orj_this.date.getTime()}`;
-			const cache = nopeRedis.getItem(cache_key);
-			if (cache) {
-				return cache;
-			}
-			const formatted = `${result.day} ${monthValue.value.format(orj_this.date)} ${dayValue.value.format(orj_this.date)} ${result.year}`;
-			nopeRedis.setItemSync(cache_key, formatted);
-			return formatted;
-		}
-		case format_types['DD MMM dddd, YYYY']: {
-			const result = converter(orj_this.date, ['day', 'year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this });
-			const monthValue = dateTimeFormat(orj_this, 'MMM');
-			const dayValue = dateTimeFormat(orj_this, 'dddd');
-			const cache_key = `${template}_${monthValue.id}_${dayValue.id}_${orj_this.date.getTime()}`;
-			const cache = nopeRedis.getItem(cache_key);
-			if (cache) {
-				return cache;
-			}
-			const formatted = `${result.day} ${monthValue.value.format(orj_this.date)} ${dayValue.value.format(orj_this.date)}, ${result.year}`;
-			nopeRedis.setItemSync(cache_key, formatted);
-			return formatted;
-		}
-		case format_types['MMM']: {
-			const formatter = dateTimeFormat(orj_this, template);
-			const cache_key = `${template}_${formatter.id}_${orj_this.date.getTime()}`;
-			const cache = nopeRedis.getItem(cache_key);
-			if (cache) {
-				return cache;
-			}
-			const value = formatter.value.format(orj_this.date);
-			nopeRedis.setItemSync(cache_key, value);
-			return value;
-		}
-		case format_types['MMMM']: {
-			const formatter = dateTimeFormat(orj_this, template);
-			const cache_key = `${template}_${formatter.id}_${orj_this.date.getTime()}`;
-			const cache = nopeRedis.getItem(cache_key);
-			if (cache) {
-				return cache;
-			}
-			const value = formatter.value.format(orj_this.date);
-			nopeRedis.setItemSync(cache_key, value);
-			return value;
-		}
-		case format_types['ddd']: {
-			const formatter = dateTimeFormat(orj_this, template);
-			const cache_key = `${template}_${formatter.id}_${orj_this.date.getTime()}`;
-			const cache = nopeRedis.getItem(cache_key);
-			if (cache) {
-				return cache;
-			}
-			const value = formatter.value.format(orj_this.date);
-			nopeRedis.setItemSync(cache_key, value);
-			return value;
-		}
-		case format_types['DD MMM YYYY']: {
-			const result = converter(orj_this.date, ['day', 'year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this });
-			const value = dateTimeFormat(orj_this, 'MMM');
-			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
-			const cache = nopeRedis.getItem(cache_key);
-			let formatted = null;
-			if (cache) {
-				formatted = cache;
-			} else {
-				formatted = value.value.format(orj_this.date);
-				nopeRedis.setItemSync(cache_key, formatted);
-			}
-			return `${result.day} ${formatted} ${result.year}`;
-		}
-		case format_types['DD MMM']: {
-			const result = converter(orj_this.date, ['day'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this });
-			const value = dateTimeFormat(orj_this, 'MMM');
-			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
-			const cache = nopeRedis.getItem(cache_key);
-			let formatted = null;
-			if (cache) {
-				formatted = cache;
-			} else {
-				formatted = value.value.format(orj_this.date);
-				nopeRedis.setItemSync(cache_key, formatted);
-			}
-			return `${result.day} ${formatted}`;
-		}
-		case format_types['MMM YYYY']: {
-			const value = dateTimeFormat(orj_this, 'MMM');
-			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
-			const cache = nopeRedis.getItem(cache_key);
-			let formatted = null;
-			if (cache) {
-				formatted = cache;
-			} else {
-				formatted = value.value.format(orj_this.date);
-				nopeRedis.setItemSync(cache_key, formatted);
-			}
-			return `${formatted} ${converter(orj_this.date, ['year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this }).year}`;
-		}
-		case format_types['dddd, DD MMMM YYYY']: {
-			const result = converter(orj_this.date, ['day', 'year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this });
-			const dayValue = dateTimeFormat(orj_this, 'dddd');
-			const monthValue = dateTimeFormat(orj_this, 'MMMM');
-			const cache_key = `${template}_${dayValue.id}_${monthValue.id}_${orj_this.date.getTime()}`;
-			const cache = nopeRedis.getItem(cache_key);
-			if (cache) {
-				return cache;
-			}
-			const formatted = `${dayValue.value.format(orj_this.date)}, ${result.day} ${monthValue.value.format(orj_this.date)} ${result.year}`;
-			nopeRedis.setItemSync(cache_key, formatted);
-			return formatted;
-		}
-		case format_types['DD MMM YYYY HH:mm']: {
-			const result = converter(orj_this.date, ['day', 'year', 'hours', 'minutes'], {
-				isUTC,
-				detectedFormat: orj_this.detected_format,
-				orj_this: orj_this,
-			});
-			const value = dateTimeFormat(orj_this, 'MMM');
-			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
-			const cache = nopeRedis.getItem(cache_key);
-			let formatted = null;
-			if (cache) {
-				formatted = cache;
-			} else {
-				formatted = value.value.format(orj_this.date);
-				nopeRedis.setItemSync(cache_key, formatted);
-			}
-			return `${result.day} ${formatted} ${result.year} ${result.hours}:${result.minutes}`;
-		}
-		case format_types['YYYY-MM']: {
-			const result = converter(orj_this.date, ['month', 'year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this });
-			return `${result.year}-${result.month}`;
-		}
-		case format_types['DD MMMM dddd']: {
-			const day = converter(orj_this.date, ['day'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this }).day;
-			const monthValue = dateTimeFormat(orj_this, 'MMMM');
-			const dayValue = dateTimeFormat(orj_this, 'dddd');
-			const cache_key = `${template}_${monthValue.id}_${dayValue.id}_${orj_this.date.getTime()}`;
-			const cache = nopeRedis.getItem(cache_key);
-			if (cache) {
-				return cache;
-			}
-			const result = `${day} ${monthValue.value.format(orj_this.date)} ${dayValue.value.format(orj_this.date)}`;
-			nopeRedis.setItemSync(cache_key, result);
-			return result;
-		}
-		case format_types['YYYY-DD-MM']: {
-			const result = converter(orj_this.date, ['day', 'month', 'year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this });
-			return `${result.year}-${result.day}-${result.month}`;
-		}
-		case format_types['DD MMMM']: {
-			const result = converter(orj_this.date, ['day'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this });
-			const value = dateTimeFormat(orj_this, 'MMMM');
-			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
-			const cache = nopeRedis.getItem(cache_key);
-			let formatted = null;
-			if (cache) {
-				formatted = cache;
-			} else {
-				formatted = value.value.format(orj_this.date);
-				nopeRedis.setItemSync(cache_key, formatted);
-			}
-			return `${result.day} ${formatted}`;
-		}
-		case format_types['D MMMM YYYY']: {
-			const day = converter(orj_this.date, ['day'], { pad: false, isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this }).day;
-			const year = converter(orj_this.date, ['year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this }).year;
-			const value = dateTimeFormat(orj_this, 'MMMM');
-			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
-			const cache = nopeRedis.getItem(cache_key);
-			let formatted = null;
-			if (cache) {
-				formatted = cache;
-			} else {
-				formatted = value.value.format(orj_this.date);
-				nopeRedis.setItemSync(cache_key, formatted);
-			}
-			return `${day} ${formatted} ${year}`;
-		}
-		case format_types['Do MMMM YYYY']: {
-			const day = converter(orj_this.date, ['day'], { pad: false, isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this }).day;
-			const year = converter(orj_this.date, ['year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this }).year;
-			const value = dateTimeFormat(orj_this, 'MMMM');
-			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
-			const cache = nopeRedis.getItem(cache_key);
-			let formatted = null;
-			if (cache) {
-				formatted = cache;
-			} else {
-				formatted = value.value.format(orj_this.date);
-				nopeRedis.setItemSync(cache_key, formatted);
-			}
-			return `${getOrdinal(parseInt(day, 10))} ${formatted} ${year}`;
-		}
-		case format_types['Do MMM YYYY']: {
-			const day = converter(orj_this.date, ['day'], { pad: false, isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this }).day;
-			const year = converter(orj_this.date, ['year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this }).year;
-			const value = dateTimeFormat(orj_this, 'MMM');
-			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
-			const cache = nopeRedis.getItem(cache_key);
-			let formatted = null;
-			if (cache) {
-				formatted = cache;
-			} else {
-				formatted = value.value.format(orj_this.date);
-				nopeRedis.setItemSync(cache_key, formatted);
-			}
-			return `${getOrdinal(parseInt(day, 10))} ${formatted} ${year}`;
-		}
-		case format_types['DD MMMM dddd, YYYY']: {
-			const result = converter(orj_this.date, ['day', 'year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this });
-			const monthValue = dateTimeFormat(orj_this, 'MMMM');
-			const dayValue = dateTimeFormat(orj_this, 'dddd');
-			const cache_key = `${template}_${monthValue.id}_${dayValue.id}_${orj_this.date.getTime()}`;
-			const cache = nopeRedis.getItem(cache_key);
-			if (cache) {
-				return cache;
-			}
-			const formatted = `${result.day} ${monthValue.value.format(orj_this.date)} ${dayValue.value.format(orj_this.date)}, ${result.year}`;
-			nopeRedis.setItemSync(cache_key, formatted);
-			return formatted;
-		}
-		case format_types['YYYY MMM DD']: {
-			const result = converter(orj_this.date, ['day', 'year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this });
-			const value = dateTimeFormat(orj_this, 'MMM');
-			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
-			const cache = nopeRedis.getItem(cache_key);
-			let formatted = null;
-			if (cache) {
-				formatted = cache;
-			} else {
-				formatted = value.value.format(orj_this.date);
-				nopeRedis.setItemSync(cache_key, formatted);
-			}
-			return `${result.year} ${formatted} ${result.day}`;
-		}
-		case format_types['YYYY MMMM DD']: {
-			const result = converter(orj_this.date, ['day', 'year'], { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this });
-			const value = dateTimeFormat(orj_this, 'MMMM');
-			const cache_key = `${template}_${value.id}_${orj_this.date.getTime()}`;
-			const cache = nopeRedis.getItem(cache_key);
-			let formatted = null;
-			if (cache) {
-				formatted = cache;
-			} else {
-				formatted = value.value.format(orj_this.date);
-				nopeRedis.setItemSync(cache_key, formatted);
-			}
-			return `${result.year} ${formatted} ${result.day}`;
-		}
-		case null: {
-			// When template is null, always return YYYY-MM-DDTHH:mm:ss format with timezone offset
-			// Get the configured timezone (from temp_config or global_config)
-			const targetTimezone = orj_this.temp_config.timezone || global_config.timezone;
-			let timezoneOffset;
+	if (template === null) {
+		// When template is null, always return YYYY-MM-DDTHH:mm:ss format with timezone offset
+		// Get the configured timezone (from temp_config or global_config)
+		const targetTimezone = orj_this.temp_config.timezone || global_config.timezone;
+		let timezoneOffset;
 
-			if (targetTimezone) {
-				if (targetTimezone === 'UTC') {
-					// UTC has zero offset
-					timezoneOffset = 0;
-				} else {
-					// Calculate offset for the configured timezone
-					const offsetMs = getTimezoneOffset(targetTimezone, orj_this.date);
-					timezoneOffset = offsetMs / 60000; // Convert ms to minutes
-				}
+		if (targetTimezone) {
+			if (targetTimezone === 'UTC') {
+				// UTC has zero offset
+				timezoneOffset = 0;
 			} else {
-				// Fallback to system timezone offset
-				timezoneOffset = -orj_this.date.getTimezoneOffset();
+				// Calculate offset for the configured timezone
+				const offsetMs = getTimezoneOffset(targetTimezone, orj_this.date);
+				timezoneOffset = offsetMs / 60000; // Convert ms to minutes
 			}
-
-			const sign = timezoneOffset >= 0 ? '+' : '-';
-			const absOffset = Math.abs(timezoneOffset);
-			const offsetHours = padZero(Math.floor(absOffset / 60));
-			const offsetMinutes = padZero(absOffset % 60);
-			const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes', 'seconds'], {
-				isUTC,
-				detectedFormat: orj_this.detected_format,
-				orj_this: orj_this,
-			});
-			return `${result.year}-${result.month}-${result.day}T${result.hours}:${result.minutes}:${result.seconds}${sign}${offsetHours}:${offsetMinutes}`;
+		} else {
+			// Fallback to system timezone offset
+			timezoneOffset = -orj_this.date.getTimezoneOffset();
 		}
-		default:
-			throw new Error('template is not right');
+
+		const sign = timezoneOffset >= 0 ? '+' : '-';
+		const absOffset = Math.abs(timezoneOffset);
+		const offsetHours = padZero(Math.floor(absOffset / 60));
+		const offsetMinutes = padZero(absOffset % 60);
+		const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes', 'seconds'], {
+			isUTC,
+			detectedFormat: orj_this.detected_format,
+			orj_this: orj_this,
+		});
+		return `${result.year}-${result.month}-${result.day}T${result.hours}:${result.minutes}:${result.seconds}${sign}${offsetHours}:${offsetMinutes}`;
 	}
+
+	const compiled = getCompiledTemplate(template);
+	const values = compiled.fields.length
+		? converter(orj_this.date, compiled.fields, { isUTC, detectedFormat: orj_this.detected_format, orj_this: orj_this })
+		: null;
+	// Meridiem comes from the original 24h value, before the %12 conversion below.
+	let meridiem = null;
+	if (compiled.has12h) {
+		meridiem = parseInt(values.hours, 10) >= 12 ? 'PM' : 'AM';
+	}
+	const parts = compiled.parts;
+	const parts_length = parts.length;
+	let out = '';
+	for (let i = 0; i < parts_length; i++) {
+		const part = parts[i];
+		switch (part.t) {
+			case format_part_types.LITERAL:
+				out += part.v;
+				break;
+			case format_part_types.YEAR:
+				out += values.year;
+				break;
+			case format_part_types.MONTH:
+				out += values.month;
+				break;
+			case format_part_types.DAY:
+				out += values.day;
+				break;
+			case format_part_types.HOURS:
+				out += values.hours;
+				break;
+			case format_part_types.MINUTES:
+				out += values.minutes;
+				break;
+			case format_part_types.SECONDS:
+				out += values.seconds;
+				break;
+			case format_part_types.MILLISECONDS:
+				out += values.milliseconds;
+				break;
+			case format_part_types.NAME:
+				out += formatNameToken(orj_this, part.v);
+				break;
+			case format_part_types.HOUR12: {
+				let hours = parseInt(values.hours, 10) % 12;
+				if (hours === 0) {
+					hours = 12;
+				}
+				out += hours < 10 ? `0${hours}` : hours;
+				break;
+			}
+			case format_part_types.DAY_UNPADDED: {
+				const day = values.day;
+				out += day[0] === '0' ? day.slice(1) : day;
+				break;
+			}
+			case format_part_types.DAY_ORDINAL:
+				out += getOrdinal(parseInt(values.day, 10));
+				break;
+			case format_part_types.MERIDIEM_UPPER:
+				out += meridiem;
+				break;
+			case format_part_types.MERIDIEM_LOWER:
+				out += meridiem === 'PM' ? 'pm' : 'am';
+				break;
+		}
+	}
+	if (compiled.appendMeridiem) {
+		out += ` ${meridiem}`;
+	}
+	return out;
+}
+
+/**
+ * Formats a locale-aware name token (dddd/ddd/MMMM/MMM) for the date,
+ * memoized in nope-redis per token, locale/timezone formatter and timestamp.
+ *
+ * @param {KkDate} orj_this
+ * @param {string} token
+ * @returns {string}
+ */
+function formatNameToken(orj_this, token) {
+	const formatter = dateTimeFormat(orj_this, token);
+	const cache_key = `${token}_${formatter.id}_${orj_this.date.getTime()}`;
+	const cache = nopeRedis.getItem(cache_key);
+	if (cache) {
+		return cache;
+	}
+	const value = formatter.value.format(orj_this.date);
+	nopeRedis.setItemSync(cache_key, value);
+	return value;
 }
 
 /**

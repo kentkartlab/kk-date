@@ -46,6 +46,12 @@ kk_date.caching({ status: true, defaultTtl: 3600 });
 const date = new kk_date('2024-08-23 10:30:00');
 console.log(date.format('YYYY-MM-DD HH:mm:ss')); // 2024-08-23 10:30:00
 
+// Format templates are dynamic: combine the supported tokens any way you like.
+// Templates are compiled once and cached, so custom combinations stay fast.
+console.log(date.format('YYYYMM'));              // 202408
+console.log(date.format('HHmm'));                // 1030
+console.log(date.format('[Created:] DD MMMM')); // Created: 23 August
+
 // Safe error handling - catches invalid dates early!
 try {
     const invalid = new kk_date('invalid-date'); // ❌ Throws error immediately
@@ -513,8 +519,10 @@ We're constantly working to improve kk-date! Here are some exciting features we'
 - **🌐 Web Workers Support** - Asynchronous date operations for better performance
 - **📦 Tree Shaking** - Bundle size optimization for production builds
 - **🔌 Plugin System** - Extensible architecture for custom functionality
-- **⚡ Template Compilation** - Pre-compiled format strings for even faster formatting
 - **🎯 Enhanced Caching** - More intelligent cache strategies for specific use cases
+
+✅ **Template Compilation** shipped: `format()` now compiles any token combination once and caches it —
+see the [Formatting Guide](docs/FORMATTING-GUIDE.md#custom-formatting).
 
 ## 💡 Pro Tips
 

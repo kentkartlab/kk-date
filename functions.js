@@ -19,6 +19,8 @@ const {
 	cached_dateTimeFormat_with_locale,
 	COMMON_TIMEZONES,
 	ordinal_suffix,
+	format_part_types,
+	compiled_templates,
 } = require('./constants');
 
 const months = {};
@@ -816,6 +818,134 @@ function converter(date, to, options = { pad: true }) {
 	return result;
 }
 
+// Longest-first alternation so multi-char tokens win over their prefixes
+// (MMMM > MMM > MM, dddd > ddd, DD > Do > D). The leading group captures
+// [bracketed] literals, dayjs/moment style.
+const format_token_regex = /(\[[^\]]*\])|YYYY|MMMM|MMM|MM|dddd|ddd|DD|Do|D|HH|hh|mm|ss|SSS|A|a/g;
+
+// Numeric-field tokens: part kind + the converter field it needs.
+const token_parts = {
+	YYYY: { t: format_part_types.YEAR, field: 'year' },
+	MM: { t: format_part_types.MONTH, field: 'month' },
+	DD: { t: format_part_types.DAY, field: 'day' },
+	HH: { t: format_part_types.HOURS, field: 'hours' },
+	mm: { t: format_part_types.MINUTES, field: 'minutes' },
+	ss: { t: format_part_types.SECONDS, field: 'seconds' },
+	SSS: { t: format_part_types.MILLISECONDS, field: 'milliseconds' },
+};
+
+function pushLiteral(parts, text) {
+	if (text === '') {
+		return;
+	}
+	const last = parts.length > 0 ? parts[parts.length - 1] : null;
+	if (last && last.t === format_part_types.LITERAL) {
+		last.v += text;
+	} else {
+		parts.push({ t: format_part_types.LITERAL, v: text });
+	}
+}
+
+function addField(fields, field) {
+	if (fields.indexOf(field) === -1) {
+		fields.push(field);
+	}
+}
+
+/**
+ * Compiles a format template into parts consumable by the formatter core.
+ * Tokens: YYYY MM DD HH mm ss SSS (numeric fields), MMMM MMM dddd ddd
+ * (locale-aware names), hh (12-hour), D (unpadded day), Do (ordinal day),
+ * A/a (meridiem). [Bracketed] text is emitted literally; any other
+ * character passes through as-is. When hh is used without an explicit A/a,
+ * ' AM'/' PM' is appended to the end of the output (legacy hh:mm behavior).
+ *
+ * @param {string} template
+ * @returns {{parts: Array<{t: number, v: string}>, fields: string[], has12h: boolean, appendMeridiem: boolean}}
+ */
+function compileFormat(template) {
+	if (typeof template !== 'string') {
+		throw new Error('template is not right');
+	}
+	const parts = [];
+	const fields = [];
+	let tokenCount = 0;
+	let usedHour12 = false;
+	let explicitMeridiem = false;
+	let lastIndex = 0;
+	format_token_regex.lastIndex = 0;
+	let match = format_token_regex.exec(template);
+	while (match !== null) {
+		if (match.index > lastIndex) {
+			pushLiteral(parts, template.slice(lastIndex, match.index));
+		}
+		const token = match[0];
+		if (match[1] !== undefined) {
+			pushLiteral(parts, token.slice(1, -1));
+		} else {
+			tokenCount++;
+			const token_part = token_parts[token];
+			if (token_part !== undefined) {
+				parts.push({ t: token_part.t, v: '' });
+				addField(fields, token_part.field);
+			} else if (token === 'hh') {
+				parts.push({ t: format_part_types.HOUR12, v: '' });
+				addField(fields, 'hours');
+				usedHour12 = true;
+			} else if (token === 'D') {
+				parts.push({ t: format_part_types.DAY_UNPADDED, v: '' });
+				addField(fields, 'day');
+			} else if (token === 'Do') {
+				parts.push({ t: format_part_types.DAY_ORDINAL, v: '' });
+				addField(fields, 'day');
+			} else if (token === 'A') {
+				parts.push({ t: format_part_types.MERIDIEM_UPPER, v: '' });
+				addField(fields, 'hours');
+				explicitMeridiem = true;
+			} else if (token === 'a') {
+				parts.push({ t: format_part_types.MERIDIEM_LOWER, v: '' });
+				addField(fields, 'hours');
+				explicitMeridiem = true;
+			} else {
+				// dddd | ddd | MMMM | MMM
+				parts.push({ t: format_part_types.NAME, v: token });
+			}
+		}
+		lastIndex = format_token_regex.lastIndex;
+		match = format_token_regex.exec(template);
+	}
+	if (lastIndex < template.length) {
+		pushLiteral(parts, template.slice(lastIndex));
+	}
+	if (tokenCount === 0) {
+		throw new Error('template is not right');
+	}
+	return Object.freeze({
+		parts,
+		fields,
+		has12h: usedHour12 || explicitMeridiem,
+		appendMeridiem: usedHour12 && !explicitMeridiem,
+	});
+}
+
+/**
+ * Returns the cached compiled template, compiling it on first use.
+ *
+ * @param {string} template
+ * @returns {{parts: Array<{t: number, v: string}>, fields: string[], has12h: boolean, appendMeridiem: boolean}}
+ */
+function getCompiledTemplate(template) {
+	let compiled = compiled_templates.get(template);
+	if (compiled === undefined) {
+		compiled = compileFormat(template);
+		if (compiled_templates.size > 1000) {
+			compiled_templates.clear();
+		}
+		compiled_templates.set(template, compiled);
+	}
+	return compiled;
+}
+
 module.exports.getTimezoneOffset = getTimezoneOffset;
 module.exports.parseWithTimezone = parseWithTimezone;
 module.exports.checkTimezone = checkTimezone;
@@ -829,6 +959,8 @@ module.exports.absFloor = absFloor;
 module.exports.duration = duration;
 module.exports.dateTimeFormat = dateTimeFormat;
 module.exports.converter = converter;
+module.exports.compileFormat = compileFormat;
+module.exports.getCompiledTemplate = getCompiledTemplate;
 module.exports.isValidMonth = isValidMonth;
 module.exports.isValidDayName = isValidDayName;
 module.exports.getOrdinal = getOrdinal;

@@ -348,10 +348,51 @@ date.format('DD.MM.YYYY HH:mm'); // '23.08.2024 10:30'
 
 ## Custom Formatting
 
-> **Important:** `format()` matches the **whole** template string against a fixed set of supported patterns
-> (see the tables above). It does **not** interpolate tokens inside arbitrary text — passing an unsupported
-> string such as `'YYYY/MM/DD at HH:mm'` or `'Today is dddd'` throws `Error: template is not right`.
-> To build a custom string, format the pieces you need and combine them in JavaScript, or use `format_c()`.
+`format()` compiles the template dynamically: any combination of the supported tokens works, in any
+order, with any separators. Templates are compiled once and cached, so custom templates are just as
+fast as the predefined ones.
+
+### Supported Tokens
+
+| Token | Output | Example |
+|-------|--------|---------|
+| `YYYY` | 4-digit year | `2024` |
+| `MM` | Month, zero-padded | `08` |
+| `DD` | Day, zero-padded | `05` |
+| `D` | Day, no padding | `5` |
+| `Do` | Ordinal day | `5th` |
+| `HH` | Hour (24h), zero-padded | `09` |
+| `hh` | Hour (12h), zero-padded | `09` |
+| `mm` | Minute, zero-padded | `07` |
+| `ss` | Second, zero-padded | `03` |
+| `SSS` | Millisecond, zero-padded | `045` |
+| `MMMM` / `MMM` | Full / short month name (locale-aware) | `August` / `Aug` |
+| `dddd` / `ddd` | Full / short weekday name (locale-aware) | `Friday` / `Fri` |
+| `A` / `a` | Meridiem | `PM` / `pm` |
+
+```javascript
+const date = new kk_date('2024-08-23 10:30:45');
+
+date.format('YYYYMM');              // '202408'
+date.format('YYYYHH');              // '202410'
+date.format('HHmm');                // '1030'
+date.format('YYYY/MM/DD HH:mm');    // '2024/08/23 10:30'
+date.format('Do MMMM, YYYY');       // '23rd August, 2024'
+date.format('hh:mm A');             // '10:30 AM'
+```
+
+Rules:
+
+- **Literal text** goes in square brackets: `date.format('[Today is] dddd')` → `'Today is Friday'`.
+  Unbracketed characters that are not tokens (separators like `-`, `/`, `:`, `T`) pass through as-is,
+  but letters that form a token (`ss`, `mm`, `a`, …) are interpreted — always bracket words.
+- **12-hour behavior:** when a template uses `hh` without an explicit `A`/`a`, ` AM`/` PM` is appended
+  to the end of the output (`'hh:mm'` → `'10:30 AM'`). With an explicit `A`/`a`, the meridiem is placed
+  exactly where the token appears.
+- A template must contain **at least one token**; strings without any token (e.g. `'hello'`)
+  throw `Error: template is not right`.
+- Dynamic templates apply to **formatting only**. The constructor's `date_format` argument and
+  `kk_date.isValid()` still accept only the predefined patterns listed above.
 
 ### Combining Templates with `format_c(separator, ...templates)`
 
@@ -591,15 +632,15 @@ console.log(date.format(DATETIME_FORMAT));
 
 ### Error Handling
 
-The `format()` method **throws** on an unsupported template (`Error: template is not right`), so wrap
-untrusted templates in a try/catch:
+The `format()` method **throws** when the template contains no recognizable token at all
+(`Error: template is not right`), so wrap untrusted templates in a try/catch:
 
 ```javascript
 const date = new kk_date('2024-08-23 10:30:45');
 
 try {
-    // Unsupported template -> throws
-    const result = date.format('INVALID_TEMPLATE');
+    // No tokens in the template -> throws
+    const result = date.format('hello world');
     console.log(result);
 } catch (error) {
     console.log('Format error:', error.message); // 'template is not right'
