@@ -123,6 +123,9 @@ console.log(date.format('hh:mm A'));                 // '10:30 AM'
 console.log(date.format('[Today is] dddd'));         // 'Today is Friday'
 ```
 
+> **Removed in v5.0.0:** `format_c(separator, ...templates)` — use a single dynamic template instead
+> (see [Migrating from format_c](FORMATTING-GUIDE.md#migrating-from-format_c-removed-in-v500)).
+
 **Tokens:**
 - `YYYY` - 4-digit year
 - `MM` - 2-digit month

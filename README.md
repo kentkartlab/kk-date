@@ -34,6 +34,21 @@ A blazing-fast JavaScript date library with intelligent caching, automatic DST d
 npm install kk-date
 ```
 
+## 🚨 Breaking Changes in v5.0.0
+
+- **`format_c()` was removed.** Dynamic `format()` templates cover every use case in a single call:
+
+```javascript
+// before (v4): date.format_c(' ', 'DD', 'MMMM', 'YYYY')
+date.format('DD MMMM YYYY');
+
+// separators that could read as tokens go in [brackets]:
+// before (v4): date.format_c('T', 'YYYY-MM-DD', 'HH:mm:ss')
+date.format('YYYY-MM-DDTHH:mm:ss');
+```
+
+See the [migration guide](docs/FORMATTING-GUIDE.md#migrating-from-format_c-removed-in-v500) for details.
+
 ## 🚀 Quick Start
 
 ```javascript

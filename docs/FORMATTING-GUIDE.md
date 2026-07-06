@@ -394,9 +394,9 @@ Rules:
 - Dynamic templates apply to **formatting only**. The constructor's `date_format` argument and
   `kk_date.isValid()` still accept only the predefined patterns listed above.
 
-### Migrating from `format_c()` (removed)
+### Migrating from `format_c()` (removed in v5.0.0)
 
-`format_c()` was removed: dynamic templates cover every use case in a single `format()` call.
+`format_c()` was removed in v5.0.0: dynamic templates cover every use case in a single `format()` call.
 Join the old template arguments with the separator; bracket the separator if it could be read
 as a token:
 
