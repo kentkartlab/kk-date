@@ -21,10 +21,52 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Benchmark numbers can only move when JavaScript changes. Docs-only pushes skip the
+  # long benchmark entirely (and don't produce a bot commit that races local work).
+  changes:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    outputs:
+      js: ${{ steps.filter.outputs.js }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect JS changes
+        id: filter
+        env:
+          EVENT_ACTION: ${{ github.event.action }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.event.after }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ "$EVENT_ACTION" = "synchronize" ]; then
+            # Only the files changed by THIS push; fall back to the whole PR when the
+            # previous head is unreachable (force push).
+            changed=$(git diff --name-only "$BEFORE" "$AFTER" 2>/dev/null) \
+              || changed=$(git diff --name-only "origin/$BASE_REF...HEAD")
+          else
+            changed=$(git diff --name-only "origin/$BASE_REF...HEAD")
+          fi
+          echo "Changed files:"
+          echo "$changed"
+          if echo "$changed" | grep -q '\.js$'; then
+            echo "js=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "js=false" >> "$GITHUB_OUTPUT"
+          fi
+
   benchmark:
-    # Skip fork PRs on pull_request runs (the default token cannot push back to a fork).
-    # Manual workflow_dispatch runs always proceed.
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    needs: changes
+    # Run when: manually dispatched; or a same-repo PR (the default token cannot push
+    # back to a fork) whose triggering push touched at least one .js file. If the
+    # detection job itself failed, fail open and benchmark anyway.
+    if: >-
+      always() &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.pull_request.head.repo.full_name == github.repository &&
+        (needs.changes.outputs.js == 'true' || needs.changes.result == 'failure')))
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
