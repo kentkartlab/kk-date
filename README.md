@@ -392,10 +392,10 @@ node benchmark2.js
 <!-- BENCH:readme-seq -->
 | Operation | kk-date | Moment.js | Day.js | Luxon | vs Fastest Competitor |
 |-----------|---------|-----------|--------|-------|-----------------------|
-| **Date Creation & Formatting** | **284ms** | 667ms | 487ms | 627ms | **~72% faster** than Day.js |
-| **Time Operations** | 439ms | 754ms | **357ms** | 1580ms | **~23% slower** than Day.js |
-| **Timezone Conversions** | **304ms** | 1085ms | 12586ms | 2314ms | **~257% faster** than Moment |
-| **Complex Operations** | **524ms** | 1318ms | 825ms | 1768ms | **~57% faster** than Day.js |
+| **Date Creation & Formatting** | **309ms** | 1717ms | 971ms | 1266ms | **~214% faster** than Day.js |
+| **Time Operations** | **595ms** | 1960ms | 789ms | 3065ms | **~33% faster** than Day.js |
+| **Timezone Conversions** | **598ms** | 3677ms | 25507ms | 5650ms | **~515% faster** than Moment |
+| **Complex Operations** | **550ms** | 3626ms | 1852ms | 3798ms | **~237% faster** than Day.js |
 <!-- /BENCH:readme-seq -->
 
 ### Overall Performance Summary
@@ -405,10 +405,10 @@ kk-date wins the overall sequential run, though Day.js is faster in the isolated
 <!-- BENCH:readme-overall -->
 | Library | Total Time | Operations/sec | Performance |
 |---------|------------|---------------|-------------|
-| **kk-date** | **1.55s** | **257,958 ops/sec** | 🏆 **Winner** |
-| Moment.js | 3.82s | 104,629 ops/sec | ~147% slower |
-| Luxon | 6.29s | 63,598 ops/sec | ~306% slower |
-| Day.js | 14.25s | 28,062 ops/sec | **~819% slower** |
+| **kk-date** | **2.05s** | **194,900 ops/sec** | 🏆 **Winner** |
+| Moment.js | 10.98s | 36,428 ops/sec | ~435% slower |
+| Luxon | 13.78s | 29,031 ops/sec | ~571% slower |
+| Day.js | 29.12s | 13,737 ops/sec | **~1319% slower** |
 <!-- /BENCH:readme-overall -->
 
 ### Memory & Bundle Size
@@ -420,8 +420,8 @@ Net heap delta after creating 100,000 date instances (from `node benchmark.js`).
 |---------|--------------------------|-------------|-------------|
 | **kk-date** | ~+4 MB | **15 KB** | **Built-in** |
 | Moment.js | ~-3 MB* | 297 KB | Plugin required |
-| Day.js | ~0 MB | 18.5 KB | Plugin required |
-| Luxon | ~+4 MB | 71 KB | Built-in |
+| Day.js | ~-1 MB* | 18.5 KB | Plugin required |
+| Luxon | ~-4 MB* | 71 KB | Built-in |
 <!-- /BENCH:readme-memory -->
 
 <sub>* GC-timing artifact — varies run-to-run and can be negative for multiple libraries; reproduce with `node benchmark.js`.</sub>
@@ -441,7 +441,7 @@ console.log((after - before) / 1024 / 1024, 'MB'); // GC-dependent; can be negat
 **Without Cache vs With Cache (representative run):**
 <!-- BENCH:readme-cache -->
 - **~69% faster** repeated operations when cache is enabled
-- Average operation time: ~67ms → ~21ms with cache
+- Average operation time: ~113ms → ~35ms with cache
 - Cache hit ratio: **100%** for repeated operations
 <!-- /BENCH:readme-cache -->
 - Memory overhead: Minimal (< 10MB for 10,000 cached items)
