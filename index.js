@@ -16,6 +16,11 @@ const {
 	isValidMonth,
 	getOrdinal,
 	getCompiledTemplate,
+	getDayOfWeek,
+	getDayOfYear,
+	getIsoWeekInfo,
+	getLocaleWeekInfo,
+	getTimezoneLongName,
 } = require('./functions');
 const {
 	cached_dateTimeFormat,
@@ -26,6 +31,8 @@ const {
 	format_types_regex_cache,
 	formatter_cache,
 	format_part_types,
+	format_derived_flags,
+	systemTimezone,
 } = require('./constants');
 
 nopeRedis.config({ defaultTtl: 1300 });
@@ -1027,13 +1034,20 @@ class KkDate {
 
 	/**
 	 * Formats the date according to the given template.
-	 * Templates are compiled dynamically, so any combination of the supported tokens works
-	 * (YYYY MM DD D Do HH hh mm ss SSS MMMM MMM dddd ddd A a), with [bracketed] literal text.
+	 * Templates are compiled dynamically, so any combination of the supported tokens works,
+	 * with [bracketed] literal text. Full moment/dayjs display-token vocabulary:
+	 * year YYYY YY, month MMMM MMM MM Mo M, quarter Q Qo, day DD Do D,
+	 * day of year DDDD DDDo DDD, weekday dddd ddd dd do d e E,
+	 * week of year ww wo w + week-year gggg gg (weekStartDay-based, week 1 contains Jan 1),
+	 * ISO week WW Wo W + ISO week-year GGGG GG, hour HH H hh h kk k,
+	 * minute mm m, second ss s, fractional seconds S..SSSSSSSSS, meridiem A a,
+	 * timezone Z ZZ z zz zzz and unix X x.
 	 * A template with no recognizable token throws `Error('template is not right')`.
-	 * Returns a `number` for `'X'` (Unix seconds) and `'x'` (Unix milliseconds).
+	 * Returns a `number` for the whole templates `'X'` (Unix seconds) and `'x'` (Unix
+	 * milliseconds); inside larger templates X/x render as digit strings.
 	 * Passing `null` or calling with no argument returns an ISO-style string with timezone offset (e.g. "2024-01-15T10:30:00+03:00").
 	 *
-	 * @param {string|null} [template] - Format template, e.g. 'YYYY-MM-DD', 'YYYYMM', '[saat] HH:mm'
+	 * @param {string|null} [template] - Format template, e.g. 'YYYY-MM-DD', '[Week] w [of] gggg', 'DD.MM.YYYY HH:mm Z'
 	 * @returns {string|number}
 	 */
 	format(template) {
@@ -1057,6 +1071,8 @@ class KkDate {
 		if (typeof options.weekStartDay === 'number') {
 			isValidWeekStartDay(options.weekStartDay);
 			this.temp_config.weekStartDay = options.weekStartDay;
+			// week tokens (w/ww/wo/gg/gggg/e) depend on the week start
+			this._fmt_sig = -1;
 		}
 		try {
 			if (options.locale) {
@@ -1065,7 +1081,7 @@ class KkDate {
 				if (typeof Intl?.RelativeTimeFormat === 'function') {
 					this.temp_config.rtf[options.locale] = new Intl.RelativeTimeFormat(options.locale, { numeric: 'auto' });
 				}
-				if (cached_dateTimeFormat.temp['dddd'][options.locale]) {
+				if (cached_dateTimeFormat.temp['dddd'][options.locale] && cached_dateTimeFormat.temp['dd'][options.locale]) {
 					return this;
 				}
 				if (typeof Intl?.Locale === 'function') {
@@ -1078,6 +1094,11 @@ class KkDate {
 				}
 				if (!cached_dateTimeFormat.temp['ddd'][options.locale]) {
 					cached_dateTimeFormat.temp['ddd'][options.locale] = new Intl.DateTimeFormat(options.locale, {
+						weekday: 'short',
+					});
+				}
+				if (!cached_dateTimeFormat.temp['dd'][options.locale]) {
+					cached_dateTimeFormat.temp['dd'][options.locale] = new Intl.DateTimeFormat(options.locale, {
 						weekday: 'short',
 					});
 				}
@@ -1498,9 +1519,9 @@ function diff(start, end, type, is_decimal = false, turn_difftime = false) {
 // Formatter result cache, two levels: outer key is the template (an interned
 // literal, cheap to hash), inner key packs timestamp and config signature into
 // one number — no per-call key string is built on the hot path.
-// A config signature interns the resolved (timezone, locale, detected_format)
-// tuple to a small int, cached per instance and recomputed when the instance's
-// temp_config or the global config changes (format_config_version).
+// A config signature interns the resolved (timezone, locale, detected_format,
+// weekStartDay) tuple to a small int, cached per instance and recomputed when
+// the instance's temp_config or the global config changes (format_config_version).
 let formatter_cache_count = 0;
 let format_config_version = 0;
 const format_sig_intern = new Map();
@@ -1508,7 +1529,10 @@ const format_sig_intern = new Map();
 function formatSig(orj_this) {
 	const timezone = orj_this.temp_config.timezone || global_config.timezone || 'none';
 	const locale = orj_this.temp_config.locale || global_config.locale || 'none';
-	const key = `${timezone}_${locale}_${orj_this.detected_format || 'none'}`;
+	// weekStartDay feeds the w/ww/wo/gg/gggg/e tokens — cached results must not
+	// survive a week-start change. ?? so an instance override of 0 wins.
+	const weekStartDay = orj_this.temp_config.weekStartDay ?? global_config.weekStartDay ?? 0;
+	const key = `${timezone}_${locale}_${orj_this.detected_format || 'none'}_${weekStartDay}`;
 	let sig = format_sig_intern.get(key);
 	if (sig === undefined) {
 		if (format_sig_intern.size >= 1024) {
@@ -1587,37 +1611,47 @@ function formatter(orj_this, template = null) {
 	return result;
 }
 
+/**
+ * UTC offset in minutes of the instance's target timezone at its instant
+ * (temp_config over global_config; system offset when neither is set).
+ *
+ * @param {KkDate} orj_this
+ * @returns {number}
+ */
+function getTargetOffsetMinutes(orj_this) {
+	const targetTimezone = orj_this.temp_config.timezone || global_config.timezone;
+	if (targetTimezone) {
+		if (targetTimezone === 'UTC') {
+			return 0;
+		}
+		return getTimezoneOffset(targetTimezone, orj_this.date) / 60000;
+	}
+	return -orj_this.date.getTimezoneOffset();
+}
+
+/**
+ * Renders offset minutes as ±HH<separator>mm (Z → '+03:00', ZZ → '+0300').
+ *
+ * @param {number} offsetMinutes
+ * @param {string} separator
+ * @returns {string}
+ */
+function formatUtcOffset(offsetMinutes, separator) {
+	const sign = offsetMinutes >= 0 ? '+' : '-';
+	const absOffset = Math.abs(offsetMinutes);
+	return `${sign}${padZero(Math.floor(absOffset / 60))}${separator}${padZero(absOffset % 60)}`;
+}
+
 function _formatterCore(orj_this, template, isUTC) {
 	if (template === null) {
 		// When template is null, always return YYYY-MM-DDTHH:mm:ss format with timezone offset
-		// Get the configured timezone (from temp_config or global_config)
-		const targetTimezone = orj_this.temp_config.timezone || global_config.timezone;
-		let timezoneOffset;
-
-		if (targetTimezone) {
-			if (targetTimezone === 'UTC') {
-				// UTC has zero offset
-				timezoneOffset = 0;
-			} else {
-				// Calculate offset for the configured timezone
-				const offsetMs = getTimezoneOffset(targetTimezone, orj_this.date);
-				timezoneOffset = offsetMs / 60000; // Convert ms to minutes
-			}
-		} else {
-			// Fallback to system timezone offset
-			timezoneOffset = -orj_this.date.getTimezoneOffset();
-		}
-
-		const sign = timezoneOffset >= 0 ? '+' : '-';
-		const absOffset = Math.abs(timezoneOffset);
-		const offsetHours = padZero(Math.floor(absOffset / 60));
-		const offsetMinutes = padZero(absOffset % 60);
+		const timezoneOffset = getTargetOffsetMinutes(orj_this);
 		const result = converter(orj_this.date, ['day', 'month', 'year', 'hours', 'minutes', 'seconds'], {
 			isUTC,
 			detectedFormat: orj_this.detected_format,
 			orj_this: orj_this,
 		});
-		return `${result.year}-${result.month}-${result.day}T${result.hours}:${result.minutes}:${result.seconds}${sign}${offsetHours}:${offsetMinutes}`;
+		return `${result.year}-${result.month}-${result.day}T${result.hours}:${result.minutes}:${result.seconds}${formatUtcOffset(timezoneOffset, ':')}`;
 	}
 
 	const compiled = getCompiledTemplate(template);
@@ -1628,6 +1662,41 @@ function _formatterCore(orj_this, template, isUTC) {
 	let meridiem = null;
 	if (compiled.has12h) {
 		meridiem = parseInt(values.hours, 10) >= 12 ? 'PM' : 'AM';
+	}
+	// Derived values (weekday, day of year, weeks, offset) are computed at most
+	// once per call and only when the compiled template marked them as needed.
+	// Every token behind YMD/DOW/DOY/*_WEEK registers year/month/day fields,
+	// so values is never null when those bits are set.
+	const needs = compiled.derived;
+	let yearNum = 0;
+	let monthNum = 0;
+	let dayNum = 0;
+	let dayOfWeek = 0;
+	let dayOfYear = 0;
+	let isoWeek = null;
+	let localeWeek = null;
+	let offsetMinutes = 0;
+	if (needs !== 0) {
+		if (needs & format_derived_flags.YMD) {
+			yearNum = +values.year;
+			monthNum = +values.month;
+			dayNum = +values.day;
+		}
+		if (needs & format_derived_flags.DOW) {
+			dayOfWeek = getDayOfWeek(yearNum, monthNum, dayNum);
+		}
+		if (needs & format_derived_flags.DOY) {
+			dayOfYear = getDayOfYear(yearNum, monthNum, dayNum);
+		}
+		if (needs & format_derived_flags.ISO_WEEK) {
+			isoWeek = getIsoWeekInfo(yearNum, monthNum, dayNum);
+		}
+		if (needs & format_derived_flags.LOCALE_WEEK) {
+			localeWeek = getLocaleWeekInfo(yearNum, monthNum, dayNum, orj_this.temp_config.weekStartDay ?? global_config.weekStartDay);
+		}
+		if (needs & format_derived_flags.OFFSET) {
+			offsetMinutes = getTargetOffsetMinutes(orj_this);
+		}
 	}
 	const parts = compiled.parts;
 	const parts_length = parts.length;
@@ -1684,6 +1753,138 @@ function _formatterCore(orj_this, template, isUTC) {
 			case format_part_types.MERIDIEM_LOWER:
 				out += meridiem === 'PM' ? 'pm' : 'am';
 				break;
+			case format_part_types.YEAR2:
+				// Year is a number on the native converter path, a string on the Intl paths.
+				out += String(values.year).slice(-2);
+				break;
+			case format_part_types.MONTH_UNPADDED: {
+				const month = values.month;
+				out += month[0] === '0' ? month.slice(1) : month;
+				break;
+			}
+			case format_part_types.MONTH_ORDINAL:
+				out += getOrdinal(parseInt(values.month, 10));
+				break;
+			case format_part_types.QUARTER:
+				out += Math.ceil(parseInt(values.month, 10) / 3);
+				break;
+			case format_part_types.QUARTER_ORDINAL:
+				out += getOrdinal(Math.ceil(parseInt(values.month, 10) / 3));
+				break;
+			case format_part_types.DAY_OF_YEAR:
+				out += dayOfYear;
+				break;
+			case format_part_types.DAY_OF_YEAR_ORDINAL:
+				out += getOrdinal(dayOfYear);
+				break;
+			case format_part_types.DAY_OF_YEAR_PADDED:
+				out += dayOfYear < 100 ? (dayOfYear < 10 ? `00${dayOfYear}` : `0${dayOfYear}`) : dayOfYear;
+				break;
+			case format_part_types.WEEKDAY:
+				out += dayOfWeek;
+				break;
+			case format_part_types.WEEKDAY_ORDINAL:
+				out += getOrdinal(dayOfWeek);
+				break;
+			case format_part_types.WEEKDAY_LOCALE:
+				out += (dayOfWeek - (orj_this.temp_config.weekStartDay ?? global_config.weekStartDay) + 7) % 7;
+				break;
+			case format_part_types.WEEKDAY_ISO:
+				out += dayOfWeek === 0 ? 7 : dayOfWeek;
+				break;
+			case format_part_types.WEEK:
+				out += localeWeek.week;
+				break;
+			case format_part_types.WEEK_ORDINAL:
+				out += getOrdinal(localeWeek.week);
+				break;
+			case format_part_types.WEEK_PADDED:
+				out += localeWeek.week < 10 ? `0${localeWeek.week}` : localeWeek.week;
+				break;
+			case format_part_types.WEEK_YEAR2:
+				out += String(localeWeek.year).slice(-2);
+				break;
+			case format_part_types.WEEK_YEAR:
+				out += localeWeek.year;
+				break;
+			case format_part_types.ISO_WEEK:
+				out += isoWeek.week;
+				break;
+			case format_part_types.ISO_WEEK_ORDINAL:
+				out += getOrdinal(isoWeek.week);
+				break;
+			case format_part_types.ISO_WEEK_PADDED:
+				out += isoWeek.week < 10 ? `0${isoWeek.week}` : isoWeek.week;
+				break;
+			case format_part_types.ISO_WEEK_YEAR2:
+				out += String(isoWeek.year).slice(-2);
+				break;
+			case format_part_types.ISO_WEEK_YEAR:
+				out += isoWeek.year;
+				break;
+			case format_part_types.HOURS_UNPADDED: {
+				const hours = values.hours;
+				out += hours[0] === '0' ? hours.slice(1) : hours;
+				break;
+			}
+			case format_part_types.HOUR12_UNPADDED: {
+				let hours = parseInt(values.hours, 10) % 12;
+				if (hours === 0) {
+					hours = 12;
+				}
+				out += hours;
+				break;
+			}
+			case format_part_types.HOUR24: {
+				// 1-24 clock: midnight renders as 24.
+				const hours = parseInt(values.hours, 10);
+				out += hours === 0 ? 24 : hours;
+				break;
+			}
+			case format_part_types.HOUR24_PADDED: {
+				const hours = parseInt(values.hours, 10);
+				out += hours === 0 ? '24' : hours < 10 ? `0${hours}` : hours;
+				break;
+			}
+			case format_part_types.MINUTES_UNPADDED: {
+				const minutes = values.minutes;
+				out += minutes[0] === '0' ? minutes.slice(1) : minutes;
+				break;
+			}
+			case format_part_types.SECONDS_UNPADDED: {
+				const seconds = values.seconds;
+				out += seconds[0] === '0' ? seconds.slice(1) : seconds;
+				break;
+			}
+			case format_part_types.MS_FRACTION: {
+				// milliseconds is always a 3-char padded string: S/SS truncate,
+				// SSSS..SSSSSSSSS right-pad with zeros (moment semantics).
+				const digits = part.v.length;
+				out += digits < 3 ? values.milliseconds.slice(0, digits) : values.milliseconds.padEnd(digits, '0');
+				break;
+			}
+			case format_part_types.OFFSET_COLON:
+				out += formatUtcOffset(offsetMinutes, ':');
+				break;
+			case format_part_types.OFFSET_BASIC:
+				out += formatUtcOffset(offsetMinutes, '');
+				break;
+			case format_part_types.TZ_ABBR:
+				out += getTimezoneAbbreviation(orj_this.temp_config.timezone || global_config.timezone || systemTimezone, orj_this.date);
+				break;
+			case format_part_types.TZ_LONG:
+				out += getTimezoneLongName(
+					orj_this.temp_config.timezone || global_config.timezone || systemTimezone,
+					orj_this.date,
+					orj_this.temp_config.locale || global_config.locale,
+				);
+				break;
+			case format_part_types.UNIX_SECONDS:
+				out += Math.floor(orj_this.date.getTime() / 1000);
+				break;
+			case format_part_types.UNIX_MS:
+				out += orj_this.date.getTime();
+				break;
 		}
 	}
 	if (compiled.appendMeridiem) {
@@ -1693,8 +1894,10 @@ function _formatterCore(orj_this, template, isUTC) {
 }
 
 /**
- * Formats a locale-aware name token (dddd/ddd/MMMM/MMM) for the date,
+ * Formats a locale-aware name token (dddd/ddd/dd/MMMM/MMM) for the date,
  * memoized in nope-redis per token, locale/timezone formatter and timestamp.
+ * dd is the short weekday name sliced to its first two characters (the
+ * closest Intl equivalent of moment's "min" weekday names).
  *
  * @param {KkDate} orj_this
  * @param {string} token
@@ -1707,7 +1910,10 @@ function formatNameToken(orj_this, token) {
 	if (cache) {
 		return cache;
 	}
-	const value = formatter.value.format(orj_this.date);
+	let value = formatter.value.format(orj_this.date);
+	if (token === 'dd') {
+		value = value.slice(0, 2);
+	}
 	nopeRedis.setItemSync(cache_key, value);
 	return value;
 }
@@ -1772,6 +1978,9 @@ function config(options) {
 			cached_dateTimeFormat.ddd = new Intl.DateTimeFormat(global_config.locale, {
 				weekday: 'short',
 			});
+			cached_dateTimeFormat.dd = new Intl.DateTimeFormat(global_config.locale, {
+				weekday: 'short',
+			});
 			cached_dateTimeFormat.MMMM = new Intl.DateTimeFormat(global_config.locale, {
 				month: 'long',
 			});
@@ -1797,9 +2006,9 @@ function config(options) {
 		checkTimezone(options.timezone);
 		global_config.timezone = options.timezone;
 	}
-	if (options.locale || options.timezone) {
+	if (options.locale || options.timezone || typeof options.weekStartDay === 'number') {
 		// Existing instances may have cached a config signature that resolved
-		// through the old global timezone/locale — force recomputation.
+		// through the old global timezone/locale/weekStartDay — force recomputation.
 		format_config_version++;
 	}
 	return true;

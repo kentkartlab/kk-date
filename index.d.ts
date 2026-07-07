@@ -174,16 +174,27 @@ declare class KkDate {
 	/**
 	 * Formats the date according to template.
 	 * Templates are compiled dynamically: any combination of the supported tokens
-	 * (YYYY MM DD D Do HH hh mm ss SSS MMMM MMM dddd ddd A a) works, with
-	 * [bracketed] literal text. A template without any token throws.
+	 * works, with [bracketed] literal text. Full moment/dayjs display-token set:
+	 * - year: `YYYY` `YY` — month: `MMMM` `MMM` `MM` `Mo` `M` — quarter: `Q` `Qo`
+	 * - day: `DD` `Do` `D` — day of year: `DDDD` `DDDo` `DDD`
+	 * - weekday: `dddd` `ddd` `dd` `do` `d` `e` `E`
+	 * - week of year: `ww` `wo` `w` + week-year `gggg` `gg` (weekStartDay-based, week 1 contains Jan 1)
+	 * - ISO week: `WW` `Wo` `W` + ISO week-year `GGGG` `GG`
+	 * - hour: `HH` `H` `hh` `h` `kk` `k` — minute: `mm` `m` — second: `ss` `s`
+	 * - fractional seconds: `S`..`SSSSSSSSS` — meridiem: `A` `a`
+	 * - timezone: `Z` `ZZ` `z` `zz` `zzz` — unix: `X` `x`
+	 * A template without any token throws. Unbracketed token letters are
+	 * interpreted — always bracket literal words.
 	 * @param template - Format template (null returns ISO format with timezone offset)
 	 * @example
-	 * date.format('YYYY-MM-DD')    // → "2024-01-15"
-	 * date.format('YYYYMM')        // → "202401"
-	 * date.format('[saat] HH:mm') // → "saat 10:30"
-	 * date.format('X')             // → 1705276800  (Unix seconds, number)
-	 * date.format('x')             // → 1705276800000  (Unix ms, number)
-	 * date.format()                // → "2024-01-15T10:30:00+03:00"
+	 * date.format('YYYY-MM-DD')       // → "2024-01-15"
+	 * date.format('[Week] w [of] gggg') // → "Week 3 of 2024"
+	 * date.format('GGGG-[W]WW-E')     // → "2024-W03-1"
+	 * date.format('DD.MM.YYYY HH:mm Z') // → "15.01.2024 10:30 +03:00"
+	 * date.format('X')                // → 1705276800  (Unix seconds, number)
+	 * date.format('x')                // → 1705276800000  (Unix ms, number)
+	 * date.format('[ts] X')           // → "ts 1705276800"  (in-template: string)
+	 * date.format()                   // → "2024-01-15T10:30:00+03:00"
 	 */
 	format(template: 'X'): number;
 	format(template: 'x'): number;
@@ -346,6 +357,51 @@ declare namespace KkDate {
 		// Timestamp formats
 		| 'X'
 		| 'x'
+		// Standalone display tokens (moment/dayjs vocabulary)
+		| 'YY'
+		| 'M'
+		| 'Mo'
+		| 'Q'
+		| 'Qo'
+		| 'D'
+		| 'Do'
+		| 'DDD'
+		| 'DDDo'
+		| 'DDDD'
+		| 'd'
+		| 'dd'
+		| 'do'
+		| 'e'
+		| 'E'
+		| 'w'
+		| 'wo'
+		| 'ww'
+		| 'W'
+		| 'Wo'
+		| 'WW'
+		| 'gg'
+		| 'gggg'
+		| 'GG'
+		| 'GGGG'
+		| 'H'
+		| 'h'
+		| 'k'
+		| 'kk'
+		| 'm'
+		| 's'
+		| 'S'
+		| 'SS'
+		| 'SSS'
+		| 'A'
+		| 'a'
+		| 'Z'
+		| 'ZZ'
+		| 'z'
+		| 'zz'
+		| 'zzz'
+		// Common combined templates with new tokens
+		| 'YYYY-MM-DD HH:mm:ss.SSS'
+		| 'YYYY-MM-DDTHH:mm:ssZ'
 		| (string & {});
 
 	/**

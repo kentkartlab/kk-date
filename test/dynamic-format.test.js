@@ -26,7 +26,9 @@ describe('dynamic format templates', () => {
 		expect(new kk_date(test_datetime).format('YYYY [saat] HH')).toBe('2024 saat 23');
 		expect(new kk_date(test_datetime).format('[YYYY] YYYY')).toBe('YYYY 2024');
 		expect(new kk_date(test_datetime).format('[]YYYY')).toBe('2024');
-		expect(new kk_date(test_datetime).format('YYYY [x')).toBe('2024 [x');
+		// An unterminated bracket stays literal, but the x after it is a token
+		// now (unix ms) — moment tokenizes it the same way.
+		expect(new kk_date(test_datetime).format('YYYY [x')).toBe(`2024 [${new kk_date(test_datetime).format('x')}`);
 		expect(new kk_date(test_datetime).format('YYYY (+*?) MM')).toBe('2024 (+*?) 08');
 	});
 
@@ -68,10 +70,18 @@ describe('dynamic format templates', () => {
 
 	test('invalid templates still throw', () => {
 		expect(() => new kk_date(test_datetime).format('')).toThrow('template is not right');
-		expect(() => new kk_date(test_datetime).format('hello')).toThrow('template is not right');
+		expect(() => new kk_date(test_datetime).format('...')).toThrow('template is not right');
 		expect(() => new kk_date(test_datetime).format('[hello]')).toThrow('template is not right');
 		expect(() => new kk_date(test_datetime).format(123)).toThrow('template is not right');
 		expect(() => new kk_date(test_datetime).format({})).toThrow('template is not right');
+	});
+
+	test('unbracketed letters tokenize instead of throwing', () => {
+		// 'hello' used to throw when h/e were not tokens; with the full moment
+		// vocabulary h (12h hour) and e (locale weekday) are significant, so the
+		// template formats — bracket literal words to keep them verbatim.
+		// 23:50 Monday: h → 11, e → 1, 'llo' literal, implicit meridiem appended.
+		expect(new kk_date(test_datetime).format('hello')).toBe('111llo PM');
 	});
 
 	test('null template keeps ISO output with offset', () => {
@@ -159,7 +169,8 @@ describe('compileFormat', () => {
 
 	test('rejects templates without tokens', () => {
 		expect(() => compileFormat('')).toThrow('template is not right');
-		expect(() => compileFormat('none')).toThrow('template is not right');
+		// 'none' is no longer token-free ('e' is a token) — use punctuation.
+		expect(() => compileFormat('...')).toThrow('template is not right');
 		expect(() => compileFormat(null)).toThrow('template is not right');
 	});
 });

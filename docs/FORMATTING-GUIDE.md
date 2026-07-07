@@ -36,13 +36,13 @@ console.log(formatted); // '2024-08-23 10:30:45'
 | Template | Description | Example |
 |----------|-------------|---------|
 | `YYYY` | 4-digit year | `2024` |
-
-**Note:** `YY` (2-digit year) template is not available in this implementation.
+| `YY` | 2-digit year | `24` |
 
 ```javascript
 const date = new kk_date('2024-08-23 10:30:45');
 
 date.format('YYYY'); // '2024'
+date.format('YY');   // '24'
 ```
 
 ### Month Templates
@@ -50,17 +50,33 @@ date.format('YYYY'); // '2024'
 | Template | Description | Example |
 |----------|-------------|---------|
 | `MM` | 2-digit month (01-12) | `08` |
+| `M` | Month, no padding (1-12) | `8` |
+| `Mo` | Month with ordinal | `8th` |
 | `MMMM` | Full month name | `August` |
 | `MMM` | Short month name | `Aug` |
-
-**Note:** `M` (single digit month) template is not available in this implementation.
 
 ```javascript
 const date = new kk_date('2024-08-23 10:30:45');
 
 date.format('MM');    // '08'
+date.format('M');     // '8'
+date.format('Mo');    // '8th'
 date.format('MMMM');  // 'August'
 date.format('MMM');   // 'Aug'
+```
+
+### Quarter Templates
+
+| Template | Description | Example |
+|----------|-------------|---------|
+| `Q` | Quarter of year (1-4) | `3` |
+| `Qo` | Quarter with ordinal | `3rd` |
+
+```javascript
+const date = new kk_date('2024-08-23 10:30:45');
+
+date.format('[Q]Q [of] YYYY'); // 'Q3 of 2024'
+date.format('Qo');             // '3rd'
 ```
 
 ### Day Templates
@@ -68,29 +84,42 @@ date.format('MMM');   // 'Aug'
 | Template | Description | Example |
 |----------|-------------|---------|
 | `DD` | 2-digit day (01-31) | `23` |
-
-**Note:** `D` (single digit day) template is not available in this implementation.
+| `D` | Day, no padding (1-31) | `23` |
+| `Do` | Day with ordinal | `23rd` |
+| `DDD` | Day of year, no padding (1-366) | `236` |
+| `DDDo` | Day of year with ordinal | `236th` |
+| `DDDD` | Day of year, 3-digit | `236` |
 
 ```javascript
 const date = new kk_date('2024-08-23 10:30:45');
 
-date.format('DD'); // '23'
+date.format('DD');   // '23'
+date.format('D');    // '23'
+date.format('Do');   // '23rd'
+date.format('DDD');  // '236'
 ```
 
 ### Hour Templates
 
 | Template | Description | Example |
 |----------|-------------|---------|
-| `HH` | 2-digit hour (00-23) | `10` |
-
-**Note:** `H` (single digit hour), `hh`, and `h` (12-hour format) templates are not available as standalone templates. However, `hh` is available in time format combinations like `'hh:mm'` and `'hh:mm:ss'`.
+| `HH` | 2-digit hour (00-23) | `22` |
+| `H` | Hour, no padding (0-23) | `22` |
+| `hh` | 2-digit hour, 12-hour clock (01-12) | `10` |
+| `h` | Hour, 12-hour clock, no padding (1-12) | `10` |
+| `kk` | 2-digit hour, 1-24 clock (01-24) | `22` |
+| `k` | Hour, 1-24 clock, no padding (1-24) | `22` |
 
 ```javascript
 const date = new kk_date('2024-08-23 22:30:45');
 
-date.format('HH'); // '22'
-// For 12-hour format, use combined formats (an AM/PM suffix is always appended):
+date.format('HH');    // '22'
+date.format('H');     // '22'
+// 12-hour tokens without an explicit A/a append an AM/PM suffix:
 date.format('hh:mm'); // '10:30 PM'
+date.format('h:mm A'); // '10:30 PM'
+// 1-24 clock renders midnight as 24:
+new kk_date('2024-08-23 00:15:00').format('k'); // '24'
 ```
 
 ### Minute Templates
@@ -98,13 +127,13 @@ date.format('hh:mm'); // '10:30 PM'
 | Template | Description | Example |
 |----------|-------------|---------|
 | `mm` | 2-digit minute (00-59) | `30` |
-
-**Note:** `m` (single digit minute) template is not available as a standalone template.
+| `m` | Minute, no padding (0-59) | `30` |
 
 ```javascript
-const date = new kk_date('2024-08-23 10:30:45');
+const date = new kk_date('2024-08-23 10:05:45');
 
-date.format('mm'); // '30'
+date.format('mm'); // '05'
+date.format('m');  // '5'
 ```
 
 ### Second Templates
@@ -112,28 +141,31 @@ date.format('mm'); // '30'
 | Template | Description | Example |
 |----------|-------------|---------|
 | `ss` | 2-digit second (00-59) | `45` |
-
-**Note:** `s` (single digit second) template is not available as a standalone template.
+| `s` | Second, no padding (0-59) | `45` |
 
 ```javascript
 const date = new kk_date('2024-08-23 10:30:45');
 
 date.format('ss'); // '45'
+date.format('s');  // '45'
 ```
 
-### Millisecond Templates
+### Fractional Second Templates
 
 | Template | Description | Example |
 |----------|-------------|---------|
+| `S` | Tenths of a second | `1` |
+| `SS` | Hundredths of a second | `12` |
 | `SSS` | 3-digit millisecond (000-999) | `123` |
-
-**Note:** `SSS` is only available in time format combinations like `'HH:mm:ss.SSS'`.
+| `SSSS`..`SSSSSSSSS` | Milliseconds right-padded with zeros | `1230` |
 
 ```javascript
 const date = new kk_date('2024-08-23 10:30:45.123');
 
-// SSS is not available as standalone, use in combinations:
 date.format('HH:mm:ss.SSS'); // '10:30:45.123'
+date.format('SSS');          // '123'
+date.format('S');            // '1'
+date.format('SSSSSS');       // '123000'
 ```
 
 ### Weekday Templates
@@ -142,12 +174,82 @@ date.format('HH:mm:ss.SSS'); // '10:30:45.123'
 |----------|-------------|---------|
 | `dddd` | Full weekday name | `Friday` |
 | `ddd` | Short weekday name | `Fri` |
+| `dd` | Two-character weekday name | `Fr` |
+| `d` | Day of week (0=Sunday .. 6=Saturday) | `5` |
+| `do` | Day of week with ordinal | `5th` |
+| `e` | Day of week relative to `weekStartDay` (0-6) | `5` |
+| `E` | ISO day of week (1=Monday .. 7=Sunday) | `5` |
 
 ```javascript
 const date = new kk_date('2024-08-23 10:30:45'); // Friday
 
 date.format('dddd'); // 'Friday'
 date.format('ddd');  // 'Fri'
+date.format('dd');   // 'Fr'
+date.format('d');    // '5'
+date.format('E');    // '5'
+```
+
+### Week of Year Templates
+
+Locale weeks start on the configured `weekStartDay` (default `0` = Sunday) and week 1 is
+the week containing January 1. ISO weeks start on Monday and week 1 is the week containing
+the first Thursday of the year. The week-year (`gggg`/`GGGG`) can differ from the calendar
+year at year boundaries.
+
+| Template | Description | Example |
+|----------|-------------|---------|
+| `w` | Week of year, no padding | `34` |
+| `wo` | Week of year with ordinal | `34th` |
+| `ww` | Week of year, 2-digit | `34` |
+| `gggg` | Week-year (4-digit) | `2024` |
+| `gg` | Week-year (2-digit) | `24` |
+| `W` | ISO week of year, no padding | `34` |
+| `Wo` | ISO week of year with ordinal | `34th` |
+| `WW` | ISO week of year, 2-digit | `34` |
+| `GGGG` | ISO week-year (4-digit) | `2024` |
+| `GG` | ISO week-year (2-digit) | `24` |
+
+```javascript
+new kk_date('2024-08-23').format('[Week] w [of] gggg'); // 'Week 34 of 2024'
+new kk_date('2021-01-01').format('GGGG-[W]WW');         // '2020-W53' (ISO week-year)
+new kk_date('2024-12-31').format('w gggg');             // '1 2025'   (week 1 of the next week-year)
+```
+
+### Timezone Templates
+
+| Template | Description | Example |
+|----------|-------------|---------|
+| `Z` | UTC offset with colon | `+03:00` |
+| `ZZ` | UTC offset without colon | `+0300` |
+| `z` / `zz` | Timezone abbreviation | `EST`, `GMT+3` |
+| `zzz` | Long timezone name | `Eastern Standard Time` |
+
+`z`, `zz` and `zzz` come from Intl/ICU data, so the exact spelling can vary by
+environment (`GMT+3`-style output is possible for zones without a conventional
+abbreviation).
+
+```javascript
+kk_date.config({ timezone: 'Europe/Istanbul' });
+new kk_date('2024-08-23 10:30:45').format('YYYY-MM-DDTHH:mm:ssZ'); // '2024-08-23T10:30:45+03:00'
+new kk_date('2024-08-23 10:30:45').format('ZZ');                   // '+0300'
+```
+
+### Unix Timestamp Templates
+
+| Template | Description | Example |
+|----------|-------------|---------|
+| `X` | Unix timestamp (seconds) | `1724409045` |
+| `x` | Unix timestamp (milliseconds) | `1724409045000` |
+
+As whole templates `X` and `x` return **numbers**; inside a larger template they
+render as digit strings.
+
+```javascript
+const date = new kk_date('2024-08-23 10:30:45');
+
+date.format('X');      // 1724409045 (number)
+date.format('[ts] X'); // 'ts 1724409045' (string)
 ```
 
 ## Date Format Templates
@@ -354,45 +456,91 @@ fast as the predefined ones.
 
 ### Supported Tokens
 
-| Token | Output | Example |
-|-------|--------|---------|
-| `YYYY` | 4-digit year | `2024` |
-| `MM` | Month, zero-padded | `08` |
-| `DD` | Day, zero-padded | `05` |
-| `D` | Day, no padding | `5` |
-| `Do` | Ordinal day | `5th` |
-| `HH` | Hour (24h), zero-padded | `09` |
-| `hh` | Hour (12h), zero-padded | `09` |
-| `mm` | Minute, zero-padded | `07` |
-| `ss` | Second, zero-padded | `03` |
-| `SSS` | Millisecond, zero-padded | `045` |
-| `MMMM` / `MMM` | Full / short month name (locale-aware) | `August` / `Aug` |
-| `dddd` / `ddd` | Full / short weekday name (locale-aware) | `Friday` / `Fri` |
-| `A` / `a` | Meridiem | `PM` / `pm` |
+The full moment/dayjs display-token vocabulary is supported (era tokens and the
+localized `LT`/`L`/`LL` macros are not).
+
+| Group | Token | Output | Example |
+|-------|-------|--------|---------|
+| Year | `YYYY` | 4-digit year | `2024` |
+| | `YY` | 2-digit year | `24` |
+| Month | `MMMM` / `MMM` | Full / short month name (locale-aware) | `August` / `Aug` |
+| | `MM` | Month, zero-padded | `08` |
+| | `Mo` | Month with ordinal | `8th` |
+| | `M` | Month, no padding | `8` |
+| Quarter | `Q` / `Qo` | Quarter / with ordinal | `3` / `3rd` |
+| Day of month | `DD` | Day, zero-padded | `05` |
+| | `Do` | Day with ordinal | `5th` |
+| | `D` | Day, no padding | `5` |
+| Day of year | `DDDD` | Day of year, 3-digit | `005` |
+| | `DDDo` | Day of year with ordinal | `5th` |
+| | `DDD` | Day of year, no padding | `5` |
+| Weekday | `dddd` / `ddd` / `dd` | Full / short / 2-char weekday name (locale-aware) | `Friday` / `Fri` / `Fr` |
+| | `d` / `do` | Day of week (0=Sun..6=Sat) / with ordinal | `5` / `5th` |
+| | `e` | Day of week relative to `weekStartDay` | `5` |
+| | `E` | ISO day of week (1=Mon..7=Sun) | `5` |
+| Week of year | `ww` / `wo` / `w` | Locale week, padded / ordinal / plain | `03` / `3rd` / `3` |
+| | `gggg` / `gg` | Locale week-year, 4/2-digit | `2024` / `24` |
+| ISO week | `WW` / `Wo` / `W` | ISO week, padded / ordinal / plain | `03` / `3rd` / `3` |
+| | `GGGG` / `GG` | ISO week-year, 4/2-digit | `2024` / `24` |
+| Hour | `HH` / `H` | Hour (24h), padded / plain | `09` / `9` |
+| | `hh` / `h` | Hour (12h), padded / plain | `09` / `9` |
+| | `kk` / `k` | Hour (1-24 clock), padded / plain | `09` / `9` |
+| Minute | `mm` / `m` | Minute, padded / plain | `07` / `7` |
+| Second | `ss` / `s` | Second, padded / plain | `03` / `3` |
+| Fractional | `S` / `SS` / `SSS` | Tenths / hundredths / milliseconds | `0` / `04` / `045` |
+| | `SSSS`..`SSSSSSSSS` | Milliseconds right-padded with zeros | `045000` |
+| Meridiem | `A` / `a` | Meridiem | `PM` / `pm` |
+| Timezone | `Z` / `ZZ` | UTC offset, with / without colon | `+03:00` / `+0300` |
+| | `z` / `zz` / `zzz` | Abbreviation / abbreviation / long name | `EST` / `EST` / `Eastern Standard Time` |
+| Unix | `X` / `x` | Seconds / milliseconds | `1724409045` / `1724409045000` |
 
 ```javascript
 const date = new kk_date('2024-08-23 10:30:45');
 
 date.format('YYYYMM');              // '202408'
-date.format('YYYYHH');              // '202410'
 date.format('HHmm');                // '1030'
 date.format('YYYY/MM/DD HH:mm');    // '2024/08/23 10:30'
 date.format('Do MMMM, YYYY');       // '23rd August, 2024'
 date.format('hh:mm A');             // '10:30 AM'
+date.format('[Week] w [of] gggg');  // 'Week 34 of 2024'
+date.format('GGGG-[W]WW-E');        // '2024-W34-5'
+date.format('YYYY-MM-DDTHH:mm:ssZ');// '2024-08-23T10:30:45+00:00' (UTC config)
 ```
 
 Rules:
 
 - **Literal text** goes in square brackets: `date.format('[Today is] dddd')` → `'Today is Friday'`.
-  Unbracketed characters that are not tokens (separators like `-`, `/`, `:`, `T`) pass through as-is,
-  but letters that form a token (`ss`, `mm`, `a`, …) are interpreted — always bracket words.
-- **12-hour behavior:** when a template uses `hh` without an explicit `A`/`a`, ` AM`/` PM` is appended
-  to the end of the output (`'hh:mm'` → `'10:30 AM'`). With an explicit `A`/`a`, the meridiem is placed
-  exactly where the token appears.
-- A template must contain **at least one token**; strings without any token (e.g. `'hello'`)
-  throw `Error: template is not right`.
+  Unbracketed characters that are not tokens (separators like `-`, `/`, `:`, `T`) pass through as-is.
+  With the full token vocabulary nearly every Latin letter is significant
+  (`M Q d e E h k m s S w W x X z Z` alone, plus the multi-letter tokens above) —
+  **always bracket literal words**: `'[Week] w'`, not `'Week w'`.
+- **12-hour behavior:** when a template uses `hh` or `h` without an explicit `A`/`a`, ` AM`/` PM` is
+  appended to the end of the output (`'hh:mm'` → `'10:30 AM'`). With an explicit `A`/`a`, the meridiem
+  is placed exactly where the token appears. (moment/dayjs do not append — kk-date keeps its legacy
+  behavior for backward compatibility.)
+- **Week tokens** (`w`, `ww`, `wo`, `gg`, `gggg`, `e`) depend on the configured `weekStartDay`
+  (global `kk_date.config({ weekStartDay })` or per-instance `.config({ weekStartDay })`).
+  ISO week tokens (`W`, `WW`, `Wo`, `GG`, `GGGG`, `E`) always use the ISO-8601 rules.
+- **`dd`** is the first two characters of the Intl short weekday name. It matches moment's "min"
+  names for most locales but can differ where CLDR data differs (e.g. Turkish).
+- **`z` / `zz` / `zzz`** come from Intl/ICU data; zones without a conventional abbreviation render
+  `GMT+3`-style. On engines without long-name support, `zzz` degrades to the abbreviation.
+- A template must contain **at least one token**; strings without any token (e.g. `'...'` or
+  `'[hello]'`) throw `Error: template is not right`. Note that letter-only words are usually
+  *not* token-free: `'hello'` contains `h` and `e` and therefore formats.
+- Ordinals (`Do`, `Mo`, `Qo`, `do`, `wo`, `Wo`, `DDDo`) use English suffixes (st/nd/rd/th).
 - Dynamic templates apply to **formatting only**. The constructor's `date_format` argument and
   `kk_date.isValid()` still accept only the predefined patterns listed above.
+
+### Breaking change in v5: more letters are tokens
+
+v5 expands the tokenizer to the full moment/dayjs vocabulary. Templates that previously relied on
+unbracketed letters passing through literally can change output silently — exactly as they would in
+moment/dayjs. Newly significant: `YY M Mo Q Qo DDD DDDo DDDD d dd do e E w wo ww W Wo WW gg gggg
+GG GGGG H h k kk m s S..SSSSSSSSS X x z zz zzz Z ZZ`. Letters that remain literal:
+`B C F G I J K L N O P R T U V Y b c f g i j l n o p q r t u v y`. Audit your templates and bracket
+every literal word (`'[saat] HH:mm'`). Templates made only of letters (e.g. `'hello'`) no longer
+throw — they format.
 
 ### Migrating from `format_c()` (removed in v5.0.0)
 
@@ -636,18 +784,25 @@ console.log(date.format(DATETIME_FORMAT));
 ### Error Handling
 
 The `format()` method **throws** when the template contains no recognizable token at all
-(`Error: template is not right`), so wrap untrusted templates in a try/catch:
+(`Error: template is not right`), so wrap untrusted templates in a try/catch. Note that with
+the full token vocabulary most letter sequences DO contain tokens (`'hello world'` contains
+`h`, `e`, `w`, `do`, …), so only genuinely token-free templates throw:
 
 ```javascript
 const date = new kk_date('2024-08-23 10:30:45');
 
 try {
     // No tokens in the template -> throws
-    const result = date.format('hello world');
+    const result = date.format('---');
     console.log(result);
 } catch (error) {
     console.log('Format error:', error.message); // 'template is not right'
     // Fallback to a supported template
     console.log(date.format('YYYY-MM-DD HH:mm:ss'));
 }
+
+// Fully bracketed templates are token-free too and also throw:
+// date.format('[hello]') -> Error: template is not right
+// Unbracketed words format instead of throwing — bracket literal text:
+date.format('[hello] YYYY'); // 'hello 2024'
 ```

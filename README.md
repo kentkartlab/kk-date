@@ -47,6 +47,13 @@ date.format('DD MMMM YYYY');
 date.format('YYYY-MM-DDTHH:mm:ss');
 ```
 
+- **`format()` now supports the full moment/dayjs display-token vocabulary** — `YY M Mo Q Qo DDD
+  DDDo DDDD d dd do e E w wo ww W Wo WW gg gggg GG GGGG H h k kk m s S..SSSSSSSSS Z ZZ z zz zzz`
+  plus in-template `X`/`x` were added to the existing 16 tokens. Because many single letters are
+  now significant, unbracketed literal words in templates can change output — bracket literal text
+  (`'[Week] w'`), exactly as in moment/dayjs. See the
+  [supported tokens table](docs/FORMATTING-GUIDE.md#supported-tokens).
+
 See the [migration guide](docs/FORMATTING-GUIDE.md#migrating-from-format_c-removed-in-v500) for details.
 
 ## 🚀 Quick Start
