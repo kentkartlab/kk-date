@@ -47,6 +47,31 @@ const TEMPLATE_DDDD = format_types.dddd;
 // cache reads/writes so no cache-key string, Date clone, or Promise is allocated on the hot path.
 let cachingEnabled = false;
 
+// Shared frozen per-instance config: most instances never call config()/tz()/fromNow(), so the
+// constructor assigns this sentinel instead of allocating a fresh { rtf: {} } per instance.
+// Readers behave exactly as with a fresh object (every property is undefined); the few methods
+// that write per-instance config go through ownTempConfig() first (copy-on-write).
+const EMPTY_RTF = Object.freeze({});
+const EMPTY_TEMP_CONFIG = Object.freeze({ timezone: undefined, locale: undefined, weekStartDay: undefined, rtf: EMPTY_RTF });
+
+/**
+ * Copy-on-write escape from the shared temp_config sentinel; call before any temp_config write.
+ *
+ * @param {KkDate} kkDate
+ * @returns {object} the instance's own (writable) temp_config
+ */
+function ownTempConfig(kkDate) {
+	if (kkDate.temp_config === EMPTY_TEMP_CONFIG) {
+		kkDate.temp_config = { timezone: undefined, locale: undefined, weekStartDay: undefined, rtf: {} };
+	}
+	return kkDate.temp_config;
+}
+
+// True only while the global timezone differs from the system timezone — the single case where
+// the constructor's parseWithTimezone() call can change the date. Kept in sync by config() and
+// setTimezone() so the constructor can skip that call entirely in the default configuration.
+let timezone_shift_enabled = global_config.timezone !== systemTimezone;
+
 /**
  * Builds a local-time Date from already-split numeric date parts using the numeric Date
  * constructor, which skips the engine's (much slower) string date parser.
@@ -132,7 +157,7 @@ class KkDate {
 		let is_can_cache = true;
 		let cached = false;
 		this.detected_format = null;
-		this.temp_config = { rtf: {} };
+		this.temp_config = EMPTY_TEMP_CONFIG;
 		// Formatter config-signature cache slot (-1 = not computed yet); see formatSig().
 		this._fmt_sig = -1;
 		this._fmt_sig_v = -1;
@@ -574,13 +599,21 @@ class KkDate {
 				this.date = new Date(cached.t);
 				this.detected_format = cached.f;
 			} else {
-				isInvalid(this.date);
+				// Inline isInvalid(): this.date is always a Date here, so the helper's
+				// try/catch adds nothing. The thrown error must stay byte-identical.
+				if (!this.date || Number.isNaN(this.date.getTime())) {
+					throw new Error('Invalid Date');
+				}
 				if (is_can_cache && cachingEnabled) {
 					nopeRedis.setItemSync(`${date}`, { t: this.date.getTime(), f: this.detected_format });
 				}
 			}
 		}
-		this.date = parseWithTimezone(this);
+		// parseWithTimezone() can only change the date while the global timezone differs from
+		// the system timezone (a fresh instance never has temp_config.timezone) — skip it otherwise.
+		if (timezone_shift_enabled) {
+			this.date = parseWithTimezone(this);
+		}
 	}
 
 	/**
@@ -1120,6 +1153,7 @@ class KkDate {
 	 * @returns {Error|KkDate}
 	 */
 	config(options) {
+		ownTempConfig(this);
 		if (options.timezone) {
 			this.temp_config.timezone = options.timezone;
 			this.temp_config.rtf = {};
@@ -1212,7 +1246,7 @@ class KkDate {
 	 */
 	tz(timezone) {
 		checkTimezone(timezone);
-		this.temp_config.timezone = timezone;
+		ownTempConfig(this).timezone = timezone;
 		this._fmt_sig = -1;
 		this.date = parseWithTimezone(this);
 		return this;
@@ -1456,7 +1490,7 @@ class KkDate {
 			}
 			try {
 				rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
-				this.temp_config.rtf[locale] = rtf;
+				ownTempConfig(this).rtf[locale] = rtf;
 			} catch (error) {
 				throw new Error(`Failed to create Intl.RelativeTimeFormat for locale "${locale}": ${error.message || 'Unkown Error'}.`);
 			}
@@ -2076,6 +2110,7 @@ function config(options) {
 	if (options.timezone && global_config.timezone !== options.timezone) {
 		checkTimezone(options.timezone);
 		global_config.timezone = options.timezone;
+		timezone_shift_enabled = global_config.timezone !== systemTimezone;
 	}
 	if (options.locale || options.timezone || typeof options.weekStartDay === 'number') {
 		// Existing instances may have cached a config signature that resolved
@@ -2141,6 +2176,7 @@ module.exports.getTimezone = () => global_config.timezone;
 module.exports.setTimezone = (timezone) => {
 	checkTimezone(timezone);
 	global_config.timezone = timezone;
+	timezone_shift_enabled = global_config.timezone !== systemTimezone;
 	// Existing instances may have cached a config signature that resolved
 	// through the old global timezone — force recomputation (see formatSig).
 	format_config_version++;
