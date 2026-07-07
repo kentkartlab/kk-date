@@ -19,6 +19,10 @@ const {
 	cached_dateTimeFormat_with_locale,
 	COMMON_TIMEZONES,
 	ordinal_suffix,
+	format_part_types,
+	format_derived_flags,
+	compiled_templates,
+	timezone_long_name_cache,
 } = require('./constants');
 
 const months = {};
@@ -32,6 +36,90 @@ const days = {};
 function getOrdinal(n) {
 	const v = n % 100;
 	return n + (ordinal_suffix[(v - 20) % 10] || ordinal_suffix[v] || ordinal_suffix[0]);
+}
+
+/**
+ * UTC timestamp of a wall-clock calendar day. Years 0-99 need the
+ * setUTCFullYear round-trip because Date.UTC maps them to 1900-1999.
+ *
+ * @param {number} y
+ * @param {number} m 1-based month
+ * @param {number} d
+ * @returns {number}
+ */
+function dayTimestampUTC(y, m, d) {
+	let ts = Date.UTC(y, m - 1, d);
+	if (y >= 0 && y <= 99) {
+		const t = new Date(ts);
+		t.setUTCFullYear(y);
+		ts = t.getTime();
+	}
+	return ts;
+}
+
+/**
+ * Day of week for a wall-clock date (0 = Sunday .. 6 = Saturday).
+ *
+ * @param {number} y
+ * @param {number} m 1-based month
+ * @param {number} d
+ * @returns {number}
+ */
+function getDayOfWeek(y, m, d) {
+	return new Date(dayTimestampUTC(y, m, d)).getUTCDay();
+}
+
+/**
+ * Day of year for a wall-clock date (1..366).
+ *
+ * @param {number} y
+ * @param {number} m 1-based month
+ * @param {number} d
+ * @returns {number}
+ */
+function getDayOfYear(y, m, d) {
+	return (dayTimestampUTC(y, m, d) - dayTimestampUTC(y, 1, 1)) / 86400000 + 1;
+}
+
+/**
+ * ISO-8601 week of year: weeks start on Monday, week 1 is the week
+ * containing the first Thursday. The week-year comes from that Thursday
+ * and can differ from the calendar year at year boundaries.
+ *
+ * @param {number} y
+ * @param {number} m 1-based month
+ * @param {number} d
+ * @returns {{week: number, year: number}}
+ */
+function getIsoWeekInfo(y, m, d) {
+	const t = dayTimestampUTC(y, m, d);
+	const dow = new Date(t).getUTCDay() || 7;
+	const thursday = t + (4 - dow) * 86400000;
+	const isoYear = new Date(thursday).getUTCFullYear();
+	const week = Math.floor((thursday - dayTimestampUTC(isoYear, 1, 1)) / 604800000) + 1;
+	return { week, year: isoYear };
+}
+
+/**
+ * Locale week of year: weeks start on weekStartDay, week 1 is the week
+ * containing Jan 1 (moment 'en' behavior with dow=0/doy=6). The week-year
+ * is the year of the week's last day — the week straddling a year boundary
+ * always contains Jan 1 and belongs to the new year.
+ *
+ * @param {number} y
+ * @param {number} m 1-based month
+ * @param {number} d
+ * @param {number} weekStartDay 0 = Sunday .. 6 = Saturday
+ * @returns {{week: number, year: number}}
+ */
+function getLocaleWeekInfo(y, m, d, weekStartDay) {
+	const t = dayTimestampUTC(y, m, d);
+	const diff = (new Date(t).getUTCDay() - weekStartDay + 7) % 7;
+	const weekStart = t - diff * 86400000;
+	const weekYear = new Date(weekStart + 6 * 86400000).getUTCFullYear();
+	const jan1 = dayTimestampUTC(weekYear, 1, 1);
+	const week1Start = jan1 - ((new Date(jan1).getUTCDay() - weekStartDay + 7) % 7) * 86400000;
+	return { week: (weekStart - week1Start) / 604800000 + 1, year: weekYear };
 }
 
 for (const key in iso6391_languages) {
@@ -429,6 +517,37 @@ function getTimezoneAbbreviation(timezone, date = new Date()) {
 }
 
 /**
+ * Long localized timezone name (e.g. 'Eastern Standard Time') for the zzz
+ * token. Falls back to the abbreviation on engines without timeZoneName
+ * support (Hermes-style degrade, same pattern as getTimezoneAbbreviation).
+ *
+ * @param {string} timezone
+ * @param {Date} date
+ * @param {string} locale
+ * @returns {string}
+ */
+function getTimezoneLongName(timezone, date = new Date(), locale = 'en') {
+	try {
+		checkTimezone(timezone);
+		const cacheKey = `${locale}_${timezone}`;
+		let formatter = timezone_long_name_cache.get(cacheKey);
+		if (formatter === undefined) {
+			formatter = new Intl.DateTimeFormat(locale, { timeZone: timezone, timeZoneName: 'long' });
+			timezone_long_name_cache.set(cacheKey, formatter);
+		}
+		const parts = formatter.formatToParts(date);
+		for (let i = 0; i < parts.length; i++) {
+			if (parts[i].type === 'timeZoneName' && parts[i].value) {
+				return parts[i].value;
+			}
+		}
+		return getTimezoneAbbreviation(timezone, date);
+	} catch {
+		return getTimezoneAbbreviation(timezone, date);
+	}
+}
+
+/**
  * absFloor function
  *
  * @param {number} number
@@ -550,6 +669,18 @@ function dateTimeFormat(orj_this, template) {
 			};
 			return cached_dateTimeFormat_with_locale.ddd[`${locale}_${timezone}`];
 		}
+		// dd is a formatting-only token (never in format_types): short weekday
+		// name, sliced to 2 chars by formatNameToken.
+		if (template === 'dd') {
+			if (cached_dateTimeFormat_with_locale.dd[`${locale}_${timezone}`]) {
+				return cached_dateTimeFormat_with_locale.dd[`${locale}_${timezone}`];
+			}
+			cached_dateTimeFormat_with_locale.dd[`${locale}_${timezone}`] = {
+				value: new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: timezone }),
+				id: `${locale}_${timezone}_dd`,
+			};
+			return cached_dateTimeFormat_with_locale.dd[`${locale}_${timezone}`];
+		}
 		if (template === format_types.MMMM) {
 			if (cached_dateTimeFormat_with_locale.MMMM[`${locale}_${timezone}`]) {
 				return cached_dateTimeFormat_with_locale.MMMM[`${locale}_${timezone}`];
@@ -586,6 +717,9 @@ function dateTimeFormat(orj_this, template) {
 	}
 	if (template === format_types.MMM) {
 		return { value: cached_dateTimeFormat.MMM, id: '4' };
+	}
+	if (template === 'dd') {
+		return { value: cached_dateTimeFormat.dd, id: '5' };
 	}
 
 	throw new Error('unkown template for dateTimeFormat !');
@@ -816,6 +950,196 @@ function converter(date, to, options = { pad: true }) {
 	return result;
 }
 
+// Longest-first alternation within every shared-prefix family so multi-char
+// tokens win over their prefixes (MMMM > MMM > MM > Mo > M, DDDD > DDDo >
+// DDD > Do > DD > D, ...). The leading group captures [bracketed] literals,
+// dayjs/moment style. S{1,9} greedily matches fractional-second runs.
+// Single g, G, Y, o, q, T are deliberately not tokens and stay literal.
+const format_token_regex =
+	/(\[[^\]]*\])|YYYY|YY|MMMM|MMM|MM|Mo|M|Qo|Q|DDDD|DDDo|DDD|Do|DD|D|dddd|ddd|dd|do|d|E|e|wo|ww|w|Wo|WW|W|gggg|gg|GGGG|GG|HH|H|hh|h|kk|k|mm|m|ss|s|S{1,9}|A|a|X|x|zzz|zz|z|ZZ|Z/g;
+
+const ymd_fields = ['year', 'month', 'day'];
+const derived_dow = format_derived_flags.YMD | format_derived_flags.DOW;
+const derived_doy = format_derived_flags.YMD | format_derived_flags.DOY;
+const derived_iso_week = format_derived_flags.YMD | format_derived_flags.ISO_WEEK;
+const derived_locale_week = format_derived_flags.YMD | format_derived_flags.LOCALE_WEEK;
+
+// Token compile table: part kind + the converter fields it needs + the
+// derived-value bits the formatter core must precompute. name: locale-aware
+// name token (the NAME part keeps the token itself in v); hour12/meridiem
+// feed has12h/appendMeridiem. S{1,9} runs other than SSS are handled in
+// compileFormat (MS_FRACTION keeps the run in v).
+const token_parts = {
+	YYYY: { t: format_part_types.YEAR, fields: ['year'] },
+	YY: { t: format_part_types.YEAR2, fields: ['year'] },
+	MMMM: { t: format_part_types.NAME, name: true },
+	MMM: { t: format_part_types.NAME, name: true },
+	MM: { t: format_part_types.MONTH, fields: ['month'] },
+	Mo: { t: format_part_types.MONTH_ORDINAL, fields: ['month'] },
+	M: { t: format_part_types.MONTH_UNPADDED, fields: ['month'] },
+	Qo: { t: format_part_types.QUARTER_ORDINAL, fields: ['month'] },
+	Q: { t: format_part_types.QUARTER, fields: ['month'] },
+	DDDD: { t: format_part_types.DAY_OF_YEAR_PADDED, fields: ymd_fields, derived: derived_doy },
+	DDDo: { t: format_part_types.DAY_OF_YEAR_ORDINAL, fields: ymd_fields, derived: derived_doy },
+	DDD: { t: format_part_types.DAY_OF_YEAR, fields: ymd_fields, derived: derived_doy },
+	Do: { t: format_part_types.DAY_ORDINAL, fields: ['day'] },
+	DD: { t: format_part_types.DAY, fields: ['day'] },
+	D: { t: format_part_types.DAY_UNPADDED, fields: ['day'] },
+	dddd: { t: format_part_types.NAME, name: true },
+	ddd: { t: format_part_types.NAME, name: true },
+	dd: { t: format_part_types.NAME, name: true },
+	do: { t: format_part_types.WEEKDAY_ORDINAL, fields: ymd_fields, derived: derived_dow },
+	d: { t: format_part_types.WEEKDAY, fields: ymd_fields, derived: derived_dow },
+	E: { t: format_part_types.WEEKDAY_ISO, fields: ymd_fields, derived: derived_dow },
+	e: { t: format_part_types.WEEKDAY_LOCALE, fields: ymd_fields, derived: derived_dow },
+	wo: { t: format_part_types.WEEK_ORDINAL, fields: ymd_fields, derived: derived_locale_week },
+	ww: { t: format_part_types.WEEK_PADDED, fields: ymd_fields, derived: derived_locale_week },
+	w: { t: format_part_types.WEEK, fields: ymd_fields, derived: derived_locale_week },
+	gggg: { t: format_part_types.WEEK_YEAR, fields: ymd_fields, derived: derived_locale_week },
+	gg: { t: format_part_types.WEEK_YEAR2, fields: ymd_fields, derived: derived_locale_week },
+	Wo: { t: format_part_types.ISO_WEEK_ORDINAL, fields: ymd_fields, derived: derived_iso_week },
+	WW: { t: format_part_types.ISO_WEEK_PADDED, fields: ymd_fields, derived: derived_iso_week },
+	W: { t: format_part_types.ISO_WEEK, fields: ymd_fields, derived: derived_iso_week },
+	GGGG: { t: format_part_types.ISO_WEEK_YEAR, fields: ymd_fields, derived: derived_iso_week },
+	GG: { t: format_part_types.ISO_WEEK_YEAR2, fields: ymd_fields, derived: derived_iso_week },
+	HH: { t: format_part_types.HOURS, fields: ['hours'] },
+	H: { t: format_part_types.HOURS_UNPADDED, fields: ['hours'] },
+	hh: { t: format_part_types.HOUR12, fields: ['hours'], hour12: true },
+	h: { t: format_part_types.HOUR12_UNPADDED, fields: ['hours'], hour12: true },
+	kk: { t: format_part_types.HOUR24_PADDED, fields: ['hours'] },
+	k: { t: format_part_types.HOUR24, fields: ['hours'] },
+	mm: { t: format_part_types.MINUTES, fields: ['minutes'] },
+	m: { t: format_part_types.MINUTES_UNPADDED, fields: ['minutes'] },
+	ss: { t: format_part_types.SECONDS, fields: ['seconds'] },
+	s: { t: format_part_types.SECONDS_UNPADDED, fields: ['seconds'] },
+	SSS: { t: format_part_types.MILLISECONDS, fields: ['milliseconds'] },
+	A: { t: format_part_types.MERIDIEM_UPPER, fields: ['hours'], meridiem: true },
+	a: { t: format_part_types.MERIDIEM_LOWER, fields: ['hours'], meridiem: true },
+	X: { t: format_part_types.UNIX_SECONDS },
+	x: { t: format_part_types.UNIX_MS },
+	zzz: { t: format_part_types.TZ_LONG },
+	zz: { t: format_part_types.TZ_ABBR },
+	z: { t: format_part_types.TZ_ABBR },
+	ZZ: { t: format_part_types.OFFSET_BASIC, derived: format_derived_flags.OFFSET },
+	Z: { t: format_part_types.OFFSET_COLON, derived: format_derived_flags.OFFSET },
+};
+
+function pushLiteral(parts, text) {
+	if (text === '') {
+		return;
+	}
+	const last = parts.length > 0 ? parts[parts.length - 1] : null;
+	if (last && last.t === format_part_types.LITERAL) {
+		last.v += text;
+	} else {
+		parts.push({ t: format_part_types.LITERAL, v: text });
+	}
+}
+
+function addField(fields, field) {
+	if (fields.indexOf(field) === -1) {
+		fields.push(field);
+	}
+}
+
+/**
+ * Compiles a format template into parts consumable by the formatter core.
+ * Supports the full moment/dayjs display-token vocabulary (except era tokens
+ * and the localized LT/L/LL macros): year (YYYY YY), month (MMMM MMM MM Mo M),
+ * quarter (Q Qo), day (DD Do D), day of year (DDDD DDDo DDD), weekday
+ * (dddd ddd dd do d e E), week + week-year (ww wo w gggg gg), ISO week +
+ * week-year (WW Wo W GGGG GG), hour (HH H hh h kk k), minute (mm m),
+ * second (ss s), fractional seconds (S..SSSSSSSSS), meridiem (A a),
+ * timezone (Z ZZ z zz zzz) and unix (X x). [Bracketed] text is emitted
+ * literally; any other character passes through as-is. When hh/h is used
+ * without an explicit A/a, ' AM'/' PM' is appended to the end of the output
+ * (legacy hh:mm behavior).
+ *
+ * @param {string} template
+ * @returns {{parts: Array<{t: number, v: string}>, fields: string[], has12h: boolean, appendMeridiem: boolean, derived: number}}
+ */
+function compileFormat(template) {
+	if (typeof template !== 'string') {
+		throw new Error('template is not right');
+	}
+	const parts = [];
+	const fields = [];
+	let tokenCount = 0;
+	let usedHour12 = false;
+	let explicitMeridiem = false;
+	let derived = 0;
+	let lastIndex = 0;
+	format_token_regex.lastIndex = 0;
+	let match = format_token_regex.exec(template);
+	while (match !== null) {
+		if (match.index > lastIndex) {
+			pushLiteral(parts, template.slice(lastIndex, match.index));
+		}
+		const token = match[0];
+		if (match[1] !== undefined) {
+			pushLiteral(parts, token.slice(1, -1));
+		} else {
+			tokenCount++;
+			const token_part = token_parts[token];
+			if (token_part !== undefined) {
+				parts.push({ t: token_part.t, v: token_part.name === true ? token : '' });
+				const token_fields = token_part.fields;
+				if (token_fields !== undefined) {
+					for (let i = 0; i < token_fields.length; i++) {
+						addField(fields, token_fields[i]);
+					}
+				}
+				if (token_part.hour12 === true) {
+					usedHour12 = true;
+				}
+				if (token_part.meridiem === true) {
+					explicitMeridiem = true;
+				}
+				if (token_part.derived !== undefined) {
+					derived |= token_part.derived;
+				}
+			} else {
+				// Only S{1,9} runs of length 1, 2, 4..9 reach here (SSS is in the map).
+				parts.push({ t: format_part_types.MS_FRACTION, v: token });
+				addField(fields, 'milliseconds');
+			}
+		}
+		lastIndex = format_token_regex.lastIndex;
+		match = format_token_regex.exec(template);
+	}
+	if (lastIndex < template.length) {
+		pushLiteral(parts, template.slice(lastIndex));
+	}
+	if (tokenCount === 0) {
+		throw new Error('template is not right');
+	}
+	return Object.freeze({
+		parts,
+		fields,
+		has12h: usedHour12 || explicitMeridiem,
+		appendMeridiem: usedHour12 && !explicitMeridiem,
+		derived,
+	});
+}
+
+/**
+ * Returns the cached compiled template, compiling it on first use.
+ *
+ * @param {string} template
+ * @returns {{parts: Array<{t: number, v: string}>, fields: string[], has12h: boolean, appendMeridiem: boolean, derived: number}}
+ */
+function getCompiledTemplate(template) {
+	let compiled = compiled_templates.get(template);
+	if (compiled === undefined) {
+		compiled = compileFormat(template);
+		if (compiled_templates.size > 1000) {
+			compiled_templates.clear();
+		}
+		compiled_templates.set(template, compiled);
+	}
+	return compiled;
+}
+
 module.exports.getTimezoneOffset = getTimezoneOffset;
 module.exports.parseWithTimezone = parseWithTimezone;
 module.exports.checkTimezone = checkTimezone;
@@ -829,6 +1153,13 @@ module.exports.absFloor = absFloor;
 module.exports.duration = duration;
 module.exports.dateTimeFormat = dateTimeFormat;
 module.exports.converter = converter;
+module.exports.compileFormat = compileFormat;
+module.exports.getCompiledTemplate = getCompiledTemplate;
 module.exports.isValidMonth = isValidMonth;
 module.exports.isValidDayName = isValidDayName;
 module.exports.getOrdinal = getOrdinal;
+module.exports.getDayOfWeek = getDayOfWeek;
+module.exports.getDayOfYear = getDayOfYear;
+module.exports.getIsoWeekInfo = getIsoWeekInfo;
+module.exports.getLocaleWeekInfo = getLocaleWeekInfo;
+module.exports.getTimezoneLongName = getTimezoneLongName;

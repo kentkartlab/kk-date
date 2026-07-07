@@ -104,8 +104,8 @@ function benchmarkFormatting() {
         testDate.format('YYYY-MM-DD HH:mm:ss');
         testDate.format('DD.MM.YYYY');
         testDate.format('DD MMMM YYYY');
-        // 'dddd, DD MMMM YYYY HH:mm' is not a single supported template — compose with format_c:
-        testDate.format_c(' ', 'dddd, DD MMMM YYYY', 'HH:mm');
+        // Templates are compiled dynamically — any token combination works directly:
+        testDate.format('dddd, DD MMMM YYYY HH:mm');
     }
     console.timeEnd('Date Formatting');
 }
@@ -384,11 +384,11 @@ node benchmark2.js  # Sequential operations benchmark
 <!-- BENCH:perf-seq -->
 | Operation | kk-date | Moment.js | Day.js | Luxon | vs Fastest Competitor |
 |-----------|---------|-----------|--------|-------|-----------------------|
-| **Date Creation & Formatting** | **190ms** | 1128ms | 726ms | 905ms | **~281% faster** than Day.js |
-| **Time Operations** | **426ms** | 1256ms | 556ms | 2733ms | **~31% faster** than Day.js |
-| **Timezone Conversions** | **416ms** | 3285ms | 18959ms | 4450ms | **~690% faster** than Moment |
-| **Complex Operations** | **337ms** | 2510ms | 1230ms | 2920ms | **~265% faster** than Day.js |
-| **Overall** | **1.37s** | 8.18s | 21.47s | 11.01s | **~15.7x faster** than Day.js |
+| **Date Creation & Formatting** | **159ms** | 1207ms | 822ms | 1055ms | **~417% faster** than Day.js |
+| **Time Operations** | **460ms** | 1367ms | 612ms | 2827ms | **~33% faster** than Day.js |
+| **Timezone Conversions** | **445ms** | 2925ms | 18772ms | 4312ms | **~557% faster** than Moment |
+| **Complex Operations** | **368ms** | 2621ms | 1398ms | 3161ms | **~280% faster** than Day.js |
+| **Overall** | **1.43s** | 8.12s | 21.60s | 11.36s | **~15.1x faster** than Day.js |
 <!-- /BENCH:perf-seq -->
 
 #### Key Performance Metrics
@@ -396,9 +396,9 @@ node benchmark2.js  # Sequential operations benchmark
 *Measured in our benchmark suite on Node.js 26 and reproduced by CI on every PR (the "Performance Benchmarks" job). These are not guarantees — results vary by workload, hardware, and Node version. Reproduce them with `node benchmark.js` / `node benchmark2.js`.*
 
 <!-- BENCH:perf-metrics -->
-- **~84% faster** than the average of competing libraries (comprehensive benchmark)
+- **~89% faster** than the average of competing libraries (comprehensive benchmark)
 - **up to ~98% faster** in timezone operations
-- **~72% faster** with caching enabled
+- **~59% faster** with caching enabled
 - **kk-date does not win every scenario** — Day.js is faster in isolated "Time Operations"
 - **Net memory delta is GC-dependent** (often negative for several libraries); stability comes from object pooling + LRU eviction
 - **Near-100% cache hit rate** for repeated operations

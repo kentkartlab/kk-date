@@ -96,7 +96,10 @@ const utcDate = new kk_date('2024-08-23T10:30:00.000Z');
 
 #### `format(template)`
 
-Formats the date according to the specified template.
+Formats the date according to the specified template. Templates are compiled dynamically:
+any combination of the tokens below works, in any order, with any separator characters
+(literal words go in `[square brackets]`). Compiled templates are cached, so custom
+combinations are as fast as the predefined ones.
 
 **Parameters:**
 - `template` (string) - Format template
@@ -112,15 +115,25 @@ console.log(date.format('DD.MM.YYYY'));              // '23.08.2024'
 console.log(date.format('DD MMMM YYYY'));            // '23 August 2024'
 console.log(date.format('HH:mm'));                   // '10:30'
 console.log(date.format('YYYY-MM-DDTHH:mm:ss'));     // '2024-08-23T10:30:45'
+
+// Custom token combinations
+console.log(date.format('YYYYMM'));                  // '202408'
+console.log(date.format('YYYYHH'));                  // '202410'
+console.log(date.format('hh:mm A'));                 // '10:30 AM'
+console.log(date.format('[Today is] dddd'));         // 'Today is Friday'
 ```
 
-**Available Templates:**
+> **Removed in v5.0.0:** `format_c(separator, ...templates)` — use a single dynamic template instead
+> (see [Migrating from format_c](FORMATTING-GUIDE.md#migrating-from-format_c-removed-in-v500)).
 
-**Basic Templates:**
+**Tokens:**
 - `YYYY` - 4-digit year
 - `MM` - 2-digit month
 - `DD` - 2-digit day
+- `D` - day without padding
+- `Do` - ordinal day (1st, 2nd, ...)
 - `HH` - 2-digit hour (24-hour)
+- `hh` - 2-digit hour (12-hour)
 - `mm` - 2-digit minute
 - `ss` - 2-digit second
 - `SSS` - 3-digit millisecond
@@ -128,6 +141,7 @@ console.log(date.format('YYYY-MM-DDTHH:mm:ss'));     // '2024-08-23T10:30:45'
 - `MMM` - Short month name
 - `dddd` - Full weekday name
 - `ddd` - Short weekday name
+- `A` / `a` - Meridiem (`PM` / `pm`)
 
 **Date Format Templates:**
 - `YYYY-MM-DD` - ISO date format
@@ -534,25 +548,6 @@ Returns the timestamp for comparison operations.
 ```javascript
 const date = new kk_date('2024-08-23 10:00:00');
 console.log(date.valueOf()); // 1724407200000
-```
-
-#### `format_c(separator, ...templates)`
-
-Advanced formatting method that allows multiple templates with custom separator.
-
-**Parameters:**
-- `separator` (string, optional) - Separator between formatted parts (default: ' ')
-- `...templates` (string[]) - Format templates to apply
-
-**Returns:** (string) - Formatted string
-
-**Examples:**
-```javascript
-const date = new kk_date('2024-08-23 10:30:45');
-
-date.format_c(' ', 'YYYY-MM-DD', 'HH:mm:ss'); // '2024-08-23 10:30:45'
-date.format_c('T', 'YYYY-MM-DD', 'HH:mm:ss');  // '2024-08-23T10:30:45'
-date.format_c('-', 'DD', 'MM', 'YYYY');        // '23-08-2024'
 ```
 
 #### `diff_range(startDate, endDate, unit?)`

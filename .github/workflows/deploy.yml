@@ -16,11 +16,11 @@ jobs:
     if: ${{ (contains(toJson(github.event.pull_request.labels.*.name), 'patch version') || contains(toJson(github.event.pull_request.labels.*.name), 'minor version') || contains(toJson(github.event.pull_request.labels.*.name), 'major version')) && github.event.pull_request.merged == true }}
     steps:
       - name: Check Out Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 26
       - name: Update Version
@@ -42,7 +42,7 @@ jobs:
           git add .
           git commit -am "Updated to version $version"
       - name: Push Changes
-        uses: ad-m/github-push-action@v0.8.0
+        uses: ad-m/github-push-action@v1.3.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           branch: ${{ github.event.pull_request.base.ref }}

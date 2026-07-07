@@ -260,6 +260,7 @@ const default_en_day_number = new Intl.DateTimeFormat('en', { day: 'numeric' });
 const timezone_cache = new Map();
 const timezone_check_cache = new Map();
 const timezone_abbreviation_cache = new Map();
+const timezone_long_name_cache = new Map();
 const target_timezone_cache = new Map();
 const long_timezone_cache = new Map();
 const timezone_formatter_cache = new Map();
@@ -270,6 +271,10 @@ const cached_dateTimeFormat = {
 	ddd: new Intl.DateTimeFormat('en', {
 		weekday: 'short',
 	}),
+	// dd renders the short weekday name sliced to 2 chars (formatNameToken)
+	dd: new Intl.DateTimeFormat('en', {
+		weekday: 'short',
+	}),
 	MMMM: new Intl.DateTimeFormat('en', {
 		month: 'long',
 	}),
@@ -277,6 +282,7 @@ const cached_dateTimeFormat = {
 	temp: {
 		dddd: {},
 		ddd: {},
+		dd: {},
 		MMMM: {},
 		MMM: {},
 	},
@@ -285,6 +291,7 @@ const cached_dateTimeFormat = {
 const cached_dateTimeFormat_with_locale = {
 	dddd: {},
 	ddd: {},
+	dd: {},
 	MMMM: {},
 	MMM: {},
 };
@@ -300,6 +307,76 @@ const global_config = {
 const cached_converter_int = {};
 const converter_results_cache = new Map();
 const formatter_cache = new Map();
+
+// Dynamic formatter: part kinds of a compiled template. Each compiled part is
+// { t: <one of these ints>, v: <string> } — produced by compileFormat() in functions.js.
+// Numeric fields get one kind each so the formatter core reads converter results
+// with direct named property loads instead of a dynamic values[key] access.
+const format_part_types = Object.freeze({
+	LITERAL: 0,
+	YEAR: 1,
+	MONTH: 2,
+	DAY: 3,
+	HOURS: 4,
+	MINUTES: 5,
+	SECONDS: 6,
+	MILLISECONDS: 7,
+	NAME: 8,
+	HOUR12: 9,
+	DAY_UNPADDED: 10,
+	DAY_ORDINAL: 11,
+	MERIDIEM_UPPER: 12,
+	MERIDIEM_LOWER: 13,
+	YEAR2: 14, // YY
+	MONTH_UNPADDED: 15, // M
+	MONTH_ORDINAL: 16, // Mo
+	QUARTER: 17, // Q
+	QUARTER_ORDINAL: 18, // Qo
+	DAY_OF_YEAR: 19, // DDD
+	DAY_OF_YEAR_ORDINAL: 20, // DDDo
+	DAY_OF_YEAR_PADDED: 21, // DDDD
+	WEEKDAY: 22, // d (0-6, Sunday=0)
+	WEEKDAY_ORDINAL: 23, // do
+	WEEKDAY_LOCALE: 24, // e (0-6 relative to weekStartDay)
+	WEEKDAY_ISO: 25, // E (1-7, Monday=1)
+	WEEK: 26, // w
+	WEEK_ORDINAL: 27, // wo
+	WEEK_PADDED: 28, // ww
+	WEEK_YEAR2: 29, // gg
+	WEEK_YEAR: 30, // gggg
+	ISO_WEEK: 31, // W
+	ISO_WEEK_ORDINAL: 32, // Wo
+	ISO_WEEK_PADDED: 33, // WW
+	ISO_WEEK_YEAR2: 34, // GG
+	ISO_WEEK_YEAR: 35, // GGGG
+	HOURS_UNPADDED: 36, // H
+	HOUR12_UNPADDED: 37, // h
+	HOUR24: 38, // k (1-24)
+	HOUR24_PADDED: 39, // kk
+	MINUTES_UNPADDED: 40, // m
+	SECONDS_UNPADDED: 41, // s
+	MS_FRACTION: 42, // S runs of length 1,2,4..9 (v = matched run; SSS stays MILLISECONDS)
+	OFFSET_COLON: 43, // Z  -> +03:00
+	OFFSET_BASIC: 44, // ZZ -> +0300
+	TZ_ABBR: 45, // z / zz
+	TZ_LONG: 46, // zzz
+	UNIX_SECONDS: 47, // X (in-template)
+	UNIX_MS: 48, // x (in-template)
+});
+
+// Derived values a compiled template needs the formatter core to precompute
+// (at most once per format call). Collected as a bitmask by compileFormat().
+const format_derived_flags = Object.freeze({
+	YMD: 1, // numeric year/month/day parsed from converter values
+	DOW: 2, // day of week
+	DOY: 4, // day of year
+	ISO_WEEK: 8, // ISO week + ISO week-year
+	LOCALE_WEEK: 16, // locale week + week-year (weekStartDay-dependent)
+	OFFSET: 32, // UTC offset minutes of the target timezone
+});
+
+// template string -> frozen compiled template (see getCompiledTemplate in functions.js)
+const compiled_templates = new Map();
 
 const systemTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 // Common timezones list - defined once at module level for performance
@@ -333,6 +410,7 @@ module.exports.format_types_regex = format_types_regex;
 module.exports.timezone_cache = timezone_cache;
 module.exports.timezone_check_cache = timezone_check_cache;
 module.exports.timezone_abbreviation_cache = timezone_abbreviation_cache;
+module.exports.timezone_long_name_cache = timezone_long_name_cache;
 module.exports.target_timezone_cache = target_timezone_cache;
 module.exports.long_timezone_cache = long_timezone_cache;
 module.exports.timezone_formatter_cache = timezone_formatter_cache;
@@ -345,3 +423,6 @@ module.exports.formatter_cache = formatter_cache;
 module.exports.cached_dateTimeFormat_with_locale = cached_dateTimeFormat_with_locale;
 module.exports.COMMON_TIMEZONES = COMMON_TIMEZONES;
 module.exports.ordinal_suffix = ordinal_suffix;
+module.exports.format_part_types = format_part_types;
+module.exports.format_derived_flags = format_derived_flags;
+module.exports.compiled_templates = compiled_templates;
