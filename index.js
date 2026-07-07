@@ -569,11 +569,14 @@ class KkDate {
 			}
 
 			if (is_can_cache && cached) {
-				this.date = new Date(cached.getTime());
+				// Restore detected_format alongside the instant: it drives timezone
+				// reinterpretation and UTC formatting, so a hit must behave like the parse it cached.
+				this.date = new Date(cached.t);
+				this.detected_format = cached.f;
 			} else {
 				isInvalid(this.date);
 				if (is_can_cache && cachingEnabled) {
-					nopeRedis.setItemSync(`${date}`, new Date(this.date.getTime()));
+					nopeRedis.setItemSync(`${date}`, { t: this.date.getTime(), f: this.detected_format });
 				}
 			}
 		}
