@@ -21,6 +21,8 @@ const {
 	getIsoWeekInfo,
 	getLocaleWeekInfo,
 	getTimezoneLongName,
+	format_validators,
+	validateDynamicTemplate,
 } = require('./functions');
 const {
 	cached_dateTimeFormat,
@@ -36,6 +38,10 @@ const {
 } = require('./constants');
 
 nopeRedis.config({ defaultTtl: 1300 });
+
+// Hoisted 'dddd' sentinel so the static isValid fast path is a single identity compare
+// instead of a property load on every call (the detection ladder calls isValid per rung).
+const TEMPLATE_DDDD = format_types.dddd;
 
 // Mirrors nope-redis service status. When caching is disabled (the default), we skip all
 // cache reads/writes so no cache-key string, Date clone, or Promise is allocated on the hot path.
@@ -60,6 +66,29 @@ function fastLocalDate(year, month, day) {
 		return new Date(+year, +month - 1, +day, 0, 0, 0, 0);
 	}
 	return new Date(`${year}-${month}-${day} 00:00:00`);
+}
+
+/**
+ * Two ASCII digits at offset i as an int. Only called on strings whose shape was already
+ * confirmed by a template validator, so no digit re-checking is needed.
+ *
+ * @param {string} s
+ * @param {number} i
+ * @returns {number}
+ */
+function cc2(s, i) {
+	return (s.charCodeAt(i) - 48) * 10 + (s.charCodeAt(i + 1) - 48);
+}
+
+/**
+ * Four ASCII digits at offset i as an int (validated shapes only).
+ *
+ * @param {string} s
+ * @param {number} i
+ * @returns {number}
+ */
+function cc4(s, i) {
+	return cc2(s, i) * 100 + cc2(s, i + 2);
 }
 
 /**
@@ -103,7 +132,7 @@ class KkDate {
 		let is_can_cache = true;
 		let cached = false;
 		this.detected_format = null;
-		this.temp_config = {};
+		this.temp_config = { rtf: {} };
 		// Formatter config-signature cache slot (-1 = not computed yet); see formatSig().
 		this._fmt_sig = -1;
 		this._fmt_sig_v = -1;
@@ -131,10 +160,25 @@ class KkDate {
 					this.detected_format = 'YYYY-DD-MM';
 				} else if (params[1] === format_types['YYYY-MM-DD']) {
 					is_can_cache = true;
-					const [year, month, day] = date.split('-');
-					this.date = fastLocalDate(year, month, day);
+					if (typeof date === 'string' && date.length === 10) {
+						this.date = new Date(cc4(date, 0), cc2(date, 5) - 1, cc2(date, 8), 0, 0, 0, 0);
+					} else {
+						const [year, month, day] = date.split('-');
+						this.date = fastLocalDate(year, month, day);
+					}
 					forced_format_founded = true;
 					this.detected_format = 'YYYY-MM-DD';
+				} else if (params[1] === format_types['mm:ss']) {
+					// Time-only value on today's date, like the bare time formats below. Not cached:
+					// the cache key is the raw input, and e.g. '03:45' means 03h45 when auto-detected
+					// but 3m45s here — sharing one key would poison the other interpretation.
+					is_can_cache = false;
+					const time_str = typeof date === 'string' ? date : `${date}`;
+					const d = new Date();
+					d.setHours(0, cc2(time_str, 0), cc2(time_str, 3), 0);
+					this.date = d;
+					forced_format_founded = true;
+					this.detected_format = format_types['mm:ss'];
 				}
 			}
 			if (!forced_format_founded && !cached) {
@@ -171,8 +215,12 @@ class KkDate {
 					this.date = new Date(date.getTime());
 					this.detected_format = 'now';
 				} else if (maybe_dash && isValid(date, format_types['YYYY-MM-DD'])) {
-					const [year, month, day] = date.split('-');
-					this.date = fastLocalDate(year, month, day);
+					if (date.length === 10) {
+						this.date = new Date(cc4(date, 0), cc2(date, 5) - 1, cc2(date, 8), 0, 0, 0, 0);
+					} else {
+						const [year, month, day] = date.split('-');
+						this.date = fastLocalDate(year, month, day);
+					}
 					this.detected_format = 'YYYY-MM-DD';
 				} else {
 					is_can_cache = true;
@@ -297,25 +345,32 @@ class KkDate {
 							this.date = fastLocalDate(year, month, day);
 							this.detected_format = format_types['DD.MM.YYYY'];
 						} else if (maybe_dash && isValid(date, format_types['YYYY-MM-DD HH:mm:ss'])) {
-							const [datePart, timePart] = date.split(' ');
-							const [year, month, day] = datePart.split('-');
-							const [hours, minutes, seconds] = timePart.split(':').map(Number);
-							if (hours >= 24) {
-								const extraDays = Math.floor(hours / 24);
-								const dateObj = fastLocalDate(year, month, day);
-								dateObj.setDate(dateObj.getDate() + extraDays);
-
-								const newDay = String(dateObj.getDate()).padStart(2, '0');
-								const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
-								const newYear = dateObj.getFullYear();
-
-								this.date = new Date(
-									`${newYear}-${newMonth}-${newDay}T${(hours % 24).toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`,
-								);
+							if (date.length === 19 && cc2(date, 11) < 24) {
+								// 4-digit year, wall-clock hours: no day overflow possible, build directly
+								// from charCodes (overflow hours 24-29 keep the legacy path below).
+								this.date = new Date(cc4(date, 0), cc2(date, 5) - 1, cc2(date, 8), cc2(date, 11), cc2(date, 14), cc2(date, 17), 0);
+								this.detected_format = format_types['YYYY-MM-DD HH:mm:ss'];
 							} else {
-								this.date = fastLocalDateTime(year, month, day, timePart);
+								const [datePart, timePart] = date.split(' ');
+								const [year, month, day] = datePart.split('-');
+								const [hours, minutes, seconds] = timePart.split(':').map(Number);
+								if (hours >= 24) {
+									const extraDays = Math.floor(hours / 24);
+									const dateObj = fastLocalDate(year, month, day);
+									dateObj.setDate(dateObj.getDate() + extraDays);
+
+									const newDay = String(dateObj.getDate()).padStart(2, '0');
+									const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
+									const newYear = dateObj.getFullYear();
+
+									this.date = new Date(
+										`${newYear}-${newMonth}-${newDay}T${(hours % 24).toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`,
+									);
+								} else {
+									this.date = fastLocalDateTime(year, month, day, timePart);
+								}
+								this.detected_format = format_types['YYYY-MM-DD HH:mm:ss'];
 							}
-							this.detected_format = format_types['YYYY-MM-DD HH:mm:ss'];
 						} else if (maybe_dash && isValid(date, format_types['YYYY-MM-DD HH:mm'])) {
 							const [datePart, timePart] = date.split(' ');
 							const [year, month, day] = datePart.split('-');
@@ -522,7 +577,6 @@ class KkDate {
 				}
 			}
 		}
-		this.temp_config.rtf = {};
 		this.date = parseWithTimezone(this);
 	}
 
@@ -1124,12 +1178,9 @@ class KkDate {
 	 * @returns {boolean}
 	 */
 	isValid() {
-		try {
-			isInvalid(this.date);
-		} catch {
-			return false;
-		}
-		return true;
+		// Direct boolean equivalent of isInvalid(this.date) without the throw/catch round-trip,
+		// so the invalid path allocates no Error object.
+		return !!this.date && !Number.isNaN(this.date.valueOf());
 	}
 
 	/**
@@ -1921,25 +1972,42 @@ function formatNameToken(orj_this, token) {
 /**
  * validation
  *
+ * Accepts every predefined template plus any display-token template the formatter
+ * understands (compiled on first use). Templates with no recognizable token throw
+ * 'Invalid template !'.
+ *
  * @param {KkDate.date_string} date_string
  * @param {string} template
+ * @param {boolean} [is_strict=false] - Layers wall-clock semantics on top of the shape check
+ * (moment strict parity): 4-digit years 1700-2199, real calendar days incl. leap years,
+ * hours 00-23 plus exactly 24:00[:00], and no :ss tail on HH:mm.
  * @returns {boolean}
  */
-function isValid(date_string, template) {
+function isValid(date_string, template, is_strict = false) {
 	// Early return for special case
-	if (template === format_types.dddd) {
+	if (template === TEMPLATE_DDDD) {
 		return true;
 	}
 
-	// Single Map lookup: format_types and format_types_regex share the same keys (except 'dddd',
-	// handled above), so a missing regex means the template is unknown.
-	const regex = format_types_regex_cache.get(template);
-	if (!regex) {
-		throw new Error('Invalid template !');
+	// Hot path: hand-written charCode validators for the predefined numeric templates.
+	// Default mode replicates the legacy regexes bit-for-bit; is_strict layers wall-clock
+	// hours (24 only as exactly 24:00[:00]), 4-digit years (1700-2199) and real-calendar
+	// day checks on top (moment strict parity).
+	const validator = format_validators.get(template);
+	if (validator !== undefined) {
+		return validator(date_string, is_strict);
 	}
 
-	// Direct return for better performance
-	return regex.test(date_string);
+	// Remaining predefined templates (name/unicode based) keep their legacy regexes.
+	// is_strict has no additional effect for these.
+	const regex = format_types_regex_cache.get(template);
+	if (regex !== undefined) {
+		return regex.test(date_string);
+	}
+
+	// Any other display-token template is compiled into a validator on first use.
+	// Templates with no recognizable token keep throwing 'Invalid template !'.
+	return validateDynamicTemplate(template, date_string, is_strict);
 }
 
 /**

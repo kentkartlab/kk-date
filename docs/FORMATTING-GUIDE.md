@@ -334,6 +334,7 @@ date.format('YYYY MMMM DD'); // '2024 August 23'
 |----------|-------------|---------|
 | `HH:mm:ss` | 24-hour time with seconds | `10:30:45` |
 | `HH:mm` | 24-hour time without seconds | `10:30` |
+| `mm:ss` | Minutes and seconds (durations/delays) | `30:45` |
 | `hh:mm:ss` | 12-hour time with seconds (AM/PM suffix) | `10:30:45 AM` |
 | `hh:mm` | 12-hour time without seconds (AM/PM suffix) | `10:30 AM` |
 
@@ -529,8 +530,9 @@ Rules:
   `'[hello]'`) throw `Error: template is not right`. Note that letter-only words are usually
   *not* token-free: `'hello'` contains `h` and `e` and therefore formats.
 - Ordinals (`Do`, `Mo`, `Qo`, `do`, `wo`, `Wo`, `DDDo`) use English suffixes (st/nd/rd/th).
-- Dynamic templates apply to **formatting only**. The constructor's `date_format` argument and
-  `kk_date.isValid()` still accept only the predefined patterns listed above.
+- Dynamic templates apply to **formatting and validation**: `kk_date.isValid()` accepts any
+  display-token template (compiled on first use, tokenless templates throw). The constructor's
+  `date_format` argument still accepts only the predefined patterns listed above.
 
 ### Breaking change in v5: more letters are tokens
 

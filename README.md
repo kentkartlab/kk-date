@@ -89,6 +89,17 @@ if (kk_date.isValid('2024-08-23', 'YYYY-MM-DD')) { // true - valid date
     const safeDate = new kk_date('2024-08-23'); // ✅ Safe to create
 }
 
+// isValid accepts ANY display-token template, not just the predefined ones
+kk_date.isValid('31/12/2024 23:59', 'DD/MM/YYYY HH:mm'); // true
+kk_date.isValid('03:45', 'mm:ss');                       // true - minutes:seconds
+
+// Optional strict mode (moment strict parity): real calendar days + wall-clock hours
+kk_date.isValid('2021-02-30', 'YYYY-MM-DD');       // true  - shape check only (default)
+kk_date.isValid('2021-02-30', 'YYYY-MM-DD', true); // false - Feb 30 doesn't exist
+kk_date.isValid('25:00:00', 'HH:mm:ss');           // true  - day-overflow support (default)
+kk_date.isValid('25:00:00', 'HH:mm:ss', true);     // false - strict wall-clock hours
+// Migrating from moment(value, format, true).isValid()? Pass true as the 3rd argument.
+
 // Zero-config timezone conversion with automatic DST detection.
 // Note: a naive string like '2024-08-23 10:30:00' is parsed in the process's LOCAL timezone.
 // The examples below assume the process timezone is UTC (run with TZ=UTC, or call

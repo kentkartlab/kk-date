@@ -165,6 +165,7 @@ console.log(date.format('[Today is] dddd'));         // 'Today is Friday'
 **Time Format Templates:**
 - `HH:mm:ss` - 24-hour time with seconds
 - `HH:mm` - 24-hour time without seconds
+- `mm:ss` - Minutes and seconds (e.g. durations/delays; parsed onto today's date)
 - `hh:mm:ss` - 12-hour time with seconds
 - `hh:mm` - 12-hour time without seconds
 - `HH:mm:ss.SSS` - 24-hour time with milliseconds
@@ -723,7 +724,7 @@ kk_date.config({
 
 ### Utility Methods
 
-#### `isValid(input, format)`
+#### `isValid(input, format, is_strict?)`
 
 Checks whether a date string matches a given format template.
 
@@ -731,9 +732,17 @@ Checks whether a date string matches a given format template.
 
 **Parameters:**
 - `input` (string) - Date string to validate
-- `format` (string, **required**) - Format to validate against ('YYYY-MM-DD', 'YYYY-DD-MM', etc.). Omitting it throws `Error: Invalid template !`.
+- `format` (string, **required**) - Format to validate against. Accepts every predefined template ('YYYY-MM-DD', 'HH:mm:ss', 'mm:ss', etc.) **plus any display-token template** the formatter understands (e.g. 'DD/MM/YYYY HH:mm'), compiled on first use. Omitting it, or passing a template with no recognizable token, throws `Error: Invalid template !`.
+- `is_strict` (boolean, optional, default `false`) - Layers wall-clock semantics on top of the shape check, matching moment's strict parsing: 4-digit years (1700-2199), real calendar days including leap years, hours 00-23 plus exactly `24:00[:00]`, and no `:ss` tail on `HH:mm`. Strict always accepts a subset of the default mode.
 
 **Returns:** (boolean) - True if valid
+
+**Default mode is a pure shape check** and deliberately keeps kk-date's leniencies for backward compatibility: hours 24-29 are accepted on the `HH`-based templates (they feed the constructor's day-overflow feature, e.g. `'25:00:00'` → next day 01:00), `HH:mm` tolerates an optional `:ss` tail, and impossible calendar days like `'2021-02-30'` pass the shape check. Pass `is_strict = true` to reject all of these.
+
+**Scope notes:**
+- Strict calendar/hour checks apply to the numeric templates and to dynamically compiled templates. The name-based predefined templates (e.g. `'DD MMMM YYYY'`) keep their legacy regex behavior; `is_strict` has no additional effect for them.
+- Dynamic templates validate shape and field ranges (plus strict semantics); cross-field consistency (e.g. that a `dddd` weekday name matches the date) is not checked — same as moment strict.
+- A template accepted by `isValid` is not necessarily parseable by the constructor: `new kk_date(input, format)` still supports only the predefined formats.
 
 **Examples:**
 ```javascript
@@ -745,6 +754,18 @@ kk_date.isValid('2024-08-23', 'YYYY-MM-DD');  // true
 kk_date.isValid('invalid', 'YYYY-MM-DD');     // false
 kk_date.isValid('2024-23-08', 'YYYY-DD-MM');  // true
 kk_date.isValid('2024-23-08', 'YYYY-MM-DD');  // false
+
+// Any display-token template works (compiled & memoized on first use)
+kk_date.isValid('31/12/2024 23:59', 'DD/MM/YYYY HH:mm'); // true
+kk_date.isValid('03:45', 'mm:ss');                       // true
+kk_date.isValid('1st Jan 2024', 'Do MMM YYYY');          // true
+
+// Strict mode (moment strict parity)
+kk_date.isValid('2021-02-30', 'YYYY-MM-DD', true); // false - not a real calendar day
+kk_date.isValid('2024-02-29', 'YYYY-MM-DD', true); // true  - leap year
+kk_date.isValid('25:00:00', 'HH:mm:ss', true);     // false - wall-clock hours only
+kk_date.isValid('24:00:00', 'HH:mm:ss', true);     // true  - end-of-day midnight
+kk_date.isValid('05-12-31', 'YYYY-MM-DD', true);   // false - 2-digit years rejected
 ```
 
 #### `getTimezoneOffset(timezone, date?)`

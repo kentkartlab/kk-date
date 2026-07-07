@@ -323,6 +323,7 @@ declare namespace KkDate {
 		| 'HH'
 		| 'mm'
 		| 'ss'
+		| 'mm:ss'
 		| 'HH:mm'
 		| 'HH:mm:ss'
 		| 'HH:mm:ss.SSS'
@@ -558,11 +559,18 @@ declare namespace KkDate {
 	function caching_flush(): boolean;
 
 	/**
-	 * Validate a date string against a format
+	 * Validate a date string against a format.
+	 *
+	 * Accepts every predefined template plus any display-token template the formatter
+	 * understands (e.g. 'DD/MM/YYYY HH:mm'); templates with no recognizable token throw.
+	 *
 	 * @param date_string - Date string to validate
 	 * @param template - Format template
+	 * @param is_strict - Adds wall-clock semantics on top of the shape check (moment strict
+	 * parity): 4-digit years 1700-2199, real calendar days incl. leap years, hours 00-23
+	 * plus exactly 24:00[:00], and no :ss tail on HH:mm. Defaults to false.
 	 */
-	function isValid(date_string: string, template: FormatType): boolean;
+	function isValid(date_string: string, template: FormatType | (string & {}), is_strict?: boolean): boolean;
 
 	/**
 	 * Get timezone information
