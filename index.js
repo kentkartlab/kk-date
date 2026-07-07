@@ -14,6 +14,9 @@ const {
 	dateTimeFormat,
 	converter,
 	isValidMonth,
+	tryParseTextDate,
+	num2,
+	num4,
 	getOrdinal,
 	getCompiledTemplate,
 	getDayOfWeek,
@@ -140,6 +143,536 @@ function fastLocalDateTime(year, month, day, timePart) {
  * Accepts various input types (string, Date, KkDate) and supports multiple date formats
  * like "YYYY-MM-DD" or "YYYY-DD-MM".
  */
+
+// ---------------------------------------------------------------------------
+// Constructor auto-detection
+//
+// String inputs are routed by (length, separator charCode) so each input runs at most a
+// couple of template validators instead of walking a long rung ladder. The validators are
+// the same `format_validators` the ladder used — acceptance is unchanged — and every shape
+// the fast paths decline falls through to `parseTextLegacy`, which keeps the original
+// regex rung chain and the native `new Date(string)` fallback verbatim.
+// ---------------------------------------------------------------------------
+
+// Cached "today" fields for time-of-day inputs. Valid while Date.now() lies inside
+// [today_from, today_until); both boundaries come from real local Date construction, so the
+// window stays exact across DST transitions (23/25-hour days).
+let today_year = 0;
+let today_month = 0;
+let today_day = 0;
+let today_from = 1;
+let today_until = 0;
+
+function refreshToday(nowMs) {
+	const now = new Date(nowMs);
+	today_year = now.getFullYear();
+	today_month = now.getMonth();
+	today_day = now.getDate();
+	today_from = new Date(today_year, today_month, today_day, 0, 0, 0, 0).getTime();
+	today_until = new Date(today_year, today_month, today_day + 1, 0, 0, 0, 0).getTime();
+}
+
+/**
+ * Parses bare time-of-day strings onto today's date in a single charCode pass (no split()).
+ * Acceptance is bit-identical to the legacy validator/regex set:
+ *   24-hour "HH:mm[:ss[.SSS]]" with hours 00-29 (24+ rolls into the next day),
+ *   12-hour "hh:mm[:ss[.SSS]] AM|PM" with hours 01-12 (uppercase meridiem only).
+ * Everything else returns false and must keep falling through — e.g. "12:30:60" reaches the
+ * native parser, which reads ":60" as a 2-digit year (locked legacy behavior).
+ *
+ * detected_format quirks are load-bearing (tests and timezone reinterpretation key off them):
+ * zero seconds report 'HH:mm' ("14:30:00", "02:30 PM" and "02:30:00 PM" all detect as
+ * 'HH:mm'), and ".000" milliseconds do not count as a .SSS match.
+ *
+ * @param {KkDate} kk
+ * @param {string} s - string with ":" at index 2 and length <= 15
+ * @param {number} len
+ * @returns {boolean}
+ */
+function parseTimeOnly(kk, s, len) {
+	let hours = num2(s, 0);
+	const minutes = num2(s, 3);
+	if (hours < 0 || minutes < 0 || minutes > 59) {
+		return false;
+	}
+	let seconds = 0;
+	let hasSeconds = false;
+	let milliseconds = 0;
+	let end = 5; // index just past "HH:mm"
+	if (len >= 8 && s.charCodeAt(5) === 58) {
+		seconds = num2(s, 6);
+		if (seconds < 0 || seconds > 59) {
+			return false;
+		}
+		hasSeconds = true;
+		end = 8;
+		if (len >= 12 && s.charCodeAt(8) === 46) {
+			const msHi = num2(s, 9);
+			const msLo = s.charCodeAt(11) - 48;
+			if (msHi < 0 || msLo < 0 || msLo > 9) {
+				return false;
+			}
+			milliseconds = msHi * 10 + msLo;
+			end = 12;
+		}
+	}
+	let isTwelveHour = false;
+	if (end !== len) {
+		// Only a literal " AM"/" PM" tail may remain (12-hour forms).
+		if (len !== end + 3 || s.charCodeAt(end) !== 32 || s.charCodeAt(end + 2) !== 77 || hours < 1 || hours > 12) {
+			return false;
+		}
+		const meridiem = s.charCodeAt(end + 1);
+		if (meridiem === 65) {
+			if (hours === 12) {
+				hours = 0;
+			}
+		} else if (meridiem === 80) {
+			if (hours !== 12) {
+				hours += 12;
+			}
+		} else {
+			return false;
+		}
+		isTwelveHour = true;
+	} else if (hours > 29) {
+		return false;
+	}
+	const nowMs = Date.now();
+	if (nowMs < today_from || nowMs >= today_until) {
+		refreshToday(nowMs);
+	}
+	// Hours 24-29 spill into the following day through the day argument — the same
+	// normalization the legacy setDate() + setHours() pair produced.
+	const extraDay = hours >= 24 ? 1 : 0;
+	kk.date = new Date(today_year, today_month, today_day + extraDay, hours - extraDay * 24, minutes, seconds, milliseconds);
+	if (milliseconds !== 0) {
+		kk.detected_format = isTwelveHour ? format_types['hh:mm:ss.SSS'] : format_types['HH:mm:ss.SSS'];
+	} else if (hasSeconds && seconds !== 0) {
+		kk.detected_format = isTwelveHour ? format_types['hh:mm:ss'] : format_types['HH:mm:ss'];
+	} else {
+		kk.detected_format = format_types['HH:mm'];
+	}
+	return true;
+}
+
+/**
+ * Exact-shape ISO parser built straight from charCodes:
+ *   len 19 "YYYY-MM-DDTHH:mm:ss"      → local time (utc = false)
+ *   len 20 "YYYY-MM-DDTHH:mm:ssZ"     → UTC
+ *   len 24 "YYYY-MM-DDTHH:mm:ss.SSSZ" → UTC
+ * Day overflow rolls exactly like the native parser; the shapes where native semantics
+ * differ from the numeric constructors (month 13, hour 24, year < 100 two-digit mapping)
+ * return false so the caller's native `new Date(string)` keeps producing the locked result.
+ *
+ * @param {KkDate} kk
+ * @param {string} s
+ * @param {number} len - 19, 20 or 24 (already checked by the caller)
+ * @param {boolean} utc
+ * @returns {boolean}
+ */
+function parseIsoExact(kk, s, len, utc) {
+	if (s.charCodeAt(13) !== 58 || s.charCodeAt(16) !== 58) {
+		return false;
+	}
+	const year = num4(s, 0);
+	const month = num2(s, 5);
+	const day = num2(s, 8);
+	const hours = num2(s, 11);
+	const minutes = num2(s, 14);
+	const seconds = num2(s, 17);
+	if (
+		year < 100 ||
+		month < 1 ||
+		month > 12 ||
+		day < 1 ||
+		day > 31 ||
+		hours < 0 ||
+		hours > 23 ||
+		minutes < 0 ||
+		minutes > 59 ||
+		seconds < 0 ||
+		seconds > 59
+	) {
+		return false;
+	}
+	let milliseconds = 0;
+	if (len === 24) {
+		if (s.charCodeAt(19) !== 46) {
+			return false;
+		}
+		const msHi = num2(s, 20);
+		const msLo = s.charCodeAt(22) - 48;
+		if (msHi < 0 || msLo < 0 || msLo > 9) {
+			return false;
+		}
+		milliseconds = msHi * 10 + msLo;
+	}
+	kk.date = utc
+		? new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds, milliseconds))
+		: new Date(year, month - 1, day, hours, minutes, seconds, milliseconds);
+	return true;
+}
+
+/**
+ * Claims a full-year "YYYY(sep)MM(sep)DD HH:mm[:ss]" input from fixed charCode offsets.
+ * Only called after the template's validator accepted the string, so fields are digits and
+ * hours are 00-29; hours 24-29 spill into the next day (legacy overflow result).
+ */
+function claimYmdDateTime(kk, s, template, withSeconds) {
+	const hours = cc2(s, 11);
+	const day = cc2(s, 8);
+	const extraDay = hours >= 24 ? 1 : 0;
+	kk.date = new Date(cc4(s, 0), cc2(s, 5) - 1, day + extraDay, hours - extraDay * 24, cc2(s, 14), withSeconds ? cc2(s, 17) : 0, 0);
+	kk.detected_format = format_types[template];
+	return true;
+}
+
+/** Mirror of claimYmdDateTime for "DD(sep)MM(sep)YYYY HH:mm[:ss]" layouts. */
+function claimDmyDateTime(kk, s, template, withSeconds) {
+	const hours = cc2(s, 11);
+	const day = cc2(s, 0);
+	const extraDay = hours >= 24 ? 1 : 0;
+	kk.date = new Date(cc4(s, 6), cc2(s, 3) - 1, day + extraDay, hours - extraDay * 24, cc2(s, 14), withSeconds ? cc2(s, 17) : 0, 0);
+	kk.detected_format = format_types[template];
+	return true;
+}
+
+/**
+ * Legacy construction for the rare 2-digit-year datetime shapes ("15-01-24 14:30", ...).
+ * The exact split()-based pipeline is preserved — including the string round-trips — because
+ * V8's string parser defines their (locked, often Invalid) results.
+ */
+function claimShortYearDateTime(kk, s, template, sep, dayFirst, withSeconds) {
+	const [datePart, timePart] = s.split(' ');
+	const dateParts = datePart.split(sep);
+	const year = dayFirst ? dateParts[2] : dateParts[0];
+	const month = dateParts[1];
+	const day = dayFirst ? dateParts[0] : dateParts[2];
+	const timeParts = timePart.split(':').map(Number);
+	const hours = timeParts[0];
+	if (hours >= 24) {
+		const extraDays = Math.floor(hours / 24);
+		const dateObj = fastLocalDate(year, month, day);
+		dateObj.setDate(dateObj.getDate() + extraDays);
+		const newDay = String(dateObj.getDate()).padStart(2, '0');
+		const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
+		const newYear = dateObj.getFullYear();
+		const hoursText = (hours % 24).toString().padStart(2, '0');
+		const minutesText = timeParts[1].toString().padStart(2, '0');
+		kk.date = withSeconds
+			? new Date(`${newYear}-${newMonth}-${newDay}T${hoursText}:${minutesText}:${timeParts[2].toString().padStart(2, '0')}`)
+			: new Date(`${newYear}-${newMonth}-${newDay}T${hoursText}:${minutesText}`);
+	} else {
+		kk.date = fastLocalDateTime(year, month, day, timePart);
+	}
+	kk.detected_format = format_types[template];
+	return true;
+}
+
+/**
+ * Numeric date shapes ("-" / "." separated and compact digits), dispatched by length and
+ * separator position. Branch order inside each length class preserves the legacy ladder's
+ * claim precedence for overlapping shapes (dot DD.MM.YY before dot YY.MM.DD, dash YY-MM-DD
+ * before dash DD-MM-YY, ...).
+ *
+ * @param {KkDate} kk
+ * @param {string} s
+ * @param {number} len
+ * @param {number} probe2 - charCodeAt(2)
+ * @param {number} probe4 - charCodeAt(4)
+ * @returns {boolean}
+ */
+function parseNumericDate(kk, s, len, probe2, probe4) {
+	switch (len) {
+		case 19: {
+			if (probe2 === 46 && isValid(s, format_types['DD.MM.YYYY HH:mm:ss'])) {
+				return claimDmyDateTime(kk, s, 'DD.MM.YYYY HH:mm:ss', true);
+			}
+			if (probe4 === 45 && isValid(s, format_types['YYYY-MM-DD HH:mm:ss'])) {
+				return claimYmdDateTime(kk, s, 'YYYY-MM-DD HH:mm:ss', true);
+			}
+			if (probe4 === 46 && isValid(s, format_types['YYYY.MM.DD HH:mm:ss'])) {
+				return claimYmdDateTime(kk, s, 'YYYY.MM.DD HH:mm:ss', true);
+			}
+			if (probe2 === 45 && isValid(s, format_types['DD-MM-YYYY HH:mm:ss'])) {
+				return claimDmyDateTime(kk, s, 'DD-MM-YYYY HH:mm:ss', true);
+			}
+			return false;
+		}
+		case 16: {
+			if (probe2 === 46 && isValid(s, format_types['DD.MM.YYYY HH:mm'])) {
+				return claimDmyDateTime(kk, s, 'DD.MM.YYYY HH:mm', false);
+			}
+			if (probe4 === 45 && isValid(s, format_types['YYYY-MM-DD HH:mm'])) {
+				return claimYmdDateTime(kk, s, 'YYYY-MM-DD HH:mm', false);
+			}
+			if (probe4 === 46 && isValid(s, format_types['YYYY.MM.DD HH:mm'])) {
+				return claimYmdDateTime(kk, s, 'YYYY.MM.DD HH:mm', false);
+			}
+			if (probe2 === 45 && isValid(s, format_types['DD-MM-YYYY HH:mm'])) {
+				return claimDmyDateTime(kk, s, 'DD-MM-YYYY HH:mm', false);
+			}
+			return false;
+		}
+		case 10: {
+			if (probe2 === 46 && isValid(s, format_types['DD.MM.YYYY'])) {
+				kk.date = new Date(cc4(s, 6), cc2(s, 3) - 1, cc2(s, 0), 0, 0, 0, 0);
+				kk.detected_format = format_types['DD.MM.YYYY'];
+				return true;
+			}
+			if (probe2 === 45 && isValid(s, format_types['DD-MM-YYYY'])) {
+				kk.date = new Date(cc4(s, 6), cc2(s, 3) - 1, cc2(s, 0), 0, 0, 0, 0);
+				kk.detected_format = format_types['DD-MM-YYYY'];
+				return true;
+			}
+			if (probe4 === 45 && isValid(s, format_types['YYYY-DD-MM'])) {
+				kk.date = new Date(cc4(s, 0), cc2(s, 8) - 1, cc2(s, 5), 0, 0, 0, 0);
+				kk.detected_format = format_types['YYYY-DD-MM'];
+				return true;
+			}
+			// New rung: date-only "YYYY.MM.DD" previously fell through to the native parser with
+			// the same resulting instant; out-of-range shapes still do (e.g. "2300.01.15").
+			if (probe4 === 46 && isValid(s, format_types['YYYY.MM.DD'])) {
+				kk.date = new Date(cc4(s, 0), cc2(s, 5) - 1, cc2(s, 8), 0, 0, 0, 0);
+				kk.detected_format = format_types['YYYY.MM.DD'];
+				return true;
+			}
+			return false;
+		}
+		case 7: {
+			if (probe4 === 45 && isValid(s, format_types['YYYY-MM'])) {
+				kk.date = new Date(cc4(s, 0), cc2(s, 5) - 1, 1, 0, 0, 0, 0);
+				kk.detected_format = format_types['YYYY-MM'];
+				return true;
+			}
+			return false;
+		}
+		case 17: {
+			// 2-digit-year datetime shapes share separator positions; ladder order decides.
+			if (probe2 === 46) {
+				if (isValid(s, format_types['DD.MM.YYYY HH:mm:ss'])) {
+					return claimShortYearDateTime(kk, s, 'DD.MM.YYYY HH:mm:ss', '.', true, true);
+				}
+				if (isValid(s, format_types['YYYY.MM.DD HH:mm:ss'])) {
+					return claimShortYearDateTime(kk, s, 'YYYY.MM.DD HH:mm:ss', '.', false, true);
+				}
+			} else if (probe2 === 45) {
+				if (isValid(s, format_types['YYYY-MM-DD HH:mm:ss'])) {
+					return claimShortYearDateTime(kk, s, 'YYYY-MM-DD HH:mm:ss', '-', false, true);
+				}
+				if (isValid(s, format_types['DD-MM-YYYY HH:mm:ss'])) {
+					return claimShortYearDateTime(kk, s, 'DD-MM-YYYY HH:mm:ss', '-', true, true);
+				}
+			}
+			return false;
+		}
+		case 14: {
+			if (probe2 === 46) {
+				if (isValid(s, format_types['DD.MM.YYYY HH:mm'])) {
+					return claimShortYearDateTime(kk, s, 'DD.MM.YYYY HH:mm', '.', true, false);
+				}
+				if (isValid(s, format_types['YYYY.MM.DD HH:mm'])) {
+					return claimShortYearDateTime(kk, s, 'YYYY.MM.DD HH:mm', '.', false, false);
+				}
+				return false;
+			}
+			if (probe2 === 45) {
+				if (isValid(s, format_types['YYYY-MM-DD HH:mm'])) {
+					return claimShortYearDateTime(kk, s, 'YYYY-MM-DD HH:mm', '-', false, false);
+				}
+				if (isValid(s, format_types['DD-MM-YYYY HH:mm'])) {
+					return claimShortYearDateTime(kk, s, 'DD-MM-YYYY HH:mm', '-', true, false);
+				}
+				return false;
+			}
+			if (isValid(s, format_types['YYYYMMDDHHmmss'])) {
+				kk.date = new Date(cc4(s, 0), cc2(s, 4) - 1, cc2(s, 6), cc2(s, 8), cc2(s, 10), cc2(s, 12), 0);
+				kk.detected_format = format_types['YYYYMMDDHHmmss'];
+				return true;
+			}
+			return false;
+		}
+		case 12: {
+			if (isValid(s, format_types['YYYYMMDDHHmmss'])) {
+				// Legacy body verbatim: fixed substrings produce a truncated string for
+				// 12-char inputs, whose (Invalid) native-parse result is locked.
+				const year = s.substring(0, 4);
+				const month = s.substring(4, 6);
+				const day = s.substring(6, 8);
+				const hour = s.substring(8, 10);
+				const minute = s.substring(10, 12);
+				const second = s.substring(12, 14);
+				kk.date = new Date(`${year}-${month}-${day} ${hour}:${minute}:${second}`);
+				kk.detected_format = format_types['YYYYMMDDHHmmss'];
+				return true;
+			}
+			return false;
+		}
+		case 8: {
+			if (probe2 === 46 && isValid(s, format_types['DD.MM.YYYY'])) {
+				const [day, month, year] = s.split('.');
+				kk.date = fastLocalDate(year, month, day);
+				kk.detected_format = format_types['DD.MM.YYYY'];
+				return true;
+			}
+			if (probe2 === 45 && isValid(s, format_types['DD-MM-YYYY'])) {
+				const [day, month, year] = s.split('-');
+				kk.date = fastLocalDate(year, month, day);
+				kk.detected_format = format_types['DD-MM-YYYY'];
+				return true;
+			}
+			if (probe2 !== 46 && probe2 !== 45 && isValid(s, format_types['YYYYMMDD'])) {
+				kk.date = new Date(cc4(s, 0), cc2(s, 4) - 1, cc2(s, 6), 0, 0, 0, 0);
+				kk.detected_format = format_types['YYYYMMDD'];
+				return true;
+			}
+			return false;
+		}
+		case 6: {
+			if (isValid(s, format_types['YYYYMMDD'])) {
+				// Legacy body verbatim for the short compact form (locked Invalid result).
+				const year = String(s.substring(0, 4), 10);
+				const month = String(s.substring(4, 6), 10);
+				const day = String(s.substring(6, 8), 10);
+				kk.date = new Date(`${year}-${month}-${day} 00:00:00`);
+				kk.detected_format = format_types['YYYYMMDD'];
+				return true;
+			}
+			return false;
+		}
+		default:
+			return false;
+	}
+}
+
+/**
+ * Legacy text-format regex chain — the cold fallback for every string the fast paths decline
+ * (2-digit-year text forms, tab-separated ordinals, embedded 'Do' matches, unknown month
+ * names, ...), ending in the native `new Date(string)` parser. Bodies are the original rung
+ * bodies, verbatim: their string round-trip construction defines the locked results.
+ *
+ * @param {KkDate} kk
+ * @param {string} date
+ * @param {boolean} has_space
+ * @returns {boolean} always true (kk.date is always assigned, possibly an Invalid Date)
+ */
+function parseTextLegacy(kk, date, has_space) {
+	if (has_space && isValid(date, format_types['DD MMMM YYYY'])) {
+		const parts = date.split(' ');
+		const day = parseInt(parts[0], 10).toString();
+		const month = isValidMonth(parts[1]);
+		const year = parts[2];
+		kk.date = new Date(`${year}-${month}-${day.padStart(2, '0')} 00:00:00`); // Ensure day is padded for Date constructor
+		kk.detected_format = format_types['DD MMMM YYYY'];
+	} else if (has_space && isValid(date, format_types['DD MMMM dddd'])) {
+		const currentYear = new Date().getFullYear();
+		const parts = date.split(' '); // e.g., ['01', 'January', 'Monday']
+		const day = parts[0];
+		const month = isValidMonth(parts[1]);
+		kk.date = new Date(`${currentYear}-${month}-${day} 00:00:00`);
+		kk.detected_format = format_types['DD MMMM dddd'];
+	} else if (has_space && isValid(date, format_types['D MMMM YYYY'])) {
+		const parts = date.split(' '); // e.g., ['1', 'January', '2024'] or ['01', 'January', '2024']
+		const day = parts[0];
+		const year = parts[2];
+		const month = isValidMonth(parts[1]);
+		kk.date = new Date(`${year}-${month}-${day.padStart(2, '0')} 00:00:00`); // Ensure day is padded for Date constructor
+		kk.detected_format = format_types['D MMMM YYYY'];
+	} else if (has_space && isValid(date, format_types['YYYY MMM DD'])) {
+		const parts = date.split(' ');
+		const year = parts[0];
+		const month = isValidMonth(parts[1]);
+		const day = parts[2];
+		kk.date = new Date(`${year}-${month}-${day.padStart(2, '0')} 00:00:00`); // Ensure day is padded for Date constructor
+		kk.detected_format = format_types['YYYY MMM DD'];
+	} else if (isValid(date, format_types['Do MMM YYYY'])) {
+		const parts = date.split(' ');
+		const day = parseInt(parts[0], 10).toString();
+		const month = isValidMonth(parts[1]);
+		const year = parts[2];
+		kk.date = new Date(`${year}-${month}-${day.padStart(2, '0')} 00:00:00`); // Ensure day is padded for Date constructor
+		kk.detected_format = format_types['Do MMM YYYY'];
+	} else if (has_space && isValid(date, format_types['DD MMMM dddd, YYYY'])) {
+		const parts = date.split(' ');
+		const day = parseInt(parts[0], 10).toString();
+		const month = isValidMonth(parts[1]);
+		const year = parts[3];
+		kk.date = new Date(`${year}-${month}-${day.padStart(2, '0')} 00:00:00`); // Ensure day is padded for Date constructor
+		kk.detected_format = format_types['DD MMMM dddd, YYYY'];
+	} else if (has_space && isValid(date, format_types['dddd, DD MMMM YYYY'])) {
+		const parts = date.split(' ');
+		const day = parseInt(parts[1], 10).toString();
+		const month = isValidMonth(parts[2]);
+		const year = parts[3];
+		kk.date = new Date(`${year}-${month}-${day.padStart(2, '0')} 00:00:00`); // Ensure day is padded for Date constructor
+		kk.detected_format = format_types['dddd, DD MMMM YYYY'];
+	} else if (has_space && isValid(date, format_types['DD MMMM'])) {
+		const currentYear = new Date().getFullYear();
+		const parts = date.split(' ');
+		const day = parts[0];
+		const month = isValidMonth(parts[1]);
+		kk.date = new Date(`${currentYear}-${month}-${day.padStart(2, '0')} 00:00:00`);
+		kk.detected_format = format_types['DD MMMM'];
+	} else {
+		kk.date = new Date(`${date}`);
+	}
+	return true;
+}
+
+/**
+ * Auto-detects and parses a string input, assigning kk.date and kk.detected_format.
+ *
+ * @param {KkDate} kk
+ * @param {string} date
+ * @returns {boolean} the constructor's is_can_cache flag (auto-detected YYYY-MM-DD is not
+ * cached; every other claim — including the native fallback — is; legacy behavior)
+ */
+function parseStringInput(kk, date) {
+	const len = date.length;
+	const probe2 = date.charCodeAt(2);
+	const probe4 = date.charCodeAt(4);
+	// Hottest shape first; also claims the lenient 2-digit-year "YY-MM-DD" (legacy precedence).
+	if ((probe2 === 45 || probe4 === 45) && isValid(date, format_types['YYYY-MM-DD'])) {
+		if (len === 10) {
+			kk.date = new Date(cc4(date, 0), cc2(date, 5) - 1, cc2(date, 8), 0, 0, 0, 0);
+		} else {
+			const [year, month, day] = date.split('-');
+			kk.date = fastLocalDate(year, month, day);
+		}
+		kk.detected_format = 'YYYY-MM-DD';
+		return false;
+	}
+	if (probe2 === 58 && len <= 15 && parseTimeOnly(kk, date, len)) {
+		return true;
+	}
+	if (date.charCodeAt(len - 1) === 90 && date.indexOf('T') !== -1) {
+		// UTC ISO strings; the exact 20/24-char shapes skip the native string parser.
+		if (!((len === 20 || len === 24) && parseIsoExact(kk, date, len, true))) {
+			kk.date = new Date(date);
+		}
+		kk.detected_format = 'ISO8601';
+		return true;
+	}
+	if (probe4 === 45 && date.charCodeAt(7) === 45 && date.charCodeAt(10) === 84) {
+		// ISO datetime without a Z/offset suffix, matched precisely by shape "____-__-__T…"
+		// (dashes at index 4 & 7, 'T' at 10) so weekday-name inputs like "Tuesday, …" are not
+		// caught. detected_format stays null, matching the legacy behavior of this shape.
+		if (!(len === 19 && parseIsoExact(kk, date, len, false))) {
+			kk.date = new Date(date);
+		}
+		return true;
+	}
+	if (parseNumericDate(kk, date, len, probe2, probe4)) {
+		return true;
+	}
+	const has_space = date.indexOf(' ') !== -1;
+	if (has_space && tryParseTextDate(kk, date)) {
+		return true;
+	}
+	return parseTextLegacy(kk, date, has_space);
+}
+
 class KkDate {
 	/**
 	 * Constructs a KkDate instance with the given input and format.
@@ -208,27 +741,16 @@ class KkDate {
 			}
 			if (!forced_format_founded && !cached) {
 				is_can_cache = false;
-				// Cheap shape probes for the detection ladder below: every guarded regex pins its
-				// first separator to index 2 or 4 (2-digit day / 2-or-4-digit year), so a mismatched
-				// charCode skips the regex test entirely. Non-string inputs keep the unguarded
-				// legacy path (isValid coerces them), so behavior is unchanged.
-				const is_str_input = typeof date === 'string';
-				const probe2 = is_str_input ? date.charCodeAt(2) : 0;
-				const probe4 = is_str_input ? date.charCodeAt(4) : 0;
-				const maybe_dash = !is_str_input || probe2 === 45 || probe4 === 45;
-				const maybe_dot = !is_str_input || probe2 === 46 || probe4 === 46;
-				const maybe_space = !is_str_input || date.indexOf(' ') !== -1;
-				const maybe_compact = !is_str_input || date.length === 14 || date.length === 12 || date.length === 8 || date.length === 6;
-				if (Number.isInteger(date)) {
+				if (typeof date === 'string') {
+					is_can_cache = parseStringInput(this, date);
+				} else if (Number.isInteger(date)) {
 					const stringed_date_length = `${date}`.length;
 					if (stringed_date_length <= 10) {
 						// Unix timestamp (seconds) - always create as UTC
-						const utcDate = new Date(date * 1000);
-						this.date = utcDate;
-					} else if (stringed_date_length > 10) {
+						this.date = new Date(date * 1000);
+					} else {
 						// JavaScript timestamp (milliseconds) - always create as UTC
-						const utcDate = new Date(date);
-						this.date = utcDate;
+						this.date = new Date(date);
 					}
 					this.detected_format = 'Xx';
 				} else if (date instanceof KkDate) {
@@ -239,357 +761,11 @@ class KkDate {
 					// Clone from Date object - preserve the exact time
 					this.date = new Date(date.getTime());
 					this.detected_format = 'now';
-				} else if (maybe_dash && isValid(date, format_types['YYYY-MM-DD'])) {
-					if (date.length === 10) {
-						this.date = new Date(cc4(date, 0), cc2(date, 5) - 1, cc2(date, 8), 0, 0, 0, 0);
-					} else {
-						const [year, month, day] = date.split('-');
-						this.date = fastLocalDate(year, month, day);
-					}
-					this.detected_format = 'YYYY-MM-DD';
 				} else {
-					is_can_cache = true;
-					// Time-only formats are all <= 15 chars ("hh:mm:ss.SSS AM"); any longer string is a
-					// date/datetime, so skip the six time-format regex tests for it. The typeof guard keeps
-					// non-string inputs (e.g. null) falling through to the invalid-date fallback below.
-					if (
-						typeof date === 'string' &&
-						date.length <= 15 &&
-						probe2 === 58 &&
-						(isValid(date, format_types['HH:mm:ss.SSS']) ||
-							isValid(date, format_types['HH:mm:ss']) ||
-							isValid(date, format_types['HH:mm']) ||
-							isValid(date, format_types['hh:mm']) ||
-							isValid(date, format_types['hh:mm:ss']) ||
-							isValid(date, format_types['hh:mm:ss.SSS']))
-					) {
-						let [hours, minutes, seconds] = date.split(':').map((n) => parseInt(n, 10));
-						const milliseconds = parseInt(date.split('.')[1] || 0, 10);
-						const seconds_isNaN = Number.isNaN(seconds);
-						const finalSeconds = seconds_isNaN || !seconds ? 0 : seconds;
-						const ampm = date.split(' ')[1];
-						if (ampm) {
-							if (ampm === 'AM') {
-								if (hours === 12) {
-									hours = 0;
-								}
-							}
-							if (ampm === 'PM') {
-								if (hours !== 12) {
-									hours += 12;
-								}
-							}
-						}
-						if (hours >= 24) {
-							const extraDays = Math.floor(hours / 24);
-							const remainingHours = hours % 24;
-							const currentDate = new Date();
-							currentDate.setDate(currentDate.getDate() + extraDays);
-							currentDate.setHours(remainingHours, minutes, finalSeconds, 0);
-							this.date = currentDate;
-						} else {
-							const currentDate = new Date();
-							currentDate.setHours(hours, minutes, finalSeconds, 0);
-							this.date = currentDate;
-						}
-						if (milliseconds) {
-							this.date.setMilliseconds(milliseconds);
-							if (ampm) {
-								this.detected_format = format_types['hh:mm:ss.SSS'];
-							} else {
-								this.detected_format = format_types['HH:mm:ss.SSS'];
-							}
-						} else if (seconds && !seconds_isNaN) {
-							if (ampm) {
-								this.detected_format = format_types['hh:mm:ss'];
-							} else {
-								this.detected_format = format_types['HH:mm:ss'];
-							}
-						} else if (ampm && seconds_isNaN) {
-							this.detected_format = format_types['hh:mm'];
-						} else {
-							this.detected_format = format_types['HH:mm'];
-						}
-					} else {
-						this.date = false;
-						// Handle ISO strings (UTC strings with Z suffix) directly without timezone conversion
-						if (typeof date === 'string' && date.includes('T') && date.endsWith('Z')) {
-							this.date = new Date(date);
-							this.detected_format = 'ISO8601';
-						} else if (typeof date === 'string' && date.charCodeAt(4) === 45 && date.charCodeAt(7) === 45 && date.charCodeAt(10) === 84) {
-							// ISO datetime without a Z/offset suffix, matched precisely by shape "____-__-__T…"
-							// (dashes at index 4 & 7, 'T' at 10) so weekday-name inputs like "Tuesday, …" are not
-							// caught. No ladder format uses a 'T' date/time separator, so these previously fell all
-							// the way through to the new Date(`${date}`) fallback; short-circuit to the identical
-							// parse (detected_format stays null, matching the old behavior).
-							this.date = new Date(date);
-						} else if (maybe_dot && isValid(date, format_types['DD.MM.YYYY HH:mm:ss'])) {
-							const [datePart, timePart] = date.split(' ');
-							const [day, month, year] = datePart.split('.');
-							const [hours, minutes, seconds] = timePart.split(':').map(Number);
-							if (hours >= 24) {
-								const extraDays = Math.floor(hours / 24);
-
-								const dateObj = fastLocalDate(year, month, day);
-								dateObj.setDate(dateObj.getDate() + extraDays);
-
-								const newDay = String(dateObj.getDate()).padStart(2, '0');
-								const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
-								const newYear = dateObj.getFullYear();
-
-								this.date = new Date(
-									`${newYear}-${newMonth}-${newDay}T${(hours % 24).toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`,
-								);
-							} else {
-								this.date = fastLocalDateTime(year, month, day, timePart);
-							}
-							this.detected_format = format_types['DD.MM.YYYY HH:mm:ss'];
-						} else if (maybe_dot && isValid(date, format_types['DD.MM.YYYY HH:mm'])) {
-							const [datePart, timePart] = date.split(' ');
-							const [day, month, year] = datePart.split('.');
-							const [hours, minutes] = timePart.split(':').map(Number);
-							if (hours >= 24) {
-								const extraDays = Math.floor(hours / 24);
-
-								const dateObj = fastLocalDate(year, month, day);
-								dateObj.setDate(dateObj.getDate() + extraDays);
-
-								const newDay = String(dateObj.getDate()).padStart(2, '0');
-								const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
-								const newYear = dateObj.getFullYear();
-
-								this.date = new Date(
-									`${newYear}-${newMonth}-${newDay}T${(hours % 24).toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`,
-								);
-							} else {
-								this.date = fastLocalDateTime(year, month, day, timePart);
-							}
-							this.detected_format = format_types['DD.MM.YYYY HH:mm'];
-						} else if (maybe_dot && isValid(date, format_types['DD.MM.YYYY'])) {
-							const [day, month, year] = date.split('.');
-							this.date = fastLocalDate(year, month, day);
-							this.detected_format = format_types['DD.MM.YYYY'];
-						} else if (maybe_dash && isValid(date, format_types['YYYY-MM-DD HH:mm:ss'])) {
-							if (date.length === 19 && cc2(date, 11) < 24) {
-								// 4-digit year, wall-clock hours: no day overflow possible, build directly
-								// from charCodes (overflow hours 24-29 keep the legacy path below).
-								this.date = new Date(cc4(date, 0), cc2(date, 5) - 1, cc2(date, 8), cc2(date, 11), cc2(date, 14), cc2(date, 17), 0);
-								this.detected_format = format_types['YYYY-MM-DD HH:mm:ss'];
-							} else {
-								const [datePart, timePart] = date.split(' ');
-								const [year, month, day] = datePart.split('-');
-								const [hours, minutes, seconds] = timePart.split(':').map(Number);
-								if (hours >= 24) {
-									const extraDays = Math.floor(hours / 24);
-									const dateObj = fastLocalDate(year, month, day);
-									dateObj.setDate(dateObj.getDate() + extraDays);
-
-									const newDay = String(dateObj.getDate()).padStart(2, '0');
-									const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
-									const newYear = dateObj.getFullYear();
-
-									this.date = new Date(
-										`${newYear}-${newMonth}-${newDay}T${(hours % 24).toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`,
-									);
-								} else {
-									this.date = fastLocalDateTime(year, month, day, timePart);
-								}
-								this.detected_format = format_types['YYYY-MM-DD HH:mm:ss'];
-							}
-						} else if (maybe_dash && isValid(date, format_types['YYYY-MM-DD HH:mm'])) {
-							const [datePart, timePart] = date.split(' ');
-							const [year, month, day] = datePart.split('-');
-							const [hours, minutes] = timePart.split(':').map(Number);
-							if (hours >= 24) {
-								const extraDays = Math.floor(hours / 24);
-								const dateObj = fastLocalDate(year, month, day);
-								dateObj.setDate(dateObj.getDate() + extraDays);
-
-								const newDay = String(dateObj.getDate()).padStart(2, '0');
-								const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
-								const newYear = dateObj.getFullYear();
-
-								this.date = new Date(
-									`${newYear}-${newMonth}-${newDay}T${(hours % 24).toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`,
-								);
-							} else {
-								this.date = fastLocalDateTime(year, month, day, timePart);
-							}
-							this.detected_format = format_types['YYYY-MM-DD HH:mm'];
-						} else if (maybe_dot && isValid(date, format_types['YYYY.MM.DD HH:mm:ss'])) {
-							const [datePart, timePart] = date.split(' ');
-							const [year, month, day] = datePart.split('.');
-							const [hours, minutes, seconds] = timePart.split(':').map(Number);
-							if (hours >= 24) {
-								const extraDays = Math.floor(hours / 24);
-
-								const dateObj = fastLocalDate(year, month, day);
-								dateObj.setDate(dateObj.getDate() + extraDays);
-
-								const newDay = String(dateObj.getDate()).padStart(2, '0');
-								const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
-								const newYear = dateObj.getFullYear();
-
-								this.date = new Date(
-									`${newYear}-${newMonth}-${newDay}T${(hours % 24).toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`,
-								);
-							} else {
-								this.date = fastLocalDateTime(year, month, day, timePart);
-							}
-							this.detected_format = format_types['YYYY.MM.DD HH:mm:ss'];
-						} else if (maybe_dot && isValid(date, format_types['YYYY.MM.DD HH:mm'])) {
-							const [datePart, timePart] = date.split(' ');
-							const [year, month, day] = datePart.split('.');
-							const [hours, minutes] = timePart.split(':').map(Number);
-							if (hours >= 24) {
-								const extraDays = Math.floor(hours / 24);
-
-								const dateObj = fastLocalDate(year, month, day);
-								dateObj.setDate(dateObj.getDate() + extraDays);
-
-								const newDay = String(dateObj.getDate()).padStart(2, '0');
-								const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
-								const newYear = dateObj.getFullYear();
-
-								this.date = new Date(
-									`${newYear}-${newMonth}-${newDay}T${(hours % 24).toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`,
-								);
-							} else {
-								this.date = fastLocalDateTime(year, month, day, timePart);
-							}
-							this.detected_format = format_types['YYYY.MM.DD HH:mm'];
-						} else if (maybe_dash && isValid(date, format_types['DD-MM-YYYY'])) {
-							const [day, month, year] = date.split('-');
-							this.date = fastLocalDate(year, month, day);
-							this.detected_format = format_types['DD-MM-YYYY'];
-						} else if (maybe_dash && isValid(date, format_types['DD-MM-YYYY HH:mm:ss'])) {
-							const [datePart, timePart] = date.split(' ');
-							const [day, month, year] = datePart.split('-');
-							const [hours, minutes, seconds] = timePart.split(':').map(Number);
-							if (hours >= 24) {
-								const extraDays = Math.floor(hours / 24);
-
-								const dateObj = fastLocalDate(year, month, day);
-								dateObj.setDate(dateObj.getDate() + extraDays);
-
-								const newDay = String(dateObj.getDate()).padStart(2, '0');
-								const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
-								const newYear = dateObj.getFullYear();
-
-								this.date = new Date(
-									`${newYear}-${newMonth}-${newDay}T${(hours % 24).toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`,
-								);
-							} else {
-								this.date = fastLocalDateTime(year, month, day, timePart);
-							}
-							this.detected_format = format_types['DD-MM-YYYY HH:mm:ss'];
-						} else if (maybe_dash && isValid(date, format_types['DD-MM-YYYY HH:mm'])) {
-							const [datePart, timePart] = date.split(' ');
-							const [day, month, year] = datePart.split('-');
-							const [hours, minutes] = timePart.split(':').map(Number);
-							if (hours >= 24) {
-								const extraDays = Math.floor(hours / 24);
-
-								const dateObj = fastLocalDate(year, month, day);
-								dateObj.setDate(dateObj.getDate() + extraDays);
-
-								const newDay = String(dateObj.getDate()).padStart(2, '0');
-								const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
-								const newYear = dateObj.getFullYear();
-
-								this.date = new Date(
-									`${newYear}-${newMonth}-${newDay}T${(hours % 24).toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`,
-								);
-							} else {
-								this.date = fastLocalDateTime(year, month, day, timePart);
-							}
-							this.detected_format = format_types['DD-MM-YYYY HH:mm'];
-						} else if (maybe_space && isValid(date, format_types['DD MMMM YYYY'])) {
-							const parts = date.split(' ');
-							const day = parseInt(parts[0], 10).toString();
-							const month = isValidMonth(parts[1]);
-							const year = parts[2];
-							this.date = new Date(`${year}-${month}-${day.padStart(2, '0')} 00:00:00`); // Ensure day is padded for Date constructor
-							this.detected_format = format_types['DD MMMM YYYY'];
-						} else if (maybe_compact && isValid(date, format_types['YYYYMMDDHHmmss'])) {
-							const year = date.substring(0, 4);
-							const month = date.substring(4, 6);
-							const day = date.substring(6, 8);
-							const hour = date.substring(8, 10);
-							const minute = date.substring(10, 12);
-							const second = date.substring(12, 14);
-							this.date = new Date(`${year}-${month}-${day} ${hour}:${minute}:${second}`);
-							this.detected_format = format_types['YYYYMMDDHHmmss'];
-						} else if (maybe_compact && isValid(date, format_types['YYYYMMDD'])) {
-							const year = String(date.substring(0, 4), 10); // Extract year
-							const month = String(date.substring(4, 6), 10); // Extract month
-							const day = String(date.substring(6, 8), 10); // Extract day
-							// substring() always yields a 4-char year, so guard on the full 8-char input:
-							// a short (2-digit-year) match keeps the legacy string form, which rejects it.
-							this.date = date.length === 8 ? new Date(+year, +month - 1, +day, 0, 0, 0, 0) : new Date(`${year}-${month}-${day} 00:00:00`);
-							this.detected_format = format_types['YYYYMMDD'];
-						} else if (maybe_dash && isValid(date, format_types['YYYY-MM'])) {
-							const [year, month] = date.split('-');
-							this.date = fastLocalDate(year, month, '01');
-							this.detected_format = format_types['YYYY-MM'];
-						} else if (maybe_space && isValid(date, format_types['DD MMMM dddd'])) {
-							const currentYear = new Date().getFullYear();
-							const parts = date.split(' '); // e.g., ['01', 'January', 'Monday']
-							const day = parts[0];
-							const month = isValidMonth(parts[1]);
-							this.date = new Date(`${currentYear}-${month}-${day} 00:00:00`);
-							this.detected_format = format_types['DD MMMM dddd'];
-						} else if (maybe_dash && isValid(date, format_types['YYYY-DD-MM'])) {
-							const [year, day, month] = date.split('-');
-							this.date = fastLocalDate(year, month, day);
-							this.detected_format = format_types['YYYY-DD-MM'];
-						} else if (maybe_space && isValid(date, format_types['D MMMM YYYY'])) {
-							const parts = date.split(' '); // e.g., ['1', 'January', '2024'] or ['01', 'January', '2024']
-							const day = parts[0];
-							const year = parts[2];
-							const month = isValidMonth(parts[1]);
-							this.date = new Date(`${year}-${month}-${day.padStart(2, '0')} 00:00:00`); // Ensure day is padded for Date constructor
-							this.detected_format = format_types['D MMMM YYYY'];
-						} else if (maybe_space && isValid(date, format_types['YYYY MMM DD'])) {
-							const parts = date.split(' ');
-							const year = parts[0];
-							const month = isValidMonth(parts[1]);
-							const day = parts[2];
-							this.date = new Date(`${year}-${month}-${day.padStart(2, '0')} 00:00:00`); // Ensure day is padded for Date constructor
-							this.detected_format = format_types['YYYY MMM DD'];
-						} else if (isValid(date, format_types['Do MMM YYYY'])) {
-							const parts = date.split(' ');
-							const day = parseInt(parts[0], 10).toString();
-							const month = isValidMonth(parts[1]);
-							const year = parts[2];
-							this.date = new Date(`${year}-${month}-${day.padStart(2, '0')} 00:00:00`); // Ensure day is padded for Date constructor
-							this.detected_format = format_types['Do MMM YYYY'];
-						} else if (maybe_space && isValid(date, format_types['DD MMMM dddd, YYYY'])) {
-							const parts = date.split(' ');
-							const day = parseInt(parts[0], 10).toString();
-							const month = isValidMonth(parts[1]);
-							const year = parts[3];
-							this.date = new Date(`${year}-${month}-${day.padStart(2, '0')} 00:00:00`); // Ensure day is padded for Date constructor
-							this.detected_format = format_types['DD MMMM dddd, YYYY'];
-						} else if (maybe_space && isValid(date, format_types['dddd, DD MMMM YYYY'])) {
-							const parts = date.split(' ');
-							const day = parseInt(parts[1], 10).toString();
-							const month = isValidMonth(parts[2]);
-							const year = parts[3];
-							this.date = new Date(`${year}-${month}-${day.padStart(2, '0')} 00:00:00`); // Ensure day is padded for Date constructor
-							this.detected_format = format_types['dddd, DD MMMM YYYY'];
-						} else if (maybe_space && isValid(date, format_types['DD MMMM'])) {
-							const currentYear = new Date().getFullYear();
-							const parts = date.split(' ');
-							const day = parts[0];
-							const month = isValidMonth(parts[1]);
-							this.date = new Date(`${currentYear}-${month}-${day.padStart(2, '0')} 00:00:00`);
-							this.detected_format = format_types['DD MMMM'];
-						}
-						if (this.date === false) {
-							this.date = new Date(`${date}`);
-						}
-					}
+					// Exotic inputs (null, floats, plain objects): parse their string coercion —
+					// the legacy ladder validated the same coercion before running its bodies, and
+					// non-parseable values still end at the native Invalid Date throw below.
+					is_can_cache = parseStringInput(this, `${date}`);
 				}
 			}
 

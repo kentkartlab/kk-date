@@ -6,6 +6,7 @@ const {
 	month_numbers,
 	timeInMilliseconds,
 	format_types,
+	format_types_regex,
 	cached_dateTimeFormat,
 	timezone_cache,
 	timezone_check_cache,
@@ -141,14 +142,24 @@ for (const key in iso6391_languages) {
 }
 
 /**
+ * Month name (any supported language, long or short form) to its 1-based month number.
+ *
+ * @param {string} monthName
+ * @returns {number} 1-12, or 0 when the name is unknown
+ */
+function getMonthNumber(monthName) {
+	return months[monthName.toLowerCase()] || 0;
+}
+
+/**
  * if valid will be turn english month name
  *
  * @param {string} monthName
  * @returns {string|Boolean}
  */
 function isValidMonth(monthName) {
-	const monthNameLower = monthName.toLowerCase();
-	return months[monthNameLower] ? month_numbers[months[monthNameLower]] : false;
+	const monthNumber = getMonthNumber(monthName);
+	return monthNumber ? month_numbers[monthNumber] : false;
 }
 
 /**
@@ -160,6 +171,124 @@ function isValidMonth(monthName) {
 function isValidDayName(dayname) {
 	const dayNameLower = dayname.toLowerCase();
 	return days[dayNameLower] ? day_numbers[days[dayNameLower]] : false;
+}
+
+// Ordinal day tokens accepted by the 'Do MMM YYYY' template ("1st", "3.", "1er", "3-й", ...).
+const ORDINAL_DAY_TOKEN = /^\d{1,2}(st|nd|rd|th|\.|er|ème|te|º|ª|-й|वां|日|일|z|день)$/u;
+
+// Length of an all-ASCII-digit token, or 0 when any character is not a digit.
+function digitCount(token) {
+	const len = token.length;
+	for (let i = 0; i < len; i++) {
+		const code = token.charCodeAt(i);
+		if (code < 48 || code > 57) {
+			return 0;
+		}
+	}
+	return len;
+}
+
+/**
+ * Claims a text-month input for `template` when — and only when — the happy path is certain:
+ * the template's own legacy regex accepts the whole string, the month name is known, and the
+ * day is within the range the legacy string round-trip accepted (native parsing of
+ * "YYYY-MonthName-DD" is Invalid for day > 31 and rolls like the numeric constructor below it).
+ * Every other shape returns false so the caller's legacy ladder handles it byte-identically.
+ *
+ * @param {KkDate} kkDate
+ * @param {string} input - the full raw input (regex verification target)
+ * @param {string} template - key into format_types / format_types_regex
+ * @param {number} year
+ * @param {string} monthToken - month name token, any supported language
+ * @param {number} day
+ * @returns {boolean} true when claimed (kkDate.date and kkDate.detected_format are set)
+ */
+function claimTextDate(kkDate, input, template, year, monthToken, day) {
+	if (day < 1 || day > 31 || !format_types_regex[template].test(input)) {
+		return false;
+	}
+	const monthNumber = getMonthNumber(monthToken);
+	if (!monthNumber) {
+		return false;
+	}
+	kkDate.date = new Date(year, monthNumber - 1, day, 0, 0, 0, 0);
+	kkDate.detected_format = format_types[template];
+	return true;
+}
+
+/**
+ * Fast path for common text-month inputs ("15 January 2024", "Monday, 15 January 2024", ...):
+ * predicts the template from the token layout, then delegates to claimTextDate which verifies
+ * with the template's original regex — so acceptance is bit-identical to the legacy ladder.
+ * Prediction order mirrors the ladder's claim precedence for overlapping layouts
+ * (DD MMMM YYYY before D MMMM YYYY, ordinal Do before the 4-token forms).
+ *
+ * Declined shapes (2-digit years, unknown month names, day tokens with junk, extra or
+ * tab-separated tokens, ...) return false and MUST keep falling through to the legacy chain.
+ *
+ * @param {KkDate} kkDate
+ * @param {string} input - constructor string input containing at least one space
+ * @returns {boolean} true when claimed
+ */
+function tryParseTextDate(kkDate, input) {
+	const parts = input.split(' ');
+	const count = parts.length;
+	if (count === 3) {
+		const dayDigits = digitCount(parts[0]);
+		const lastDigits = digitCount(parts[2]);
+		if (dayDigits >= 1 && dayDigits <= 2) {
+			if (lastDigits === 4) {
+				// "15 January 2024" — the zero-padded single-digit day belongs to D MMMM YYYY
+				return (
+					claimTextDate(kkDate, input, 'DD MMMM YYYY', +parts[2], parts[1], +parts[0]) ||
+					claimTextDate(kkDate, input, 'D MMMM YYYY', +parts[2], parts[1], +parts[0])
+				);
+			}
+			if (lastDigits === 0) {
+				// "15 January Monday" — the weekday token is not validated (legacy behavior)
+				return claimTextDate(kkDate, input, 'DD MMMM dddd', new Date().getFullYear(), parts[1], +parts[0]);
+			}
+			return false;
+		}
+		if (dayDigits === 4 && lastDigits === 2) {
+			// "2024 Jan 15"
+			return claimTextDate(kkDate, input, 'YYYY MMM DD', +parts[0], parts[1], +parts[2]);
+		}
+		if (dayDigits === 0 && lastDigits === 4 && ORDINAL_DAY_TOKEN.test(parts[0])) {
+			// "1st Jan 2024" — legacy 'Do MMM YYYY' accepts any 4-digit year
+			return claimTextDate(kkDate, input, 'Do MMM YYYY', +parts[2], parts[1], parseInt(parts[0], 10));
+		}
+		return false;
+	}
+	if (count === 4) {
+		if (digitCount(parts[3]) !== 4) {
+			return false;
+		}
+		const day = digitCount(parts[1]) ? +parts[1] : +parts[0];
+		if (parts[0].charCodeAt(parts[0].length - 1) === 44) {
+			// "Monday, 15 January 2024"
+			return claimTextDate(kkDate, input, 'dddd, DD MMMM YYYY', +parts[3], parts[2], day);
+		}
+		if (parts[2].charCodeAt(parts[2].length - 1) === 44) {
+			// "15 January Monday, 2024" — detected_format is the real template here; the legacy
+			// rung historically mislabeled it (see the constructor ladder).
+			return claimTextDate(kkDate, input, 'DD MMMM dddd, YYYY', +parts[3], parts[1], +parts[0]);
+		}
+		return false;
+	}
+	if (count === 2) {
+		const dayDigits = digitCount(parts[0]);
+		if (dayDigits >= 1 && dayDigits <= 2) {
+			// "15 January" — current year (legacy behavior)
+			return claimTextDate(kkDate, input, 'DD MMMM', new Date().getFullYear(), parts[1], +parts[0]);
+		}
+		if (dayDigits === 0 && digitCount(parts[1]) === 4) {
+			// "January 2024" — new rung with no legacy equivalent: unknown month names must keep
+			// falling through so inputs like "Blah 2024" keep their legacy native-parse result.
+			return claimTextDate(kkDate, input, 'MMMM YYYY', +parts[1], parts[0], 1);
+		}
+	}
+	return false;
 }
 
 /**
@@ -1911,6 +2040,10 @@ module.exports.compileFormat = compileFormat;
 module.exports.getCompiledTemplate = getCompiledTemplate;
 module.exports.isValidMonth = isValidMonth;
 module.exports.isValidDayName = isValidDayName;
+module.exports.getMonthNumber = getMonthNumber;
+module.exports.tryParseTextDate = tryParseTextDate;
+module.exports.num2 = num2;
+module.exports.num4 = num4;
 module.exports.getOrdinal = getOrdinal;
 module.exports.getDayOfWeek = getDayOfWeek;
 module.exports.getDayOfYear = getDayOfYear;
