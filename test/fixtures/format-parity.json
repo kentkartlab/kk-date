@@ -23758,5 +23758,4845 @@
 		},
 		"template": "DD MMMM",
 		"expected": "19 August"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "YY-M-D",
+		"expected": "24-1-5"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "Q Qo Mo do wo Wo DDDo",
+		"expected": "1 1st 1st 5th 1st 1st 5th"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "DDD DDDD [day of year]",
+		"expected": "5 005 day of year"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Fr Fri Friday"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "e E d",
+		"expected": "5 5 5"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "[w]w [of] gggg gg",
+		"expected": "w1 of 2024 24"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "GGGG-[W]WW-E",
+		"expected": "2024-W01-5"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "ww/gggg",
+		"expected": "01/2024"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "k kk H m s",
+		"expected": "7 07 7 8 9"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "h:mm A",
+		"expected": "7:08 AM"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "S SS SSS SSSS SSSSSS SSSSSSSSS",
+		"expected": "0 00 000 0000 000000 000000000"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "YYYY-MM-DDTHH:mm:ssZ",
+		"expected": "2024-01-05T07:08:09+00:00"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "Z ZZ",
+		"expected": "+00:00 +0000"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "X [and] x",
+		"expected": "1704438489 and 1704438489000"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "YY-M-D",
+		"expected": "24-8-19"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "Q Qo Mo do wo Wo DDDo",
+		"expected": "3 3rd 8th 1st 34th 34th 232nd"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "DDD DDDD [day of year]",
+		"expected": "232 232 day of year"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Mo Mon Monday"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "e E d",
+		"expected": "1 1 1"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "[w]w [of] gggg gg",
+		"expected": "w34 of 2024 24"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "GGGG-[W]WW-E",
+		"expected": "2024-W34-1"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "ww/gggg",
+		"expected": "34/2024"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "k kk H m s",
+		"expected": "23 23 23 50 59"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "h:mm A",
+		"expected": "11:50 PM"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "S SS SSS SSSS SSSSSS SSSSSSSSS",
+		"expected": "0 00 000 0000 000000 000000000"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "YYYY-MM-DDTHH:mm:ssZ",
+		"expected": "2024-08-19T23:50:59+00:00"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "Z ZZ",
+		"expected": "+00:00 +0000"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "X [and] x",
+		"expected": "1724111459 and 1724111459000"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "YY-M-D",
+		"expected": "24-12-31"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "Q Qo Mo do wo Wo DDDo",
+		"expected": "4 4th 12th 2nd 1st 1st 366th"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "DDD DDDD [day of year]",
+		"expected": "366 366 day of year"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Tu Tue Tuesday"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "e E d",
+		"expected": "2 2 2"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "[w]w [of] gggg gg",
+		"expected": "w1 of 2025 25"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "GGGG-[W]WW-E",
+		"expected": "2025-W01-2"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "ww/gggg",
+		"expected": "01/2025"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "k kk H m s",
+		"expected": "24 24 0 0 0"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "h:mm A",
+		"expected": "12:00 AM"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "S SS SSS SSSS SSSSSS SSSSSSSSS",
+		"expected": "0 00 000 0000 000000 000000000"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "YYYY-MM-DDTHH:mm:ssZ",
+		"expected": "2024-12-31T00:00:00+00:00"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "Z ZZ",
+		"expected": "+00:00 +0000"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "X [and] x",
+		"expected": "1735603200 and 1735603200000"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "YY-M-D",
+		"expected": "24-2-29"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "Q Qo Mo do wo Wo DDDo",
+		"expected": "1 1st 2nd 4th 9th 9th 60th"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "DDD DDDD [day of year]",
+		"expected": "60 060 day of year"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Th Thu Thursday"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "e E d",
+		"expected": "4 4 4"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "[w]w [of] gggg gg",
+		"expected": "w9 of 2024 24"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "GGGG-[W]WW-E",
+		"expected": "2024-W09-4"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "ww/gggg",
+		"expected": "09/2024"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "k kk H m s",
+		"expected": "12 12 12 0 0"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "h:mm A",
+		"expected": "12:00 PM"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "S SS SSS SSSS SSSSSS SSSSSSSSS",
+		"expected": "0 00 000 0000 000000 000000000"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "YYYY-MM-DDTHH:mm:ssZ",
+		"expected": "2024-02-29T12:00:00+00:00"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "Z ZZ",
+		"expected": "+00:00 +0000"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "X [and] x",
+		"expected": "1709208000 and 1709208000000"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "YY-M-D",
+		"expected": "23-11-1"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "Q Qo Mo do wo Wo DDDo",
+		"expected": "4 4th 11th 3rd 44th 44th 305th"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "DDD DDDD [day of year]",
+		"expected": "305 305 day of year"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "dd ddd dddd",
+		"expected": "We Wed Wednesday"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "e E d",
+		"expected": "3 3 3"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "[w]w [of] gggg gg",
+		"expected": "w44 of 2023 23"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "GGGG-[W]WW-E",
+		"expected": "2023-W44-3"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "ww/gggg",
+		"expected": "44/2023"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "k kk H m s",
+		"expected": "13 13 13 5 0"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "h:mm A",
+		"expected": "1:05 PM"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "S SS SSS SSSS SSSSSS SSSSSSSSS",
+		"expected": "0 00 000 0000 000000 000000000"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "YYYY-MM-DDTHH:mm:ssZ",
+		"expected": "2023-11-01T13:05:00+00:00"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "Z ZZ",
+		"expected": "+00:00 +0000"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "X [and] x",
+		"expected": "1698843900 and 1698843900000"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "YY-M-D",
+		"expected": "25-6-1"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "Q Qo Mo do wo Wo DDDo",
+		"expected": "2 2nd 6th 0th 23rd 22nd 152nd"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "DDD DDDD [day of year]",
+		"expected": "152 152 day of year"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Su Sun Sunday"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "e E d",
+		"expected": "0 7 0"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "[w]w [of] gggg gg",
+		"expected": "w23 of 2025 25"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "GGGG-[W]WW-E",
+		"expected": "2025-W22-7"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "ww/gggg",
+		"expected": "23/2025"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "k kk H m s",
+		"expected": "4 04 4 0 0"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "h:mm A",
+		"expected": "4:00 AM"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "S SS SSS SSSS SSSSSS SSSSSSSSS",
+		"expected": "0 00 000 0000 000000 000000000"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "YYYY-MM-DDTHH:mm:ssZ",
+		"expected": "2025-06-01T04:00:00+00:00"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "Z ZZ",
+		"expected": "+00:00 +0000"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "X [and] x",
+		"expected": "1748750400 and 1748750400000"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "YY-M-D",
+		"expected": "24-3-7"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "Q Qo Mo do wo Wo DDDo",
+		"expected": "1 1st 3rd 4th 10th 10th 67th"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "DDD DDDD [day of year]",
+		"expected": "67 067 day of year"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Th Thu Thursday"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "e E d",
+		"expected": "4 4 4"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "[w]w [of] gggg gg",
+		"expected": "w10 of 2024 24"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "GGGG-[W]WW-E",
+		"expected": "2024-W10-4"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "ww/gggg",
+		"expected": "10/2024"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "k kk H m s",
+		"expected": "9 09 9 4 5"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "h:mm A",
+		"expected": "9:04 AM"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "S SS SSS SSSS SSSSSS SSSSSSSSS",
+		"expected": "0 00 007 0070 007000 007000000"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "YYYY-MM-DDTHH:mm:ssZ",
+		"expected": "2024-03-07T09:04:05+00:00"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "Z ZZ",
+		"expected": "+00:00 +0000"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "X [and] x",
+		"expected": "1709802245 and 1709802245007"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "YY-M-D",
+		"expected": "24-3-7"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "Q Qo Mo do wo Wo DDDo",
+		"expected": "1 1st 3rd 4th 10th 10th 67th"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "DDD DDDD [day of year]",
+		"expected": "67 067 day of year"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Th Thu Thursday"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "e E d",
+		"expected": "4 4 4"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "[w]w [of] gggg gg",
+		"expected": "w10 of 2024 24"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "GGGG-[W]WW-E",
+		"expected": "2024-W10-4"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "ww/gggg",
+		"expected": "10/2024"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "k kk H m s",
+		"expected": "9 09 9 4 5"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "h:mm A",
+		"expected": "9:04 AM"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "S SS SSS SSSS SSSSSS SSSSSSSSS",
+		"expected": "0 04 045 0450 045000 045000000"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "YYYY-MM-DDTHH:mm:ssZ",
+		"expected": "2024-03-07T09:04:05+00:00"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "Z ZZ",
+		"expected": "+00:00 +0000"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "X [and] x",
+		"expected": "1709802245 and 1709802245045"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "YY-M-D",
+		"expected": "24-3-7"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "Q Qo Mo do wo Wo DDDo",
+		"expected": "1 1st 3rd 4th 10th 10th 67th"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "DDD DDDD [day of year]",
+		"expected": "67 067 day of year"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Th Thu Thursday"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "e E d",
+		"expected": "4 4 4"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "[w]w [of] gggg gg",
+		"expected": "w10 of 2024 24"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "GGGG-[W]WW-E",
+		"expected": "2024-W10-4"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "ww/gggg",
+		"expected": "10/2024"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "k kk H m s",
+		"expected": "21 21 21 4 5"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "h:mm A",
+		"expected": "9:04 PM"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "S SS SSS SSSS SSSSSS SSSSSSSSS",
+		"expected": "3 34 345 3450 345000 345000000"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "YYYY-MM-DDTHH:mm:ssZ",
+		"expected": "2024-03-07T21:04:05+00:00"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "Z ZZ",
+		"expected": "+00:00 +0000"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "X [and] x",
+		"expected": "1709845445 and 1709845445345"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "YY-M-D",
+		"expected": "24-8-19"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "Q Qo Mo do wo Wo DDDo",
+		"expected": "3 3rd 8th 1st 34th 34th 232nd"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "DDD DDDD [day of year]",
+		"expected": "232 232 day of year"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "dd ddd dddd",
+		"expected": "Mo Mon Monday"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "e E d",
+		"expected": "1 1 1"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "[w]w [of] gggg gg",
+		"expected": "w34 of 2024 24"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "GGGG-[W]WW-E",
+		"expected": "2024-W34-1"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "ww/gggg",
+		"expected": "34/2024"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "k kk H m s",
+		"expected": "23 23 23 50 59"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "h:mm A",
+		"expected": "11:50 PM"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "S SS SSS SSSS SSSSSS SSSSSSSSS",
+		"expected": "0 00 000 0000 000000 000000000"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "YYYY-MM-DDTHH:mm:ssZ",
+		"expected": "2024-08-19T23:50:59+00:00"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "Z ZZ",
+		"expected": "+00:00 +0000"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "X [and] x",
+		"expected": "1724111459 and 1724111459000"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "YY-M-D",
+		"expected": "24-8-19"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "Q Qo Mo do wo Wo DDDo",
+		"expected": "3 3rd 8th 1st 34th 34th 232nd"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "DDD DDDD [day of year]",
+		"expected": "232 232 day of year"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "dd ddd dddd",
+		"expected": "Mo Mon Monday"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "e E d",
+		"expected": "1 1 1"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "[w]w [of] gggg gg",
+		"expected": "w34 of 2024 24"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "GGGG-[W]WW-E",
+		"expected": "2024-W34-1"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "ww/gggg",
+		"expected": "34/2024"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "k kk H m s",
+		"expected": "23 23 23 50 59"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "h:mm A",
+		"expected": "11:50 PM"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "S SS SSS SSSS SSSSSS SSSSSSSSS",
+		"expected": "3 34 345 3450 345000 345000000"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "YYYY-MM-DDTHH:mm:ssZ",
+		"expected": "2024-08-19T23:50:59+00:00"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "Z ZZ",
+		"expected": "+00:00 +0000"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "X [and] x",
+		"expected": "1724111459 and 1724111459345"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "YY-M-D",
+		"expected": "24-1-5"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "Q Qo Mo do wo Wo DDDo",
+		"expected": "1 1st 1st 5th 1st 1st 5th"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "DDD DDDD [day of year]",
+		"expected": "5 005 day of year"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Fr Fri Friday"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "e E d",
+		"expected": "5 5 5"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "[w]w [of] gggg gg",
+		"expected": "w1 of 2024 24"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "GGGG-[W]WW-E",
+		"expected": "2024-W01-5"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "ww/gggg",
+		"expected": "01/2024"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "k kk H m s",
+		"expected": "7 07 7 8 9"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "h:mm A",
+		"expected": "7:08 AM"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "S SS SSS SSSS SSSSSS SSSSSSSSS",
+		"expected": "0 00 000 0000 000000 000000000"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "YYYY-MM-DDTHH:mm:ssZ",
+		"expected": "2024-01-05T07:08:09+03:00"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "Z ZZ",
+		"expected": "+03:00 +0300"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "X [and] x",
+		"expected": "1704427689 and 1704427689000"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "YY-M-D",
+		"expected": "24-8-19"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "Q Qo Mo do wo Wo DDDo",
+		"expected": "3 3rd 8th 1st 34th 34th 232nd"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "DDD DDDD [day of year]",
+		"expected": "232 232 day of year"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Mo Mon Monday"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "e E d",
+		"expected": "1 1 1"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "[w]w [of] gggg gg",
+		"expected": "w34 of 2024 24"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "GGGG-[W]WW-E",
+		"expected": "2024-W34-1"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "ww/gggg",
+		"expected": "34/2024"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "k kk H m s",
+		"expected": "23 23 23 50 59"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "h:mm A",
+		"expected": "11:50 PM"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "S SS SSS SSSS SSSSSS SSSSSSSSS",
+		"expected": "0 00 000 0000 000000 000000000"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "YYYY-MM-DDTHH:mm:ssZ",
+		"expected": "2024-08-19T23:50:59+03:00"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "Z ZZ",
+		"expected": "+03:00 +0300"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "X [and] x",
+		"expected": "1724100659 and 1724100659000"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "YY-M-D",
+		"expected": "24-12-31"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "Q Qo Mo do wo Wo DDDo",
+		"expected": "4 4th 12th 2nd 1st 1st 366th"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "DDD DDDD [day of year]",
+		"expected": "366 366 day of year"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Tu Tue Tuesday"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "e E d",
+		"expected": "2 2 2"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "[w]w [of] gggg gg",
+		"expected": "w1 of 2025 25"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "GGGG-[W]WW-E",
+		"expected": "2025-W01-2"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "ww/gggg",
+		"expected": "01/2025"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "k kk H m s",
+		"expected": "24 24 0 0 0"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "h:mm A",
+		"expected": "12:00 AM"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "S SS SSS SSSS SSSSSS SSSSSSSSS",
+		"expected": "0 00 000 0000 000000 000000000"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "YYYY-MM-DDTHH:mm:ssZ",
+		"expected": "2024-12-31T00:00:00+03:00"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "Z ZZ",
+		"expected": "+03:00 +0300"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "X [and] x",
+		"expected": "1735592400 and 1735592400000"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "YY-M-D",
+		"expected": "24-2-29"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "Q Qo Mo do wo Wo DDDo",
+		"expected": "1 1st 2nd 4th 9th 9th 60th"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "DDD DDDD [day of year]",
+		"expected": "60 060 day of year"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Th Thu Thursday"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "e E d",
+		"expected": "4 4 4"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "[w]w [of] gggg gg",
+		"expected": "w9 of 2024 24"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "GGGG-[W]WW-E",
+		"expected": "2024-W09-4"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "ww/gggg",
+		"expected": "09/2024"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "k kk H m s",
+		"expected": "12 12 12 0 0"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "h:mm A",
+		"expected": "12:00 PM"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "S SS SSS SSSS SSSSSS SSSSSSSSS",
+		"expected": "0 00 000 0000 000000 000000000"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "YYYY-MM-DDTHH:mm:ssZ",
+		"expected": "2024-02-29T12:00:00+03:00"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "Z ZZ",
+		"expected": "+03:00 +0300"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "X [and] x",
+		"expected": "1709197200 and 1709197200000"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "YY-M-D",
+		"expected": "23-11-1"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "Q Qo Mo do wo Wo DDDo",
+		"expected": "4 4th 11th 3rd 44th 44th 305th"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "DDD DDDD [day of year]",
+		"expected": "305 305 day of year"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "dd ddd dddd",
+		"expected": "We Wed Wednesday"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "e E d",
+		"expected": "3 3 3"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "[w]w [of] gggg gg",
+		"expected": "w44 of 2023 23"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "GGGG-[W]WW-E",
+		"expected": "2023-W44-3"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "ww/gggg",
+		"expected": "44/2023"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "k kk H m s",
+		"expected": "13 13 13 5 0"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "h:mm A",
+		"expected": "1:05 PM"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "S SS SSS SSSS SSSSSS SSSSSSSSS",
+		"expected": "0 00 000 0000 000000 000000000"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "YYYY-MM-DDTHH:mm:ssZ",
+		"expected": "2023-11-01T13:05:00+03:00"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "Z ZZ",
+		"expected": "+03:00 +0300"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "X [and] x",
+		"expected": "1698833100 and 1698833100000"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "YY-M-D",
+		"expected": "25-6-1"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "Q Qo Mo do wo Wo DDDo",
+		"expected": "2 2nd 6th 0th 23rd 22nd 152nd"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "DDD DDDD [day of year]",
+		"expected": "152 152 day of year"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Su Sun Sunday"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "e E d",
+		"expected": "0 7 0"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "[w]w [of] gggg gg",
+		"expected": "w23 of 2025 25"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "GGGG-[W]WW-E",
+		"expected": "2025-W22-7"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "ww/gggg",
+		"expected": "23/2025"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "k kk H m s",
+		"expected": "4 04 4 0 0"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "h:mm A",
+		"expected": "4:00 AM"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "S SS SSS SSSS SSSSSS SSSSSSSSS",
+		"expected": "0 00 000 0000 000000 000000000"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "YYYY-MM-DDTHH:mm:ssZ",
+		"expected": "2025-06-01T04:00:00+03:00"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "Z ZZ",
+		"expected": "+03:00 +0300"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "X [and] x",
+		"expected": "1748739600 and 1748739600000"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "YY-M-D",
+		"expected": "24-3-7"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "Q Qo Mo do wo Wo DDDo",
+		"expected": "1 1st 3rd 4th 10th 10th 67th"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "DDD DDDD [day of year]",
+		"expected": "67 067 day of year"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Th Thu Thursday"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "e E d",
+		"expected": "4 4 4"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "[w]w [of] gggg gg",
+		"expected": "w10 of 2024 24"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "GGGG-[W]WW-E",
+		"expected": "2024-W10-4"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "ww/gggg",
+		"expected": "10/2024"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "k kk H m s",
+		"expected": "12 12 12 4 5"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "h:mm A",
+		"expected": "12:04 PM"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "S SS SSS SSSS SSSSSS SSSSSSSSS",
+		"expected": "0 00 007 0070 007000 007000000"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "YYYY-MM-DDTHH:mm:ssZ",
+		"expected": "2024-03-07T12:04:05+03:00"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "Z ZZ",
+		"expected": "+03:00 +0300"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "X [and] x",
+		"expected": "1709802245 and 1709802245007"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "YY-M-D",
+		"expected": "24-3-7"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "Q Qo Mo do wo Wo DDDo",
+		"expected": "1 1st 3rd 4th 10th 10th 67th"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "DDD DDDD [day of year]",
+		"expected": "67 067 day of year"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Th Thu Thursday"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "e E d",
+		"expected": "4 4 4"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "[w]w [of] gggg gg",
+		"expected": "w10 of 2024 24"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "GGGG-[W]WW-E",
+		"expected": "2024-W10-4"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "ww/gggg",
+		"expected": "10/2024"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "k kk H m s",
+		"expected": "12 12 12 4 5"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "h:mm A",
+		"expected": "12:04 PM"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "S SS SSS SSSS SSSSSS SSSSSSSSS",
+		"expected": "0 04 045 0450 045000 045000000"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "YYYY-MM-DDTHH:mm:ssZ",
+		"expected": "2024-03-07T12:04:05+03:00"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "Z ZZ",
+		"expected": "+03:00 +0300"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "X [and] x",
+		"expected": "1709802245 and 1709802245045"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "YY-M-D",
+		"expected": "24-3-8"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "Q Qo Mo do wo Wo DDDo",
+		"expected": "1 1st 3rd 5th 10th 10th 68th"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "DDD DDDD [day of year]",
+		"expected": "68 068 day of year"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Fr Fri Friday"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "e E d",
+		"expected": "5 5 5"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "[w]w [of] gggg gg",
+		"expected": "w10 of 2024 24"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "GGGG-[W]WW-E",
+		"expected": "2024-W10-5"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "ww/gggg",
+		"expected": "10/2024"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "k kk H m s",
+		"expected": "24 24 0 4 5"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "h:mm A",
+		"expected": "12:04 AM"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "S SS SSS SSSS SSSSSS SSSSSSSSS",
+		"expected": "3 34 345 3450 345000 345000000"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "YYYY-MM-DDTHH:mm:ssZ",
+		"expected": "2024-03-08T00:04:05+03:00"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "Z ZZ",
+		"expected": "+03:00 +0300"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "X [and] x",
+		"expected": "1709845445 and 1709845445345"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "YY-M-D",
+		"expected": "24-8-20"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "Q Qo Mo do wo Wo DDDo",
+		"expected": "3 3rd 8th 2nd 34th 34th 233rd"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "DDD DDDD [day of year]",
+		"expected": "233 233 day of year"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "dd ddd dddd",
+		"expected": "Tu Tue Tuesday"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "e E d",
+		"expected": "2 2 2"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "[w]w [of] gggg gg",
+		"expected": "w34 of 2024 24"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "GGGG-[W]WW-E",
+		"expected": "2024-W34-2"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "ww/gggg",
+		"expected": "34/2024"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "k kk H m s",
+		"expected": "2 02 2 50 59"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "h:mm A",
+		"expected": "2:50 AM"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "S SS SSS SSSS SSSSSS SSSSSSSSS",
+		"expected": "0 00 000 0000 000000 000000000"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "YYYY-MM-DDTHH:mm:ssZ",
+		"expected": "2024-08-20T02:50:59+03:00"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "Z ZZ",
+		"expected": "+03:00 +0300"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "X [and] x",
+		"expected": "1724111459 and 1724111459000"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "YY-M-D",
+		"expected": "24-8-20"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "Q Qo Mo do wo Wo DDDo",
+		"expected": "3 3rd 8th 2nd 34th 34th 233rd"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "DDD DDDD [day of year]",
+		"expected": "233 233 day of year"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "dd ddd dddd",
+		"expected": "Tu Tue Tuesday"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "e E d",
+		"expected": "2 2 2"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "[w]w [of] gggg gg",
+		"expected": "w34 of 2024 24"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "GGGG-[W]WW-E",
+		"expected": "2024-W34-2"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "ww/gggg",
+		"expected": "34/2024"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "k kk H m s",
+		"expected": "2 02 2 50 59"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "h:mm A",
+		"expected": "2:50 AM"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "S SS SSS SSSS SSSSSS SSSSSSSSS",
+		"expected": "3 34 345 3450 345000 345000000"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "YYYY-MM-DDTHH:mm:ssZ",
+		"expected": "2024-08-20T02:50:59+03:00"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "Z ZZ",
+		"expected": "+03:00 +0300"
+	},
+	{
+		"timezone": "Europe/Istanbul",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "X [and] x",
+		"expected": "1724111459 and 1724111459345"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "YY-M-D",
+		"expected": "24-1-5"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "Q Qo Mo do wo Wo DDDo",
+		"expected": "1 1st 1st 5th 1st 1st 5th"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "DDD DDDD [day of year]",
+		"expected": "5 005 day of year"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Fr Fri Friday"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "e E d",
+		"expected": "5 5 5"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "[w]w [of] gggg gg",
+		"expected": "w1 of 2024 24"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "GGGG-[W]WW-E",
+		"expected": "2024-W01-5"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "ww/gggg",
+		"expected": "01/2024"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "k kk H m s",
+		"expected": "7 07 7 8 9"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "h:mm A",
+		"expected": "7:08 AM"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "S SS SSS SSSS SSSSSS SSSSSSSSS",
+		"expected": "0 00 000 0000 000000 000000000"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "YYYY-MM-DDTHH:mm:ssZ",
+		"expected": "2024-01-05T07:08:09-05:00"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "Z ZZ",
+		"expected": "-05:00 -0500"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "X [and] x",
+		"expected": "1704456489 and 1704456489000"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "YY-M-D",
+		"expected": "24-8-19"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "Q Qo Mo do wo Wo DDDo",
+		"expected": "3 3rd 8th 1st 34th 34th 232nd"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "DDD DDDD [day of year]",
+		"expected": "232 232 day of year"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Mo Mon Monday"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "e E d",
+		"expected": "1 1 1"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "[w]w [of] gggg gg",
+		"expected": "w34 of 2024 24"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "GGGG-[W]WW-E",
+		"expected": "2024-W34-1"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "ww/gggg",
+		"expected": "34/2024"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "k kk H m s",
+		"expected": "23 23 23 50 59"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "h:mm A",
+		"expected": "11:50 PM"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "S SS SSS SSSS SSSSSS SSSSSSSSS",
+		"expected": "0 00 000 0000 000000 000000000"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "YYYY-MM-DDTHH:mm:ssZ",
+		"expected": "2024-08-19T23:50:59-04:00"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "Z ZZ",
+		"expected": "-04:00 -0400"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "X [and] x",
+		"expected": "1724125859 and 1724125859000"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "YY-M-D",
+		"expected": "24-12-31"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "Q Qo Mo do wo Wo DDDo",
+		"expected": "4 4th 12th 2nd 1st 1st 366th"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "DDD DDDD [day of year]",
+		"expected": "366 366 day of year"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Tu Tue Tuesday"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "e E d",
+		"expected": "2 2 2"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "[w]w [of] gggg gg",
+		"expected": "w1 of 2025 25"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "GGGG-[W]WW-E",
+		"expected": "2025-W01-2"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "ww/gggg",
+		"expected": "01/2025"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "k kk H m s",
+		"expected": "24 24 0 0 0"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "h:mm A",
+		"expected": "12:00 AM"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "S SS SSS SSSS SSSSSS SSSSSSSSS",
+		"expected": "0 00 000 0000 000000 000000000"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "YYYY-MM-DDTHH:mm:ssZ",
+		"expected": "2024-12-31T00:00:00-05:00"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "Z ZZ",
+		"expected": "-05:00 -0500"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "X [and] x",
+		"expected": "1735621200 and 1735621200000"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "YY-M-D",
+		"expected": "24-2-29"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "Q Qo Mo do wo Wo DDDo",
+		"expected": "1 1st 2nd 4th 9th 9th 60th"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "DDD DDDD [day of year]",
+		"expected": "60 060 day of year"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Th Thu Thursday"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "e E d",
+		"expected": "4 4 4"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "[w]w [of] gggg gg",
+		"expected": "w9 of 2024 24"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "GGGG-[W]WW-E",
+		"expected": "2024-W09-4"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "ww/gggg",
+		"expected": "09/2024"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "k kk H m s",
+		"expected": "12 12 12 0 0"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "h:mm A",
+		"expected": "12:00 PM"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "S SS SSS SSSS SSSSSS SSSSSSSSS",
+		"expected": "0 00 000 0000 000000 000000000"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "YYYY-MM-DDTHH:mm:ssZ",
+		"expected": "2024-02-29T12:00:00-05:00"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "Z ZZ",
+		"expected": "-05:00 -0500"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "X [and] x",
+		"expected": "1709226000 and 1709226000000"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "YY-M-D",
+		"expected": "23-11-1"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "Q Qo Mo do wo Wo DDDo",
+		"expected": "4 4th 11th 3rd 44th 44th 305th"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "DDD DDDD [day of year]",
+		"expected": "305 305 day of year"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "dd ddd dddd",
+		"expected": "We Wed Wednesday"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "e E d",
+		"expected": "3 3 3"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "[w]w [of] gggg gg",
+		"expected": "w44 of 2023 23"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "GGGG-[W]WW-E",
+		"expected": "2023-W44-3"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "ww/gggg",
+		"expected": "44/2023"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "k kk H m s",
+		"expected": "13 13 13 5 0"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "h:mm A",
+		"expected": "1:05 PM"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "S SS SSS SSSS SSSSSS SSSSSSSSS",
+		"expected": "0 00 000 0000 000000 000000000"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "YYYY-MM-DDTHH:mm:ssZ",
+		"expected": "2023-11-01T13:05:00-04:00"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "Z ZZ",
+		"expected": "-04:00 -0400"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "X [and] x",
+		"expected": "1698858300 and 1698858300000"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "YY-M-D",
+		"expected": "25-6-1"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "Q Qo Mo do wo Wo DDDo",
+		"expected": "2 2nd 6th 0th 23rd 22nd 152nd"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "DDD DDDD [day of year]",
+		"expected": "152 152 day of year"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Su Sun Sunday"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "e E d",
+		"expected": "0 7 0"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "[w]w [of] gggg gg",
+		"expected": "w23 of 2025 25"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "GGGG-[W]WW-E",
+		"expected": "2025-W22-7"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "ww/gggg",
+		"expected": "23/2025"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "k kk H m s",
+		"expected": "4 04 4 0 0"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "h:mm A",
+		"expected": "4:00 AM"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "S SS SSS SSSS SSSSSS SSSSSSSSS",
+		"expected": "0 00 000 0000 000000 000000000"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "YYYY-MM-DDTHH:mm:ssZ",
+		"expected": "2025-06-01T04:00:00-04:00"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "Z ZZ",
+		"expected": "-04:00 -0400"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "X [and] x",
+		"expected": "1748764800 and 1748764800000"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "YY-M-D",
+		"expected": "24-3-7"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "Q Qo Mo do wo Wo DDDo",
+		"expected": "1 1st 3rd 4th 10th 10th 67th"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "DDD DDDD [day of year]",
+		"expected": "67 067 day of year"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Th Thu Thursday"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "e E d",
+		"expected": "4 4 4"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "[w]w [of] gggg gg",
+		"expected": "w10 of 2024 24"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "GGGG-[W]WW-E",
+		"expected": "2024-W10-4"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "ww/gggg",
+		"expected": "10/2024"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "k kk H m s",
+		"expected": "4 04 4 4 5"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "h:mm A",
+		"expected": "4:04 AM"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "S SS SSS SSSS SSSSSS SSSSSSSSS",
+		"expected": "0 00 007 0070 007000 007000000"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "YYYY-MM-DDTHH:mm:ssZ",
+		"expected": "2024-03-07T04:04:05-05:00"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "Z ZZ",
+		"expected": "-05:00 -0500"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "X [and] x",
+		"expected": "1709802245 and 1709802245007"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "YY-M-D",
+		"expected": "24-3-7"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "Q Qo Mo do wo Wo DDDo",
+		"expected": "1 1st 3rd 4th 10th 10th 67th"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "DDD DDDD [day of year]",
+		"expected": "67 067 day of year"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Th Thu Thursday"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "e E d",
+		"expected": "4 4 4"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "[w]w [of] gggg gg",
+		"expected": "w10 of 2024 24"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "GGGG-[W]WW-E",
+		"expected": "2024-W10-4"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "ww/gggg",
+		"expected": "10/2024"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "k kk H m s",
+		"expected": "4 04 4 4 5"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "h:mm A",
+		"expected": "4:04 AM"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "S SS SSS SSSS SSSSSS SSSSSSSSS",
+		"expected": "0 04 045 0450 045000 045000000"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "YYYY-MM-DDTHH:mm:ssZ",
+		"expected": "2024-03-07T04:04:05-05:00"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "Z ZZ",
+		"expected": "-05:00 -0500"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "X [and] x",
+		"expected": "1709802245 and 1709802245045"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "YY-M-D",
+		"expected": "24-3-7"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "Q Qo Mo do wo Wo DDDo",
+		"expected": "1 1st 3rd 4th 10th 10th 67th"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "DDD DDDD [day of year]",
+		"expected": "67 067 day of year"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Th Thu Thursday"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "e E d",
+		"expected": "4 4 4"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "[w]w [of] gggg gg",
+		"expected": "w10 of 2024 24"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "GGGG-[W]WW-E",
+		"expected": "2024-W10-4"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "ww/gggg",
+		"expected": "10/2024"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "k kk H m s",
+		"expected": "16 16 16 4 5"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "h:mm A",
+		"expected": "4:04 PM"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "S SS SSS SSSS SSSSSS SSSSSSSSS",
+		"expected": "3 34 345 3450 345000 345000000"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "YYYY-MM-DDTHH:mm:ssZ",
+		"expected": "2024-03-07T16:04:05-05:00"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "Z ZZ",
+		"expected": "-05:00 -0500"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "X [and] x",
+		"expected": "1709845445 and 1709845445345"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "YY-M-D",
+		"expected": "24-8-19"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "Q Qo Mo do wo Wo DDDo",
+		"expected": "3 3rd 8th 1st 34th 34th 232nd"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "DDD DDDD [day of year]",
+		"expected": "232 232 day of year"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "dd ddd dddd",
+		"expected": "Mo Mon Monday"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "e E d",
+		"expected": "1 1 1"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "[w]w [of] gggg gg",
+		"expected": "w34 of 2024 24"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "GGGG-[W]WW-E",
+		"expected": "2024-W34-1"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "ww/gggg",
+		"expected": "34/2024"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "k kk H m s",
+		"expected": "19 19 19 50 59"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "h:mm A",
+		"expected": "7:50 PM"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "S SS SSS SSSS SSSSSS SSSSSSSSS",
+		"expected": "0 00 000 0000 000000 000000000"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "YYYY-MM-DDTHH:mm:ssZ",
+		"expected": "2024-08-19T19:50:59-04:00"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "Z ZZ",
+		"expected": "-04:00 -0400"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "X [and] x",
+		"expected": "1724111459 and 1724111459000"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "YY-M-D",
+		"expected": "24-8-19"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "Q Qo Mo do wo Wo DDDo",
+		"expected": "3 3rd 8th 1st 34th 34th 232nd"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "DDD DDDD [day of year]",
+		"expected": "232 232 day of year"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "dd ddd dddd",
+		"expected": "Mo Mon Monday"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "e E d",
+		"expected": "1 1 1"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "[w]w [of] gggg gg",
+		"expected": "w34 of 2024 24"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "GGGG-[W]WW-E",
+		"expected": "2024-W34-1"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "ww/gggg",
+		"expected": "34/2024"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "k kk H m s",
+		"expected": "19 19 19 50 59"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "h:mm A",
+		"expected": "7:50 PM"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "S SS SSS SSSS SSSSSS SSSSSSSSS",
+		"expected": "3 34 345 3450 345000 345000000"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "YYYY-MM-DDTHH:mm:ssZ",
+		"expected": "2024-08-19T19:50:59-04:00"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "Z ZZ",
+		"expected": "-04:00 -0400"
+	},
+	{
+		"timezone": "America/New_York",
+		"locale": "en",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "X [and] x",
+		"expected": "1724111459 and 1724111459345"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "tr",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Cu Cum Cuma"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "tr",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Pz Pzt Pazartesi"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "tr",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Sa Sal Salı"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "tr",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Pe Per Perşembe"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "tr",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Ça Çar Çarşamba"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "tr",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Pa Paz Pazar"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "tr",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Pe Per Perşembe"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "tr",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Pe Per Perşembe"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "tr",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Pe Per Perşembe"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "tr",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "dd ddd dddd",
+		"expected": "Pz Pzt Pazartesi"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "tr",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "dd ddd dddd",
+		"expected": "Pz Pzt Pazartesi"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "de",
+		"input": {
+			"kind": "string",
+			"value": "2024-01-05 07:08:09"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Fr Fr Freitag"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "de",
+		"input": {
+			"kind": "string",
+			"value": "2024-08-19 23:50:59"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Mo Mo Montag"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "de",
+		"input": {
+			"kind": "string",
+			"value": "2024-12-31 00:00:00"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Di Di Dienstag"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "de",
+		"input": {
+			"kind": "string",
+			"value": "2024-02-29 12:00:00"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Do Do Donnerstag"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "de",
+		"input": {
+			"kind": "string",
+			"value": "2023-11-01 13:05:00"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Mi Mi Mittwoch"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "de",
+		"input": {
+			"kind": "string",
+			"value": "2025-06-01 04:00:00"
+		},
+		"template": "dd ddd dddd",
+		"expected": "So So Sonntag"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "de",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.007Z"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Do Do Donnerstag"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "de",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T09:04:05.045Z"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Do Do Donnerstag"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "de",
+		"input": {
+			"kind": "string",
+			"value": "2024-03-07T21:04:05.345Z"
+		},
+		"template": "dd ddd dddd",
+		"expected": "Do Do Donnerstag"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "de",
+		"input": {
+			"kind": "number",
+			"value": 1724111459
+		},
+		"template": "dd ddd dddd",
+		"expected": "Mo Mo Montag"
+	},
+	{
+		"timezone": "UTC",
+		"locale": "de",
+		"input": {
+			"kind": "number",
+			"value": 1724111459345
+		},
+		"template": "dd ddd dddd",
+		"expected": "Mo Mo Montag"
 	}
 ]

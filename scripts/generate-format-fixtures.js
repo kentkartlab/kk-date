@@ -44,9 +44,48 @@ const blocks = [
 	{ timezone: 'UTC', locale: 'de', templates: name_templates },
 ];
 
+// v5 display tokens, run as a second pass so regenerating stays append-only
+// against the legacy matrix above. z/zz/zzz are deliberately absent: their
+// output is ICU-data-dependent and would make the fixture brittle across
+// Node builds (unit tests cover them with stable zones instead).
+const new_token_templates = [
+	'YY-M-D',
+	'Q Qo Mo do wo Wo DDDo',
+	'DDD DDDD [day of year]',
+	'dd ddd dddd',
+	'e E d',
+	'[w]w [of] gggg gg',
+	'GGGG-[W]WW-E',
+	'ww/gggg',
+	'k kk H m s',
+	'h:mm A',
+	'S SS SSS SSSS SSSSSS SSSSSSSSS',
+	'YYYY-MM-DDTHH:mm:ssZ',
+	'Z ZZ',
+	'X [and] x',
+];
+const new_token_name_templates = ['dd ddd dddd'];
+
+const new_token_blocks = [
+	{ timezone: 'UTC', locale: 'en', templates: new_token_templates },
+	{ timezone: 'Europe/Istanbul', locale: 'en', templates: new_token_templates },
+	{ timezone: 'America/New_York', locale: 'en', templates: new_token_templates },
+	{ timezone: 'UTC', locale: 'tr', templates: new_token_name_templates },
+	{ timezone: 'UTC', locale: 'de', templates: new_token_name_templates },
+];
+
 const entries = [];
 for (const block of blocks) {
 	kk_date.config({ timezone: block.timezone, locale: block.locale });
+	for (const input of inputs) {
+		for (const template of block.templates) {
+			const expected = new kk_date(input.value).format(template);
+			entries.push({ timezone: block.timezone, locale: block.locale, input, template, expected });
+		}
+	}
+}
+for (const block of new_token_blocks) {
+	kk_date.config({ timezone: block.timezone, locale: block.locale, weekStartDay: 0 });
 	for (const input of inputs) {
 		for (const template of block.templates) {
 			const expected = new kk_date(input.value).format(template);
