@@ -570,7 +570,7 @@ class KkDate {
 							const month = isValidMonth(parts[1]);
 							const year = parts[3];
 							this.date = new Date(`${year}-${month}-${day.padStart(2, '0')} 00:00:00`); // Ensure day is padded for Date constructor
-							this.detected_format = format_types['YYYY.MM.DD HH:mm'];
+							this.detected_format = format_types['DD MMMM dddd, YYYY'];
 						} else if (maybe_space && isValid(date, format_types['dddd, DD MMMM YYYY'])) {
 							const parts = date.split(' ');
 							const day = parseInt(parts[1], 10).toString();
