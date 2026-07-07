@@ -1,0 +1,103 @@
+name: Require version label
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled, unlabeled]
+    branches:
+      - dev
+      - main
+
+# Cancel superseded runs for the same PR
+concurrency:
+  group: version-label-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  require-version-label:
+    name: Version label check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      # Check out the repo to read package.json and compute the target version
+      - name: Check Out Repository
+        uses: actions/checkout@v4
+      - name: Validate version label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const wanted = ['patch version', 'minor version', 'major version'];
+            const labels = context.payload.pull_request.labels.map((l) => l.name);
+            const found = labels.filter((l) => wanted.includes(l));
+
+            // Compute the target semver from the current version based on the label
+            const nextVersion = (current, label) => {
+              const [maj, min, pat] = current.split('.').map(Number);
+              if (label === 'major version') return `${maj + 1}.0.0`;
+              if (label === 'minor version') return `${maj}.${min + 1}.0`;
+              return `${maj}.${min}.${pat + 1}`; // patch version
+            };
+
+            // Hidden marker so we update the same comment instead of posting new ones
+            const marker = '<!-- version-label-check -->';
+
+            // Update the existing bot comment, or create one (a comment failure must not fail the check)
+            const upsertComment = async (body) => {
+              try {
+                const { data: comments } = await github.rest.issues.listComments({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                });
+                const existing = comments.find((c) => c.body && c.body.includes(marker));
+                if (existing) {
+                  await github.rest.issues.updateComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    comment_id: existing.id,
+                    body,
+                  });
+                } else {
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: context.issue.number,
+                    body,
+                  });
+                }
+              } catch (e) {
+                core.warning('Could not post comment: ' + e.message);
+              }
+            };
+
+            if (found.length === 1) {
+              const current = JSON.parse(fs.readFileSync('package.json', 'utf8')).version;
+              const next = nextVersion(current, found[0]);
+              await upsertComment(
+                marker +
+                  '\n\n**Version label:** `' + found[0] + '`\n\n' +
+                  'After merge `' + current + '` -> `' + next + '` will be released; ' +
+                  'the `v' + next + '` git tag and a GitHub Release will be created automatically.'
+              );
+              return;
+            }
+
+            const reason =
+              found.length === 0
+                ? 'This PR has no version label.'
+                : 'This PR has multiple version labels: ' + found.map((l) => '`' + l + '`').join(', ') + '.';
+
+            await upsertComment(
+              marker +
+                '\n\n' +
+                reason +
+                '\n\nBefore merging, add **exactly one** of these labels: ' +
+                wanted.map((l) => '`' + l + '`').join(', ') +
+                '.\n\n_This comment updates automatically once you add the label._'
+            );
+
+            // Do not fail the check (no red X, merge is not blocked) — the comment is the reminder
+            core.warning(reason);

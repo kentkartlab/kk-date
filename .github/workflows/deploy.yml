@@ -13,6 +13,9 @@ jobs:
   automatic-version-update:
     name: Automatic version update
     runs-on: ubuntu-latest
+    # Write permission is required to create a release and push the bump commit
+    permissions:
+      contents: write
     if: ${{ (contains(toJson(github.event.pull_request.labels.*.name), 'patch version') || contains(toJson(github.event.pull_request.labels.*.name), 'minor version') || contains(toJson(github.event.pull_request.labels.*.name), 'major version')) && github.event.pull_request.merged == true }}
     steps:
       - name: Check Out Repository
@@ -23,28 +26,36 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 26
-      - name: Update Version
+      - name: Update version and push
+        env:
+          BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          PR_LABELS=$(jq --raw-output '.pull_request.labels[].name' $GITHUB_EVENT_PATH)
+          PR_LABELS=$(jq --raw-output '.pull_request.labels[].name' "$GITHUB_EVENT_PATH")
 
-          if [[ $PR_LABELS == *"minor version"* ]]; then
-            npm version minor --no-git-tag-version
-          elif [[ $PR_LABELS == *"major version"* ]]; then
+          if [[ $PR_LABELS == *"major version"* ]]; then
             npm version major --no-git-tag-version
+          elif [[ $PR_LABELS == *"minor version"* ]]; then
+            npm version minor --no-git-tag-version
           elif [[ $PR_LABELS == *"patch version"* ]]; then
             npm version patch --no-git-tag-version
           fi
 
-          version=$(node -p "require('./package.json').version")
-          git tag -a "v$version" -m "v$version"
-          git add .
-          git commit -am "Updated to version $version"
-      - name: Push Changes
-        uses: ad-m/github-push-action@v0.8.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: ${{ github.event.pull_request.base.ref }}
+          VERSION=$(node -p "require('./package.json').version")
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+          # Push the bump commit back to the base branch
+          git commit -am "Updated to version $VERSION"
+          git push origin "HEAD:$BASE_BRANCH"
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # The release is created on the base branch of the pull request, which is either dev or main.
+        run: |
+          gh release create "v$VERSION" \
+            --title "v$VERSION" \
+            --target "${{ github.event.pull_request.base.ref }}" \
+            --generate-notes
     outputs:
       status: ${{ job.status }}
