@@ -142,14 +142,19 @@ function derived(seq, comp) {
 	const tzXfloor = Math.floor(tzX / 10) * 10; // stable "over Nx" (only moves when it crosses a decade)
 	const tzXpct = round(tzX - 1) * 100; // Day.js takes ~this many % MORE time
 	const cachePct = round(comp.cache.improvementPct);
-	return { avgFaster, tzMaxFaster, tzXfloor, tzXpct, cachePct };
+	// Sequential scenarios where any competitor beats kk-date in THIS run — drives the
+	// win/concession wording below so the prose can never contradict the tables.
+	const lostScenarios = SEQ_ORDER.filter((name) => COMPETS.some((c) => seq.scenarios[name][c] < seq.scenarios[name]['kk-date']));
+	return { avgFaster, tzMaxFaster, tzXfloor, tzXpct, cachePct, lostScenarios };
 }
 
 function whyBullets(seq, comp) {
 	const d = derived(seq, comp);
 	return [
 		`- **⚡ Lightning Fast** - Over ${d.tzXfloor}x faster timezone operations than Day.js`,
-		`- **🚀 ~${d.avgFaster}% Faster Overall** - Wins most scenarios vs Moment.js, Day.js, and Luxon (Day.js is faster in isolated "Time Operations")`,
+		d.lostScenarios.length
+			? `- **🚀 ~${d.avgFaster}% Faster Overall** - Wins most scenarios vs Moment.js, Day.js, and Luxon (slower in isolated "${d.lostScenarios.join('", "')}")`
+			: `- **🚀 ~${d.avgFaster}% Faster Overall** - Fastest in every scenario vs Moment.js, Day.js, and Luxon`,
 		'- **💾 Memory Efficient** - Object pooling + LRU cache eviction keep long-running processes stable',
 		`- **⚙️ Smart Caching** - ~${d.cachePct}% faster repeated operations with built-in caching`,
 	].join('\n');
@@ -173,7 +178,9 @@ function perfMetricsBullets(seq, comp) {
 		`- **~${d.avgFaster}% faster** than the average of competing libraries (comprehensive benchmark)`,
 		`- **up to ~${d.tzMaxFaster}% faster** in timezone operations`,
 		`- **~${d.cachePct}% faster** with caching enabled`,
-		'- **kk-date does not win every scenario** — Day.js is faster in isolated "Time Operations"',
+		d.lostScenarios.length
+			? `- **kk-date does not win every scenario** — slower in isolated "${d.lostScenarios.join('", "')}"`
+			: '- **kk-date wins every scenario** in the current benchmark run',
 		'- **Net memory delta is GC-dependent** (often negative for several libraries); stability comes from object pooling + LRU eviction',
 		'- **Near-100% cache hit rate** for repeated operations',
 	].join('\n');

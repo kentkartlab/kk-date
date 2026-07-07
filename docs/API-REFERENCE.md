@@ -96,7 +96,10 @@ const utcDate = new kk_date('2024-08-23T10:30:00.000Z');
 
 #### `format(template)`
 
-Formats the date according to the specified template.
+Formats the date according to the specified template. Templates are compiled dynamically:
+any combination of the tokens below works, in any order, with any separator characters
+(literal words go in `[square brackets]`). Compiled templates are cached, so custom
+combinations are as fast as the predefined ones.
 
 **Parameters:**
 - `template` (string) - Format template
@@ -112,15 +115,25 @@ console.log(date.format('DD.MM.YYYY'));              // '23.08.2024'
 console.log(date.format('DD MMMM YYYY'));            // '23 August 2024'
 console.log(date.format('HH:mm'));                   // '10:30'
 console.log(date.format('YYYY-MM-DDTHH:mm:ss'));     // '2024-08-23T10:30:45'
+
+// Custom token combinations
+console.log(date.format('YYYYMM'));                  // '202408'
+console.log(date.format('YYYYHH'));                  // '202410'
+console.log(date.format('hh:mm A'));                 // '10:30 AM'
+console.log(date.format('[Today is] dddd'));         // 'Today is Friday'
 ```
 
-**Available Templates:**
+> **Removed in v5.0.0:** `format_c(separator, ...templates)` — use a single dynamic template instead
+> (see [Migrating from format_c](FORMATTING-GUIDE.md#migrating-from-format_c-removed-in-v500)).
 
-**Basic Templates:**
+**Tokens:**
 - `YYYY` - 4-digit year
 - `MM` - 2-digit month
 - `DD` - 2-digit day
+- `D` - day without padding
+- `Do` - ordinal day (1st, 2nd, ...)
 - `HH` - 2-digit hour (24-hour)
+- `hh` - 2-digit hour (12-hour)
 - `mm` - 2-digit minute
 - `ss` - 2-digit second
 - `SSS` - 3-digit millisecond
@@ -128,6 +141,7 @@ console.log(date.format('YYYY-MM-DDTHH:mm:ss'));     // '2024-08-23T10:30:45'
 - `MMM` - Short month name
 - `dddd` - Full weekday name
 - `ddd` - Short weekday name
+- `A` / `a` - Meridiem (`PM` / `pm`)
 
 **Date Format Templates:**
 - `YYYY-MM-DD` - ISO date format
@@ -151,6 +165,7 @@ console.log(date.format('YYYY-MM-DDTHH:mm:ss'));     // '2024-08-23T10:30:45'
 **Time Format Templates:**
 - `HH:mm:ss` - 24-hour time with seconds
 - `HH:mm` - 24-hour time without seconds
+- `mm:ss` - Minutes and seconds (e.g. durations/delays; parsed onto today's date)
 - `hh:mm:ss` - 12-hour time with seconds
 - `hh:mm` - 12-hour time without seconds
 - `HH:mm:ss.SSS` - 24-hour time with milliseconds
@@ -536,25 +551,6 @@ const date = new kk_date('2024-08-23 10:00:00');
 console.log(date.valueOf()); // 1724407200000
 ```
 
-#### `format_c(separator, ...templates)`
-
-Advanced formatting method that allows multiple templates with custom separator.
-
-**Parameters:**
-- `separator` (string, optional) - Separator between formatted parts (default: ' ')
-- `...templates` (string[]) - Format templates to apply
-
-**Returns:** (string) - Formatted string
-
-**Examples:**
-```javascript
-const date = new kk_date('2024-08-23 10:30:45');
-
-date.format_c(' ', 'YYYY-MM-DD', 'HH:mm:ss'); // '2024-08-23 10:30:45'
-date.format_c('T', 'YYYY-MM-DD', 'HH:mm:ss');  // '2024-08-23T10:30:45'
-date.format_c('-', 'DD', 'MM', 'YYYY');        // '23-08-2024'
-```
-
 #### `diff_range(startDate, endDate, unit?)`
 
 Calculates the difference between a date range.
@@ -728,7 +724,7 @@ kk_date.config({
 
 ### Utility Methods
 
-#### `isValid(input, format)`
+#### `isValid(input, format, is_strict?)`
 
 Checks whether a date string matches a given format template.
 
@@ -736,9 +732,17 @@ Checks whether a date string matches a given format template.
 
 **Parameters:**
 - `input` (string) - Date string to validate
-- `format` (string, **required**) - Format to validate against ('YYYY-MM-DD', 'YYYY-DD-MM', etc.). Omitting it throws `Error: Invalid template !`.
+- `format` (string, **required**) - Format to validate against. Accepts every predefined template ('YYYY-MM-DD', 'HH:mm:ss', 'mm:ss', etc.) **plus any display-token template** the formatter understands (e.g. 'DD/MM/YYYY HH:mm'), compiled on first use. Omitting it, or passing a template with no recognizable token, throws `Error: Invalid template !`.
+- `is_strict` (boolean, optional, default `false`) - Layers wall-clock semantics on top of the shape check, matching moment's strict parsing: 4-digit years (1700-2199), real calendar days including leap years, hours 00-23 plus exactly `24:00[:00]`, and no `:ss` tail on `HH:mm`. Strict always accepts a subset of the default mode.
 
 **Returns:** (boolean) - True if valid
+
+**Default mode is a pure shape check** and deliberately keeps kk-date's leniencies for backward compatibility: hours 24-29 are accepted on the `HH`-based templates (they feed the constructor's day-overflow feature, e.g. `'25:00:00'` → next day 01:00), `HH:mm` tolerates an optional `:ss` tail, and impossible calendar days like `'2021-02-30'` pass the shape check. Pass `is_strict = true` to reject all of these.
+
+**Scope notes:**
+- Strict calendar/hour checks apply to the numeric templates and to dynamically compiled templates. The name-based predefined templates (e.g. `'DD MMMM YYYY'`) keep their legacy regex behavior; `is_strict` has no additional effect for them.
+- Dynamic templates validate shape and field ranges (plus strict semantics); cross-field consistency (e.g. that a `dddd` weekday name matches the date) is not checked — same as moment strict.
+- A template accepted by `isValid` is not necessarily parseable by the constructor: `new kk_date(input, format)` still supports only the predefined formats.
 
 **Examples:**
 ```javascript
@@ -750,6 +754,18 @@ kk_date.isValid('2024-08-23', 'YYYY-MM-DD');  // true
 kk_date.isValid('invalid', 'YYYY-MM-DD');     // false
 kk_date.isValid('2024-23-08', 'YYYY-DD-MM');  // true
 kk_date.isValid('2024-23-08', 'YYYY-MM-DD');  // false
+
+// Any display-token template works (compiled & memoized on first use)
+kk_date.isValid('31/12/2024 23:59', 'DD/MM/YYYY HH:mm'); // true
+kk_date.isValid('03:45', 'mm:ss');                       // true
+kk_date.isValid('1st Jan 2024', 'Do MMM YYYY');          // true
+
+// Strict mode (moment strict parity)
+kk_date.isValid('2021-02-30', 'YYYY-MM-DD', true); // false - not a real calendar day
+kk_date.isValid('2024-02-29', 'YYYY-MM-DD', true); // true  - leap year
+kk_date.isValid('25:00:00', 'HH:mm:ss', true);     // false - wall-clock hours only
+kk_date.isValid('24:00:00', 'HH:mm:ss', true);     // true  - end-of-day midnight
+kk_date.isValid('05-12-31', 'YYYY-MM-DD', true);   // false - 2-digit years rejected
 ```
 
 #### `getTimezoneOffset(timezone, date?)`

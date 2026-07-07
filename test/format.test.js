@@ -83,8 +83,8 @@ describe('format', () => {
 	});
 
 	test('custom format', () => {
-		expect(new kk_date(`${test_date} ${test_time}`).format_c(' ', 'YYYY', 'MM', 'DD', 'HH:mm:ss')).toBe('2024 08 19 23:50:59');
-		expect(new kk_date(`${test_date} ${test_time}`).format_c(' ', 'YYYY', 'MM', 'dddd', 'HH:mm:ss')).toBe('2024 08 Monday 23:50:59');
+		expect(new kk_date(`${test_date} ${test_time}`).format('YYYY MM DD HH:mm:ss')).toBe('2024 08 19 23:50:59');
+		expect(new kk_date(`${test_date} ${test_time}`).format('YYYY MM dddd HH:mm:ss')).toBe('2024 08 Monday 23:50:59');
 	});
 
 	test('dddd', () => {

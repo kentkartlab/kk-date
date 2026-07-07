@@ -2,7 +2,7 @@
 
 [![npm version](https://badge.fury.io/js/kk-date.svg)](https://badge.fury.io/js/kk-date)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests](https://img.shields.io/badge/Tests-499%20passed-brightgreen)](https://github.com/kentkartlab/kk-date)
+[![Tests](https://img.shields.io/badge/Tests-585%20passed-brightgreen)](https://github.com/kentkartlab/kk-date)
 
 A blazing-fast JavaScript date library with intelligent caching, automatic DST detection, and zero-config timezone handling. Perfect for high-performance applications, real-time systems, and data-intensive operations where speed and accuracy matter most.
 
@@ -10,17 +10,17 @@ A blazing-fast JavaScript date library with intelligent caching, automatic DST d
 
 ### Performance & Efficiency *(measured on Node.js 26; reproduced by CI, results vary)*
 <!-- BENCH:readme-why -->
-- **⚡ Lightning Fast** - Over 40x faster timezone operations than Day.js
-- **🚀 ~84% Faster Overall** - Wins most scenarios vs Moment.js, Day.js, and Luxon (Day.js is faster in isolated "Time Operations")
+- **⚡ Lightning Fast** - Over 50x faster timezone operations than Day.js
+- **🚀 ~95% Faster Overall** - Fastest in every scenario vs Moment.js, Day.js, and Luxon
 - **💾 Memory Efficient** - Object pooling + LRU cache eviction keep long-running processes stable
-- **⚙️ Smart Caching** - ~72% faster repeated operations with built-in caching
+- **⚙️ Smart Caching** - ~32% faster repeated operations with built-in caching
 <!-- /BENCH:readme-why -->
 
 ### Reliability & Safety
 - **🛡️ Fail-Fast Design** - Invalid dates immediately throw errors, preventing silent bugs in production
 - **🎯 Type Safety** - Rejects malformed dates instead of returning unexpected results
 - **✅ Predictable Behavior** - Never continues with invalid dates, unlike libraries that return "Invalid Date"
-- **🔒 Production Tested** - 499 comprehensive tests covering edge cases and DST transitions
+- **🔒 Production Tested** - 585 comprehensive tests covering edge cases and DST transitions
 
 ### Features & Compatibility
 - **🌍 Accurate Timezone Handling** - Fast, DST-aware timezone conversions with perfect accuracy
@@ -34,6 +34,28 @@ A blazing-fast JavaScript date library with intelligent caching, automatic DST d
 npm install kk-date
 ```
 
+## 🚨 Breaking Changes in v5.0.0
+
+- **`format_c()` was removed.** Dynamic `format()` templates cover every use case in a single call:
+
+```javascript
+// before (v4): date.format_c(' ', 'DD', 'MMMM', 'YYYY')
+date.format('DD MMMM YYYY');
+
+// separators that could read as tokens go in [brackets]:
+// before (v4): date.format_c('T', 'YYYY-MM-DD', 'HH:mm:ss')
+date.format('YYYY-MM-DDTHH:mm:ss');
+```
+
+- **`format()` now supports the full moment/dayjs display-token vocabulary** — `YY M Mo Q Qo DDD
+  DDDo DDDD d dd do e E w wo ww W Wo WW gg gggg GG GGGG H h k kk m s S..SSSSSSSSS Z ZZ z zz zzz`
+  plus in-template `X`/`x` were added to the existing 16 tokens. Because many single letters are
+  now significant, unbracketed literal words in templates can change output — bracket literal text
+  (`'[Week] w'`), exactly as in moment/dayjs. See the
+  [supported tokens table](docs/FORMATTING-GUIDE.md#supported-tokens).
+
+See the [migration guide](docs/FORMATTING-GUIDE.md#migrating-from-format_c-removed-in-v500) for details.
+
 ## 🚀 Quick Start
 
 ```javascript
@@ -45,6 +67,12 @@ kk_date.caching({ status: true, defaultTtl: 3600 });
 // Create and format dates
 const date = new kk_date('2024-08-23 10:30:00');
 console.log(date.format('YYYY-MM-DD HH:mm:ss')); // 2024-08-23 10:30:00
+
+// Format templates are dynamic: combine the supported tokens any way you like.
+// Templates are compiled once and cached, so custom combinations stay fast.
+console.log(date.format('YYYYMM'));              // 202408
+console.log(date.format('HHmm'));                // 1030
+console.log(date.format('[Created:] DD MMMM')); // Created: 23 August
 
 // Safe error handling - catches invalid dates early!
 try {
@@ -60,6 +88,17 @@ if (kk_date.isValid('2024-13-45', 'YYYY-MM-DD')) { // false - invalid month
 if (kk_date.isValid('2024-08-23', 'YYYY-MM-DD')) { // true - valid date
     const safeDate = new kk_date('2024-08-23'); // ✅ Safe to create
 }
+
+// isValid accepts ANY display-token template, not just the predefined ones
+kk_date.isValid('31/12/2024 23:59', 'DD/MM/YYYY HH:mm'); // true
+kk_date.isValid('03:45', 'mm:ss');                       // true - minutes:seconds
+
+// Optional strict mode (moment strict parity): real calendar days + wall-clock hours
+kk_date.isValid('2021-02-30', 'YYYY-MM-DD');       // true  - shape check only (default)
+kk_date.isValid('2021-02-30', 'YYYY-MM-DD', true); // false - Feb 30 doesn't exist
+kk_date.isValid('25:00:00', 'HH:mm:ss');           // true  - day-overflow support (default)
+kk_date.isValid('25:00:00', 'HH:mm:ss', true);     // false - strict wall-clock hours
+// Migrating from moment(value, format, true).isValid()? Pass true as the 3rd argument.
 
 // Zero-config timezone conversion with automatic DST detection.
 // Note: a naive string like '2024-08-23 10:30:00' is parsed in the process's LOCAL timezone.
@@ -376,7 +415,7 @@ console.log(date.format('DD/MM/YYYY')); // 23/08/2024
 
 ## 📊 Performance Benchmarks
 
-> **Note:** All performance figures in this README come from our own benchmark suite on Node.js 26 and are **reproduced by CI on every PR** (the "Performance Benchmarks" job runs `benchmark.js` + `benchmark2.js` and uploads the results). They are **not guarantees** — results vary by workload, hardware, Node version, and caching. Reproduce locally with `node benchmark.js` / `node benchmark2.js`. kk-date wins most scenarios but not all (e.g. Day.js is faster in isolated "Time Operations").
+> **Note:** All performance figures in this README come from our own benchmark suite on Node.js 26 and are **reproduced by CI on every PR** (the "Performance Benchmarks" job runs `benchmark.js` + `benchmark2.js` and uploads the results). They are **not guarantees** — results vary by workload, hardware, Node version, and caching. Reproduce locally with `node benchmark.js` / `node benchmark2.js`.
 
 ### Real-World Sequential Operations (1000 days, 100 operations/day)
 
@@ -392,23 +431,23 @@ node benchmark2.js
 <!-- BENCH:readme-seq -->
 | Operation | kk-date | Moment.js | Day.js | Luxon | vs Fastest Competitor |
 |-----------|---------|-----------|--------|-------|-----------------------|
-| **Date Creation & Formatting** | **190ms** | 1128ms | 726ms | 905ms | **~281% faster** than Day.js |
-| **Time Operations** | **426ms** | 1256ms | 556ms | 2733ms | **~31% faster** than Day.js |
-| **Timezone Conversions** | **416ms** | 3285ms | 18959ms | 4450ms | **~690% faster** than Moment |
-| **Complex Operations** | **337ms** | 2510ms | 1230ms | 2920ms | **~265% faster** than Day.js |
+| **Date Creation & Formatting** | **190ms** | 1531ms | 879ms | 1190ms | **~362% faster** than Day.js |
+| **Time Operations** | **267ms** | 1759ms | 712ms | 3183ms | **~166% faster** than Day.js |
+| **Timezone Conversions** | **452ms** | 3509ms | 23787ms | 5036ms | **~676% faster** than Moment |
+| **Complex Operations** | **373ms** | 3404ms | 1710ms | 3718ms | **~358% faster** than Day.js |
 <!-- /BENCH:readme-seq -->
 
 ### Overall Performance Summary
 
-kk-date wins the overall sequential run, though Day.js is faster in the isolated "Time Operations" scenario above.
+kk-date wins the overall sequential run and every individual scenario above.
 
 <!-- BENCH:readme-overall -->
 | Library | Total Time | Operations/sec | Performance |
 |---------|------------|---------------|-------------|
-| **kk-date** | **1.37s** | **292,279 ops/sec** | 🏆 **Winner** |
-| Moment.js | 8.18s | 48,907 ops/sec | ~498% slower |
-| Luxon | 11.01s | 36,340 ops/sec | ~704% slower |
-| Day.js | 21.47s | 18,630 ops/sec | **~1469% slower** |
+| **kk-date** | **1.28s** | **311,742 ops/sec** | 🏆 **Winner** |
+| Moment.js | 10.20s | 39,206 ops/sec | ~695% slower |
+| Luxon | 13.13s | 30,471 ops/sec | ~923% slower |
+| Day.js | 27.09s | 14,767 ops/sec | **~2011% slower** |
 <!-- /BENCH:readme-overall -->
 
 ### Memory & Bundle Size
@@ -418,8 +457,8 @@ Net heap delta after creating 100,000 date instances (from `node benchmark.js`).
 <!-- BENCH:readme-memory -->
 | Library | Heap Δ / 100k instances* | Bundle Size | DST Support |
 |---------|--------------------------|-------------|-------------|
-| **kk-date** | ~+6 MB | **15 KB** | **Built-in** |
-| Moment.js | ~+16 MB | 297 KB | Plugin required |
+| **kk-date** | ~+15 MB | **15 KB** | **Built-in** |
+| Moment.js | ~-16 MB* | 297 KB | Plugin required |
 | Day.js | ~-4 MB* | 18.5 KB | Plugin required |
 | Luxon | ~+5 MB | 71 KB | Built-in |
 <!-- /BENCH:readme-memory -->
@@ -440,8 +479,8 @@ console.log((after - before) / 1024 / 1024, 'MB'); // GC-dependent; can be negat
 
 **Without Cache vs With Cache (representative run):**
 <!-- BENCH:readme-cache -->
-- **~72% faster** repeated operations when cache is enabled
-- Average operation time: ~106ms → ~30ms with cache
+- **~32% faster** repeated operations when cache is enabled
+- Average operation time: ~41ms → ~27ms with cache
 - Cache hit ratio: **100%** for repeated operations
 <!-- /BENCH:readme-cache -->
 - Memory overhead: minimal (caches are LRU-capped at 10,000 entries)
@@ -461,14 +500,14 @@ kk_date.caching({ status: true, defaultTtl: 3600 });
 ### Key Performance Advantages
 
 <!-- BENCH:readme-advantages -->
-- **⚡ ~84% faster** than the average of competing libraries (comprehensive benchmark)
+- **⚡ ~95% faster** than the average of competing libraries (comprehensive benchmark)
 - **🚀 up to ~98% faster** in timezone operations (critical for global apps)
 - **📊 Big-data ready** - efficient for bulk/1M-operation workloads
 - **💾 Stable memory** - object pooling + LRU eviction; net heap delta is GC-dependent (often negative)
-- **⚙️ ~72% boost** with smart caching enabled
-- **🌍 Over 40x faster** (≈4500%) than Day.js in timezone conversions
+- **⚙️ ~32% boost** with smart caching enabled
+- **🌍 Over 50x faster** (≈5200%) than Day.js in timezone conversions
 <!-- /BENCH:readme-advantages -->
-- **✅ Production tested** with 499 comprehensive tests
+- **✅ Production tested** with 585 comprehensive tests
 
 ## 🤝 Contributing
 
@@ -513,8 +552,10 @@ We're constantly working to improve kk-date! Here are some exciting features we'
 - **🌐 Web Workers Support** - Asynchronous date operations for better performance
 - **📦 Tree Shaking** - Bundle size optimization for production builds
 - **🔌 Plugin System** - Extensible architecture for custom functionality
-- **⚡ Template Compilation** - Pre-compiled format strings for even faster formatting
 - **🎯 Enhanced Caching** - More intelligent cache strategies for specific use cases
+
+✅ **Template Compilation** shipped: `format()` now compiles any token combination once and caches it —
+see the [Formatting Guide](docs/FORMATTING-GUIDE.md#custom-formatting).
 
 ## 💡 Pro Tips
 
