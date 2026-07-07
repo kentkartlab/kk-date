@@ -35,8 +35,13 @@ const luxon = require('luxon');
 // Enable timezone plugins for dayjs
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
+// customParseFormat is required for dayjs(str, format) to actually honor the format argument;
+// without it dayjs silently ignores the format and falls back to native Date parsing, which
+// would make every format-string comparison below meaningless (Invalid Date in ~0 time).
+const customParseFormat = require('dayjs/plugin/customParseFormat');
 dayjs.extend(utc);
 dayjs.extend(timezone);
+dayjs.extend(customParseFormat);
 
 // `--json` mode: emit only machine-readable JSON (suppress human-readable output).
 // Used by scripts/update-benchmark-docs.js / the "Update Benchmark Docs" workflow.
