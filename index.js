@@ -621,6 +621,24 @@ function parseTextLegacy(kk, date, has_space) {
 }
 
 /**
+ * Offset source for the manipulation methods' offset dance (add/set/get/startOf/endOf/diff).
+ * When the effective timezone IS the system timezone — the default configuration, since the
+ * global timezone initializes to it — the native getTimezoneOffset() yields the identical
+ * value with no Intl formatToParts call and no cache-key string allocation. The two sources
+ * only diverge for pre-1901 sub-minute LMT instants, far outside the supported input range.
+ *
+ * @param {string} timezone - effective target timezone (always truthy at call sites)
+ * @param {Date} date
+ * @returns {number} offset in milliseconds
+ */
+function offsetForCalc(timezone, date) {
+	if (timezone === systemTimezone) {
+		return -date.getTimezoneOffset() * 60000;
+	}
+	return getTimezoneOffset(timezone, date);
+}
+
+/**
  * Auto-detects and parses a string input, assigning kk.date and kk.detected_format.
  *
  * @param {KkDate} kk
@@ -1073,7 +1091,7 @@ class KkDate {
 		let offset = 0;
 
 		if (targetTimezone) {
-			offset = getTimezoneOffset(targetTimezone, this.date);
+			offset = offsetForCalc(targetTimezone, this.date);
 			dateToModify = new Date(this.date.getTime() + offset);
 		}
 
@@ -1146,7 +1164,7 @@ class KkDate {
 
 		if (targetTimezone) {
 			// Recalculate offset for the new date (DST may have changed)
-			const newOffset = getTimezoneOffset(targetTimezone, dateToModify);
+			const newOffset = offsetForCalc(targetTimezone, dateToModify);
 			this.date = new Date(dateToModify.getTime() - newOffset);
 		}
 		return this;
@@ -1180,7 +1198,7 @@ class KkDate {
 			let date = new Date(this.date.getTime());
 
 			if (targetTimezone) {
-				const offset = getTimezoneOffset(targetTimezone, this.date);
+				const offset = offsetForCalc(targetTimezone, this.date);
 				const dateToModify = new Date(date.getTime() + offset);
 				dateToModify.setUTCSeconds(dateToModify.getUTCSeconds() + diffed.type_value * index);
 				date = new Date(dateToModify.getTime() - offset);
@@ -1208,7 +1226,7 @@ class KkDate {
 		let offset = 0;
 
 		if (targetTimezone) {
-			offset = getTimezoneOffset(targetTimezone, this.date);
+			offset = offsetForCalc(targetTimezone, this.date);
 			dateToModify = new Date(this.date.getTime() + offset);
 		}
 
@@ -1276,7 +1294,7 @@ class KkDate {
 		let dateToRead = this.date;
 
 		if (targetTimezone) {
-			const offset = getTimezoneOffset(targetTimezone, this.date);
+			const offset = offsetForCalc(targetTimezone, this.date);
 			dateToRead = new Date(this.date.getTime() + offset);
 		}
 
@@ -1469,7 +1487,7 @@ class KkDate {
 		let offset = 0;
 
 		if (targetTimezone) {
-			offset = getTimezoneOffset(targetTimezone, this.date);
+			offset = offsetForCalc(targetTimezone, this.date);
 			dateToModify = new Date(this.date.getTime() + offset);
 		}
 
@@ -1539,7 +1557,7 @@ class KkDate {
 
 		if (targetTimezone) {
 			// Recalculate offset for the new date (DST may have changed)
-			const newOffset = getTimezoneOffset(targetTimezone, dateToModify);
+			const newOffset = offsetForCalc(targetTimezone, dateToModify);
 			this.date = new Date(dateToModify.getTime() - newOffset);
 		}
 		return this;
@@ -1556,7 +1574,7 @@ class KkDate {
 		let offset = 0;
 
 		if (targetTimezone) {
-			offset = getTimezoneOffset(targetTimezone, this.date);
+			offset = offsetForCalc(targetTimezone, this.date);
 			dateToModify = new Date(this.date.getTime() + offset);
 		}
 
@@ -1634,7 +1652,7 @@ class KkDate {
 
 		if (targetTimezone) {
 			// Recalculate offset for the new date (DST may have changed)
-			const newOffset = getTimezoneOffset(targetTimezone, dateToModify);
+			const newOffset = offsetForCalc(targetTimezone, dateToModify);
 			this.date = new Date(dateToModify.getTime() - newOffset);
 		}
 		return this;
