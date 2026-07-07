@@ -696,8 +696,8 @@ const date = new kk_date('2024-08-23 10:30:45');
 // Display formats
 const displayDate = date.format('DD MMMM YYYY');
 const displayTime = date.format('HH:mm');
-// 'at' is arbitrary text, so build the combined string in JS (format() has no token interpolation):
-const displayDateTime = `${date.format('dddd, DD MMMM YYYY')} at ${date.format('HH:mm')}`;
+// 'at' contains the meridiem token `a`, so bracket literal words — or build the string in JS:
+const displayDateTime = date.format('dddd, DD MMMM YYYY [at] HH:mm');
 
 console.log(`Date: ${displayDate}`);           // Date: 23 August 2024
 console.log(`Time: ${displayTime}`);           // Time: 10:30
