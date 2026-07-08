@@ -6,6 +6,7 @@ const {
 	month_numbers,
 	timeInMilliseconds,
 	format_types,
+	format_types_regex,
 	cached_dateTimeFormat,
 	timezone_cache,
 	timezone_check_cache,
@@ -19,6 +20,10 @@ const {
 	cached_dateTimeFormat_with_locale,
 	COMMON_TIMEZONES,
 	ordinal_suffix,
+	format_part_types,
+	format_derived_flags,
+	compiled_templates,
+	timezone_long_name_cache,
 } = require('./constants');
 
 const months = {};
@@ -32,6 +37,90 @@ const days = {};
 function getOrdinal(n) {
 	const v = n % 100;
 	return n + (ordinal_suffix[(v - 20) % 10] || ordinal_suffix[v] || ordinal_suffix[0]);
+}
+
+/**
+ * UTC timestamp of a wall-clock calendar day. Years 0-99 need the
+ * setUTCFullYear round-trip because Date.UTC maps them to 1900-1999.
+ *
+ * @param {number} y
+ * @param {number} m 1-based month
+ * @param {number} d
+ * @returns {number}
+ */
+function dayTimestampUTC(y, m, d) {
+	let ts = Date.UTC(y, m - 1, d);
+	if (y >= 0 && y <= 99) {
+		const t = new Date(ts);
+		t.setUTCFullYear(y);
+		ts = t.getTime();
+	}
+	return ts;
+}
+
+/**
+ * Day of week for a wall-clock date (0 = Sunday .. 6 = Saturday).
+ *
+ * @param {number} y
+ * @param {number} m 1-based month
+ * @param {number} d
+ * @returns {number}
+ */
+function getDayOfWeek(y, m, d) {
+	return new Date(dayTimestampUTC(y, m, d)).getUTCDay();
+}
+
+/**
+ * Day of year for a wall-clock date (1..366).
+ *
+ * @param {number} y
+ * @param {number} m 1-based month
+ * @param {number} d
+ * @returns {number}
+ */
+function getDayOfYear(y, m, d) {
+	return (dayTimestampUTC(y, m, d) - dayTimestampUTC(y, 1, 1)) / 86400000 + 1;
+}
+
+/**
+ * ISO-8601 week of year: weeks start on Monday, week 1 is the week
+ * containing the first Thursday. The week-year comes from that Thursday
+ * and can differ from the calendar year at year boundaries.
+ *
+ * @param {number} y
+ * @param {number} m 1-based month
+ * @param {number} d
+ * @returns {{week: number, year: number}}
+ */
+function getIsoWeekInfo(y, m, d) {
+	const t = dayTimestampUTC(y, m, d);
+	const dow = new Date(t).getUTCDay() || 7;
+	const thursday = t + (4 - dow) * 86400000;
+	const isoYear = new Date(thursday).getUTCFullYear();
+	const week = Math.floor((thursday - dayTimestampUTC(isoYear, 1, 1)) / 604800000) + 1;
+	return { week, year: isoYear };
+}
+
+/**
+ * Locale week of year: weeks start on weekStartDay, week 1 is the week
+ * containing Jan 1 (moment 'en' behavior with dow=0/doy=6). The week-year
+ * is the year of the week's last day — the week straddling a year boundary
+ * always contains Jan 1 and belongs to the new year.
+ *
+ * @param {number} y
+ * @param {number} m 1-based month
+ * @param {number} d
+ * @param {number} weekStartDay 0 = Sunday .. 6 = Saturday
+ * @returns {{week: number, year: number}}
+ */
+function getLocaleWeekInfo(y, m, d, weekStartDay) {
+	const t = dayTimestampUTC(y, m, d);
+	const diff = (new Date(t).getUTCDay() - weekStartDay + 7) % 7;
+	const weekStart = t - diff * 86400000;
+	const weekYear = new Date(weekStart + 6 * 86400000).getUTCFullYear();
+	const jan1 = dayTimestampUTC(weekYear, 1, 1);
+	const week1Start = jan1 - ((new Date(jan1).getUTCDay() - weekStartDay + 7) % 7) * 86400000;
+	return { week: (weekStart - week1Start) / 604800000 + 1, year: weekYear };
 }
 
 for (const key in iso6391_languages) {
@@ -53,14 +142,24 @@ for (const key in iso6391_languages) {
 }
 
 /**
+ * Month name (any supported language, long or short form) to its 1-based month number.
+ *
+ * @param {string} monthName
+ * @returns {number} 1-12, or 0 when the name is unknown
+ */
+function getMonthNumber(monthName) {
+	return months[monthName.toLowerCase()] || 0;
+}
+
+/**
  * if valid will be turn english month name
  *
  * @param {string} monthName
  * @returns {string|Boolean}
  */
 function isValidMonth(monthName) {
-	const monthNameLower = monthName.toLowerCase();
-	return months[monthNameLower] ? month_numbers[months[monthNameLower]] : false;
+	const monthNumber = getMonthNumber(monthName);
+	return monthNumber ? month_numbers[monthNumber] : false;
 }
 
 /**
@@ -72,6 +171,124 @@ function isValidMonth(monthName) {
 function isValidDayName(dayname) {
 	const dayNameLower = dayname.toLowerCase();
 	return days[dayNameLower] ? day_numbers[days[dayNameLower]] : false;
+}
+
+// Ordinal day tokens accepted by the 'Do MMM YYYY' template ("1st", "3.", "1er", "3-й", ...).
+const ORDINAL_DAY_TOKEN = /^\d{1,2}(st|nd|rd|th|\.|er|ème|te|º|ª|-й|वां|日|일|z|день)$/u;
+
+// Length of an all-ASCII-digit token, or 0 when any character is not a digit.
+function digitCount(token) {
+	const len = token.length;
+	for (let i = 0; i < len; i++) {
+		const code = token.charCodeAt(i);
+		if (code < 48 || code > 57) {
+			return 0;
+		}
+	}
+	return len;
+}
+
+/**
+ * Claims a text-month input for `template` when — and only when — the happy path is certain:
+ * the template's own legacy regex accepts the whole string, the month name is known, and the
+ * day is within the range the legacy string round-trip accepted (native parsing of
+ * "YYYY-MonthName-DD" is Invalid for day > 31 and rolls like the numeric constructor below it).
+ * Every other shape returns false so the caller's legacy ladder handles it byte-identically.
+ *
+ * @param {KkDate} kkDate
+ * @param {string} input - the full raw input (regex verification target)
+ * @param {string} template - key into format_types / format_types_regex
+ * @param {number} year
+ * @param {string} monthToken - month name token, any supported language
+ * @param {number} day
+ * @returns {boolean} true when claimed (kkDate.date and kkDate.detected_format are set)
+ */
+function claimTextDate(kkDate, input, template, year, monthToken, day) {
+	if (day < 1 || day > 31 || !format_types_regex[template].test(input)) {
+		return false;
+	}
+	const monthNumber = getMonthNumber(monthToken);
+	if (!monthNumber) {
+		return false;
+	}
+	kkDate.date = new Date(year, monthNumber - 1, day, 0, 0, 0, 0);
+	kkDate.detected_format = format_types[template];
+	return true;
+}
+
+/**
+ * Fast path for common text-month inputs ("15 January 2024", "Monday, 15 January 2024", ...):
+ * predicts the template from the token layout, then delegates to claimTextDate which verifies
+ * with the template's original regex — so acceptance is bit-identical to the legacy ladder.
+ * Prediction order mirrors the ladder's claim precedence for overlapping layouts
+ * (DD MMMM YYYY before D MMMM YYYY, ordinal Do before the 4-token forms).
+ *
+ * Declined shapes (2-digit years, unknown month names, day tokens with junk, extra or
+ * tab-separated tokens, ...) return false and MUST keep falling through to the legacy chain.
+ *
+ * @param {KkDate} kkDate
+ * @param {string} input - constructor string input containing at least one space
+ * @returns {boolean} true when claimed
+ */
+function tryParseTextDate(kkDate, input) {
+	const parts = input.split(' ');
+	const count = parts.length;
+	if (count === 3) {
+		const dayDigits = digitCount(parts[0]);
+		const lastDigits = digitCount(parts[2]);
+		if (dayDigits >= 1 && dayDigits <= 2) {
+			if (lastDigits === 4) {
+				// "15 January 2024" — the zero-padded single-digit day belongs to D MMMM YYYY
+				return (
+					claimTextDate(kkDate, input, 'DD MMMM YYYY', +parts[2], parts[1], +parts[0]) ||
+					claimTextDate(kkDate, input, 'D MMMM YYYY', +parts[2], parts[1], +parts[0])
+				);
+			}
+			if (lastDigits === 0) {
+				// "15 January Monday" — the weekday token is not validated (legacy behavior)
+				return claimTextDate(kkDate, input, 'DD MMMM dddd', new Date().getFullYear(), parts[1], +parts[0]);
+			}
+			return false;
+		}
+		if (dayDigits === 4 && lastDigits === 2) {
+			// "2024 Jan 15"
+			return claimTextDate(kkDate, input, 'YYYY MMM DD', +parts[0], parts[1], +parts[2]);
+		}
+		if (dayDigits === 0 && lastDigits === 4 && ORDINAL_DAY_TOKEN.test(parts[0])) {
+			// "1st Jan 2024" — legacy 'Do MMM YYYY' accepts any 4-digit year
+			return claimTextDate(kkDate, input, 'Do MMM YYYY', +parts[2], parts[1], parseInt(parts[0], 10));
+		}
+		return false;
+	}
+	if (count === 4) {
+		if (digitCount(parts[3]) !== 4) {
+			return false;
+		}
+		const day = digitCount(parts[1]) ? +parts[1] : +parts[0];
+		if (parts[0].charCodeAt(parts[0].length - 1) === 44) {
+			// "Monday, 15 January 2024"
+			return claimTextDate(kkDate, input, 'dddd, DD MMMM YYYY', +parts[3], parts[2], day);
+		}
+		if (parts[2].charCodeAt(parts[2].length - 1) === 44) {
+			// "15 January Monday, 2024" — detected_format is the real template here; the legacy
+			// rung historically mislabeled it (see the constructor ladder).
+			return claimTextDate(kkDate, input, 'DD MMMM dddd, YYYY', +parts[3], parts[1], +parts[0]);
+		}
+		return false;
+	}
+	if (count === 2) {
+		const dayDigits = digitCount(parts[0]);
+		if (dayDigits >= 1 && dayDigits <= 2) {
+			// "15 January" — current year (legacy behavior)
+			return claimTextDate(kkDate, input, 'DD MMMM', new Date().getFullYear(), parts[1], +parts[0]);
+		}
+		if (dayDigits === 0 && digitCount(parts[1]) === 4) {
+			// "January 2024" — new rung with no legacy equivalent: unknown month names must keep
+			// falling through so inputs like "Blah 2024" keep their legacy native-parse result.
+			return claimTextDate(kkDate, input, 'MMMM YYYY', +parts[1], parts[0], 1);
+		}
+	}
+	return false;
 }
 
 /**
@@ -429,6 +646,37 @@ function getTimezoneAbbreviation(timezone, date = new Date()) {
 }
 
 /**
+ * Long localized timezone name (e.g. 'Eastern Standard Time') for the zzz
+ * token. Falls back to the abbreviation on engines without timeZoneName
+ * support (Hermes-style degrade, same pattern as getTimezoneAbbreviation).
+ *
+ * @param {string} timezone
+ * @param {Date} date
+ * @param {string} locale
+ * @returns {string}
+ */
+function getTimezoneLongName(timezone, date = new Date(), locale = 'en') {
+	try {
+		checkTimezone(timezone);
+		const cacheKey = `${locale}_${timezone}`;
+		let formatter = timezone_long_name_cache.get(cacheKey);
+		if (formatter === undefined) {
+			formatter = new Intl.DateTimeFormat(locale, { timeZone: timezone, timeZoneName: 'long' });
+			timezone_long_name_cache.set(cacheKey, formatter);
+		}
+		const parts = formatter.formatToParts(date);
+		for (let i = 0; i < parts.length; i++) {
+			if (parts[i].type === 'timeZoneName' && parts[i].value) {
+				return parts[i].value;
+			}
+		}
+		return getTimezoneAbbreviation(timezone, date);
+	} catch {
+		return getTimezoneAbbreviation(timezone, date);
+	}
+}
+
+/**
  * absFloor function
  *
  * @param {number} number
@@ -550,6 +798,18 @@ function dateTimeFormat(orj_this, template) {
 			};
 			return cached_dateTimeFormat_with_locale.ddd[`${locale}_${timezone}`];
 		}
+		// dd is a formatting-only token (never in format_types): short weekday
+		// name, sliced to 2 chars by formatNameToken.
+		if (template === 'dd') {
+			if (cached_dateTimeFormat_with_locale.dd[`${locale}_${timezone}`]) {
+				return cached_dateTimeFormat_with_locale.dd[`${locale}_${timezone}`];
+			}
+			cached_dateTimeFormat_with_locale.dd[`${locale}_${timezone}`] = {
+				value: new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: timezone }),
+				id: `${locale}_${timezone}_dd`,
+			};
+			return cached_dateTimeFormat_with_locale.dd[`${locale}_${timezone}`];
+		}
 		if (template === format_types.MMMM) {
 			if (cached_dateTimeFormat_with_locale.MMMM[`${locale}_${timezone}`]) {
 				return cached_dateTimeFormat_with_locale.MMMM[`${locale}_${timezone}`];
@@ -586,6 +846,9 @@ function dateTimeFormat(orj_this, template) {
 	}
 	if (template === format_types.MMM) {
 		return { value: cached_dateTimeFormat.MMM, id: '4' };
+	}
+	if (template === 'dd') {
+		return { value: cached_dateTimeFormat.dd, id: '5' };
 	}
 
 	throw new Error('unkown template for dateTimeFormat !');
@@ -816,6 +1079,950 @@ function converter(date, to, options = { pad: true }) {
 	return result;
 }
 
+// Longest-first alternation within every shared-prefix family so multi-char
+// tokens win over their prefixes (MMMM > MMM > MM > Mo > M, DDDD > DDDo >
+// DDD > Do > DD > D, ...). The leading group captures [bracketed] literals,
+// dayjs/moment style. S{1,9} greedily matches fractional-second runs.
+// Single g, G, Y, o, q, T are deliberately not tokens and stay literal.
+const format_token_regex =
+	/(\[[^\]]*\])|YYYY|YY|MMMM|MMM|MM|Mo|M|Qo|Q|DDDD|DDDo|DDD|Do|DD|D|dddd|ddd|dd|do|d|E|e|wo|ww|w|Wo|WW|W|gggg|gg|GGGG|GG|HH|H|hh|h|kk|k|mm|m|ss|s|S{1,9}|A|a|X|x|zzz|zz|z|ZZ|Z/g;
+
+const ymd_fields = ['year', 'month', 'day'];
+const derived_dow = format_derived_flags.YMD | format_derived_flags.DOW;
+const derived_doy = format_derived_flags.YMD | format_derived_flags.DOY;
+const derived_iso_week = format_derived_flags.YMD | format_derived_flags.ISO_WEEK;
+const derived_locale_week = format_derived_flags.YMD | format_derived_flags.LOCALE_WEEK;
+
+// Token compile table: part kind + the converter fields it needs + the
+// derived-value bits the formatter core must precompute. name: locale-aware
+// name token (the NAME part keeps the token itself in v); hour12/meridiem
+// feed has12h/appendMeridiem. S{1,9} runs other than SSS are handled in
+// compileFormat (MS_FRACTION keeps the run in v).
+const token_parts = {
+	YYYY: { t: format_part_types.YEAR, fields: ['year'] },
+	YY: { t: format_part_types.YEAR2, fields: ['year'] },
+	MMMM: { t: format_part_types.NAME, name: true },
+	MMM: { t: format_part_types.NAME, name: true },
+	MM: { t: format_part_types.MONTH, fields: ['month'] },
+	Mo: { t: format_part_types.MONTH_ORDINAL, fields: ['month'] },
+	M: { t: format_part_types.MONTH_UNPADDED, fields: ['month'] },
+	Qo: { t: format_part_types.QUARTER_ORDINAL, fields: ['month'] },
+	Q: { t: format_part_types.QUARTER, fields: ['month'] },
+	DDDD: { t: format_part_types.DAY_OF_YEAR_PADDED, fields: ymd_fields, derived: derived_doy },
+	DDDo: { t: format_part_types.DAY_OF_YEAR_ORDINAL, fields: ymd_fields, derived: derived_doy },
+	DDD: { t: format_part_types.DAY_OF_YEAR, fields: ymd_fields, derived: derived_doy },
+	Do: { t: format_part_types.DAY_ORDINAL, fields: ['day'] },
+	DD: { t: format_part_types.DAY, fields: ['day'] },
+	D: { t: format_part_types.DAY_UNPADDED, fields: ['day'] },
+	dddd: { t: format_part_types.NAME, name: true },
+	ddd: { t: format_part_types.NAME, name: true },
+	dd: { t: format_part_types.NAME, name: true },
+	do: { t: format_part_types.WEEKDAY_ORDINAL, fields: ymd_fields, derived: derived_dow },
+	d: { t: format_part_types.WEEKDAY, fields: ymd_fields, derived: derived_dow },
+	E: { t: format_part_types.WEEKDAY_ISO, fields: ymd_fields, derived: derived_dow },
+	e: { t: format_part_types.WEEKDAY_LOCALE, fields: ymd_fields, derived: derived_dow },
+	wo: { t: format_part_types.WEEK_ORDINAL, fields: ymd_fields, derived: derived_locale_week },
+	ww: { t: format_part_types.WEEK_PADDED, fields: ymd_fields, derived: derived_locale_week },
+	w: { t: format_part_types.WEEK, fields: ymd_fields, derived: derived_locale_week },
+	gggg: { t: format_part_types.WEEK_YEAR, fields: ymd_fields, derived: derived_locale_week },
+	gg: { t: format_part_types.WEEK_YEAR2, fields: ymd_fields, derived: derived_locale_week },
+	Wo: { t: format_part_types.ISO_WEEK_ORDINAL, fields: ymd_fields, derived: derived_iso_week },
+	WW: { t: format_part_types.ISO_WEEK_PADDED, fields: ymd_fields, derived: derived_iso_week },
+	W: { t: format_part_types.ISO_WEEK, fields: ymd_fields, derived: derived_iso_week },
+	GGGG: { t: format_part_types.ISO_WEEK_YEAR, fields: ymd_fields, derived: derived_iso_week },
+	GG: { t: format_part_types.ISO_WEEK_YEAR2, fields: ymd_fields, derived: derived_iso_week },
+	HH: { t: format_part_types.HOURS, fields: ['hours'] },
+	H: { t: format_part_types.HOURS_UNPADDED, fields: ['hours'] },
+	hh: { t: format_part_types.HOUR12, fields: ['hours'], hour12: true },
+	h: { t: format_part_types.HOUR12_UNPADDED, fields: ['hours'], hour12: true },
+	kk: { t: format_part_types.HOUR24_PADDED, fields: ['hours'] },
+	k: { t: format_part_types.HOUR24, fields: ['hours'] },
+	mm: { t: format_part_types.MINUTES, fields: ['minutes'] },
+	m: { t: format_part_types.MINUTES_UNPADDED, fields: ['minutes'] },
+	ss: { t: format_part_types.SECONDS, fields: ['seconds'] },
+	s: { t: format_part_types.SECONDS_UNPADDED, fields: ['seconds'] },
+	SSS: { t: format_part_types.MILLISECONDS, fields: ['milliseconds'] },
+	A: { t: format_part_types.MERIDIEM_UPPER, fields: ['hours'], meridiem: true },
+	a: { t: format_part_types.MERIDIEM_LOWER, fields: ['hours'], meridiem: true },
+	X: { t: format_part_types.UNIX_SECONDS },
+	x: { t: format_part_types.UNIX_MS },
+	zzz: { t: format_part_types.TZ_LONG },
+	zz: { t: format_part_types.TZ_ABBR },
+	z: { t: format_part_types.TZ_ABBR },
+	ZZ: { t: format_part_types.OFFSET_BASIC, derived: format_derived_flags.OFFSET },
+	Z: { t: format_part_types.OFFSET_COLON, derived: format_derived_flags.OFFSET },
+};
+
+function pushLiteral(parts, text) {
+	if (text === '') {
+		return;
+	}
+	const last = parts.length > 0 ? parts[parts.length - 1] : null;
+	if (last && last.t === format_part_types.LITERAL) {
+		last.v += text;
+	} else {
+		parts.push({ t: format_part_types.LITERAL, v: text });
+	}
+}
+
+function addField(fields, field) {
+	if (fields.indexOf(field) === -1) {
+		fields.push(field);
+	}
+}
+
+/**
+ * Compiles a format template into parts consumable by the formatter core.
+ * Supports the full moment/dayjs display-token vocabulary (except era tokens
+ * and the localized LT/L/LL macros): year (YYYY YY), month (MMMM MMM MM Mo M),
+ * quarter (Q Qo), day (DD Do D), day of year (DDDD DDDo DDD), weekday
+ * (dddd ddd dd do d e E), week + week-year (ww wo w gggg gg), ISO week +
+ * week-year (WW Wo W GGGG GG), hour (HH H hh h kk k), minute (mm m),
+ * second (ss s), fractional seconds (S..SSSSSSSSS), meridiem (A a),
+ * timezone (Z ZZ z zz zzz) and unix (X x). [Bracketed] text is emitted
+ * literally; any other character passes through as-is. When hh/h is used
+ * without an explicit A/a, ' AM'/' PM' is appended to the end of the output
+ * (legacy hh:mm behavior).
+ *
+ * @param {string} template
+ * @returns {{parts: Array<{t: number, v: string}>, fields: string[], has12h: boolean, appendMeridiem: boolean, derived: number}}
+ */
+function compileFormat(template) {
+	if (typeof template !== 'string') {
+		throw new Error('template is not right');
+	}
+	const parts = [];
+	const fields = [];
+	let tokenCount = 0;
+	let usedHour12 = false;
+	let explicitMeridiem = false;
+	let derived = 0;
+	let lastIndex = 0;
+	format_token_regex.lastIndex = 0;
+	let match = format_token_regex.exec(template);
+	while (match !== null) {
+		if (match.index > lastIndex) {
+			pushLiteral(parts, template.slice(lastIndex, match.index));
+		}
+		const token = match[0];
+		if (match[1] !== undefined) {
+			pushLiteral(parts, token.slice(1, -1));
+		} else {
+			tokenCount++;
+			const token_part = token_parts[token];
+			if (token_part !== undefined) {
+				parts.push({ t: token_part.t, v: token_part.name === true ? token : '' });
+				const token_fields = token_part.fields;
+				if (token_fields !== undefined) {
+					for (let i = 0; i < token_fields.length; i++) {
+						addField(fields, token_fields[i]);
+					}
+				}
+				if (token_part.hour12 === true) {
+					usedHour12 = true;
+				}
+				if (token_part.meridiem === true) {
+					explicitMeridiem = true;
+				}
+				if (token_part.derived !== undefined) {
+					derived |= token_part.derived;
+				}
+			} else {
+				// Only S{1,9} runs of length 1, 2, 4..9 reach here (SSS is in the map).
+				parts.push({ t: format_part_types.MS_FRACTION, v: token });
+				addField(fields, 'milliseconds');
+			}
+		}
+		lastIndex = format_token_regex.lastIndex;
+		match = format_token_regex.exec(template);
+	}
+	if (lastIndex < template.length) {
+		pushLiteral(parts, template.slice(lastIndex));
+	}
+	if (tokenCount === 0) {
+		throw new Error('template is not right');
+	}
+	return Object.freeze({
+		parts,
+		fields,
+		has12h: usedHour12 || explicitMeridiem,
+		appendMeridiem: usedHour12 && !explicitMeridiem,
+		derived,
+	});
+}
+
+/**
+ * Returns the cached compiled template, compiling it on first use.
+ *
+ * @param {string} template
+ * @returns {{parts: Array<{t: number, v: string}>, fields: string[], has12h: boolean, appendMeridiem: boolean, derived: number}}
+ */
+function getCompiledTemplate(template) {
+	let compiled = compiled_templates.get(template);
+	if (compiled === undefined) {
+		compiled = compileFormat(template);
+		if (compiled_templates.size > 1000) {
+			compiled_templates.clear();
+		}
+		compiled_templates.set(template, compiled);
+	}
+	return compiled;
+}
+
+/*
+ * ---------------------------------------------------------------------------
+ * Template validators (static isValid hot path).
+ *
+ * Every validator replicates its legacy regex in `constants.format_types_regex`
+ * bit-for-bit when `is_strict` is false — including the deliberate quirks
+ * (hour 20-29 day-overflow support, `HH:mm` accepting an optional `:ss` tail,
+ * the empty-year-alternative that also matches 2-digit years). They are plain
+ * charCode/integer checks so they beat the multi-alternation regexes without
+ * allocating.
+ *
+ * `is_strict` layers wall-clock semantics on top of the shape check (moment
+ * strict parity): 4-digit years only (1700-2199), real calendar days with leap
+ * years, hours 00-23 plus exactly `24:00[:00[.000]]`, and no `:ss` tail on
+ * `HH:mm`. Strict always accepts a subset of the default mode.
+ * ---------------------------------------------------------------------------
+ */
+
+const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+/**
+ * Real-calendar check for an already range-checked date (month 1-12, day 1-31).
+ *
+ * @param {number} year
+ * @param {number} month - 1-based month
+ * @param {number} day
+ * @returns {boolean}
+ */
+function isRealDate(year, month, day) {
+	if (day <= DAYS_IN_MONTH[month - 1]) {
+		return true;
+	}
+	return month === 2 && day === 29 && year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+}
+
+// Two ASCII digits at offset i as an int, or -1 when either char is not a digit.
+function num2(s, i) {
+	// >>> 0 folds the two range checks per digit into one unsigned compare. Callers always
+	// length-check first, so charCodeAt never returns NaN here.
+	const a = (s.charCodeAt(i) - 48) >>> 0;
+	const b = (s.charCodeAt(i + 1) - 48) >>> 0;
+	if (a > 9 || b > 9) {
+		return -1;
+	}
+	return a * 10 + b;
+}
+
+// Four ASCII digits at offset i as an int, or -1.
+function num4(s, i) {
+	const a = (s.charCodeAt(i) - 48) >>> 0;
+	const b = (s.charCodeAt(i + 1) - 48) >>> 0;
+	const c = (s.charCodeAt(i + 2) - 48) >>> 0;
+	const d = (s.charCodeAt(i + 3) - 48) >>> 0;
+	if (a > 9 || b > 9 || c > 9 || d > 9) {
+		return -1;
+	}
+	return a * 1000 + b * 100 + c * 10 + d;
+}
+
+// regex.test() coerces its argument with ToString; validators must match that.
+function asString(input) {
+	return typeof input === 'string' ? input : String(input);
+}
+
+/**
+ * Hour policy shared by all time validators. `hourMax` mirrors the legacy
+ * regex of the template (29 for the `([01]\d|2[0-9])` day-overflow templates,
+ * 23 for the compact/ISO ones). Strict additionally enforces wall-clock hours,
+ * allowing hour 24 only when every finer field is absent (-1) or zero.
+ */
+function checkHour(hour, minute, second, ms, is_strict, hourMax) {
+	if (hour < 0 || hour > hourMax) {
+		return false;
+	}
+	if (is_strict && hour > 23) {
+		return hour === 24 && minute <= 0 && second <= 0 && ms <= 0;
+	}
+	return true;
+}
+
+// "YYYY(sep)MM(sep)DD" occupying s[0..9] (4-digit year 1700-2199).
+function ymd4At(s, sep, is_strict) {
+	if (s.charCodeAt(4) !== sep || s.charCodeAt(7) !== sep) {
+		return false;
+	}
+	const y = num4(s, 0);
+	if (y < 1700 || y > 2199) {
+		return false;
+	}
+	const m = num2(s, 5);
+	const d = num2(s, 8);
+	if (m < 1 || m > 12 || d < 1 || d > 31) {
+		return false;
+	}
+	return !is_strict || isRealDate(y, m, d);
+}
+
+// Legacy 2-digit-year "YY(sep)MM(sep)DD" occupying s[0..7] (default mode only).
+function ymd2At(s, sep) {
+	if (s.charCodeAt(2) !== sep || s.charCodeAt(5) !== sep) {
+		return false;
+	}
+	if (num2(s, 0) < 0) {
+		return false;
+	}
+	const m = num2(s, 3);
+	const d = num2(s, 6);
+	return m >= 1 && m <= 12 && d >= 1 && d <= 31;
+}
+
+// "DD(sep)MM(sep)YYYY" occupying s[0..9].
+function dmy4At(s, sep, is_strict) {
+	if (s.charCodeAt(2) !== sep || s.charCodeAt(5) !== sep) {
+		return false;
+	}
+	const d = num2(s, 0);
+	const m = num2(s, 3);
+	const y = num4(s, 6);
+	if (y < 1700 || y > 2199) {
+		return false;
+	}
+	if (m < 1 || m > 12 || d < 1 || d > 31) {
+		return false;
+	}
+	return !is_strict || isRealDate(y, m, d);
+}
+
+// Legacy 2-digit-year "DD(sep)MM(sep)YY" occupying s[0..7] (default mode only).
+function dmy2At(s, sep) {
+	if (s.charCodeAt(2) !== sep || s.charCodeAt(5) !== sep) {
+		return false;
+	}
+	const d = num2(s, 0);
+	const m = num2(s, 3);
+	if (num2(s, 6) < 0) {
+		return false;
+	}
+	return m >= 1 && m <= 12 && d >= 1 && d <= 31;
+}
+
+// "HH:mm:ss" at offset i, optionally followed by ".SSS".
+function hmsAt(s, i, is_strict, hourMax, hasMs) {
+	if (s.charCodeAt(i + 2) !== 58 || s.charCodeAt(i + 5) !== 58) {
+		return false;
+	}
+	const h = num2(s, i);
+	const mi = num2(s, i + 3);
+	const se = num2(s, i + 6);
+	if (mi < 0 || mi > 59 || se < 0 || se > 59) {
+		return false;
+	}
+	let ms = -1;
+	if (hasMs) {
+		if (s.charCodeAt(i + 8) !== 46) {
+			return false;
+		}
+		const hiMs = num2(s, i + 9);
+		const loMs = s.charCodeAt(i + 11) - 48;
+		if (hiMs < 0 || loMs < 0 || loMs > 9) {
+			return false;
+		}
+		ms = hiMs * 10 + loMs;
+	}
+	return checkHour(h, mi, se, ms, is_strict, hourMax);
+}
+
+// "HH:mm" at offset i.
+function hmAt(s, i, is_strict, hourMax) {
+	if (s.charCodeAt(i + 2) !== 58) {
+		return false;
+	}
+	const h = num2(s, i);
+	const mi = num2(s, i + 3);
+	if (mi < 0 || mi > 59) {
+		return false;
+	}
+	return checkHour(h, mi, -1, -1, is_strict, hourMax);
+}
+
+const format_validators = new Map();
+{
+	const DASH = 45;
+	const DOT = 46;
+	const SLASH = 47;
+	const SPACE = 32;
+	const COLON = 58;
+	const UPPER_T = 84;
+
+	const dateYmd = (sep) => (input, is_strict) => {
+		const s = asString(input);
+		if (s.length === 10) {
+			return ymd4At(s, sep, is_strict);
+		}
+		return s.length === 8 && !is_strict && ymd2At(s, sep);
+	};
+	const dateDmy = (sep) => (input, is_strict) => {
+		const s = asString(input);
+		if (s.length === 10) {
+			return dmy4At(s, sep, is_strict);
+		}
+		return s.length === 8 && !is_strict && dmy2At(s, sep);
+	};
+	// Rare legacy shape: 2-digit year datetime ("YY?MM?DD HH:mm[:ss]" / "DD?MM?YY ..."), kept out
+	// of the hot validators so their primary path stays straight-line. Default mode only.
+	const shortYearDateTime = (s, sep, dayFirst, withSeconds) => {
+		if (s.charCodeAt(8) !== SPACE || s.charCodeAt(2) !== sep || s.charCodeAt(5) !== sep) {
+			return false;
+		}
+		const y = num2(s, dayFirst ? 6 : 0);
+		const m = num2(s, 3);
+		const d = num2(s, dayFirst ? 0 : 6);
+		if (y < 0 || m < 1 || m > 12 || d < 1 || d > 31 || s.charCodeAt(11) !== COLON) {
+			return false;
+		}
+		const h = num2(s, 9);
+		const mi = num2(s, 12);
+		if (h < 0 || h > 29 || mi < 0 || mi > 59) {
+			return false;
+		}
+		if (!withSeconds) {
+			return true;
+		}
+		if (s.charCodeAt(14) !== COLON) {
+			return false;
+		}
+		const se = num2(s, 15);
+		return se >= 0 && se <= 59;
+	};
+
+	// The four space-separated datetime families are the longest hot inputs; each gets its own
+	// straight-line literal (single length check, unconditional field reads, one range gate) —
+	// that structure is what keeps them ahead of the legacy regexes.
+	const dateTimeYmdSec = (sep) => (input, is_strict) => {
+		const s = asString(input);
+		if (s.length !== 19) {
+			return s.length === 17 && !is_strict && shortYearDateTime(s, sep, false, true);
+		}
+		if (
+			s.charCodeAt(4) !== sep ||
+			s.charCodeAt(7) !== sep ||
+			s.charCodeAt(10) !== SPACE ||
+			s.charCodeAt(13) !== COLON ||
+			s.charCodeAt(16) !== COLON
+		) {
+			return false;
+		}
+		const y = num4(s, 0);
+		const m = num2(s, 5);
+		const d = num2(s, 8);
+		const h = num2(s, 11);
+		const mi = num2(s, 14);
+		const se = num2(s, 17);
+		if (y < 1700 || y > 2199 || m < 1 || m > 12 || d < 1 || d > 31 || h < 0 || h > 29 || mi < 0 || mi > 59 || se < 0 || se > 59) {
+			return false;
+		}
+		if (is_strict) {
+			if (h > 23 && !(h === 24 && mi === 0 && se === 0)) {
+				return false;
+			}
+			return isRealDate(y, m, d);
+		}
+		return true;
+	};
+	const dateTimeYmdMin = (sep) => (input, is_strict) => {
+		const s = asString(input);
+		if (s.length !== 16) {
+			return s.length === 14 && !is_strict && shortYearDateTime(s, sep, false, false);
+		}
+		if (s.charCodeAt(4) !== sep || s.charCodeAt(7) !== sep || s.charCodeAt(10) !== SPACE || s.charCodeAt(13) !== COLON) {
+			return false;
+		}
+		const y = num4(s, 0);
+		const m = num2(s, 5);
+		const d = num2(s, 8);
+		const h = num2(s, 11);
+		const mi = num2(s, 14);
+		if (y < 1700 || y > 2199 || m < 1 || m > 12 || d < 1 || d > 31 || h < 0 || h > 29 || mi < 0 || mi > 59) {
+			return false;
+		}
+		if (is_strict) {
+			if (h > 23 && !(h === 24 && mi === 0)) {
+				return false;
+			}
+			return isRealDate(y, m, d);
+		}
+		return true;
+	};
+	const dateTimeDmySec = (sep) => (input, is_strict) => {
+		const s = asString(input);
+		if (s.length !== 19) {
+			return s.length === 17 && !is_strict && shortYearDateTime(s, sep, true, true);
+		}
+		if (
+			s.charCodeAt(2) !== sep ||
+			s.charCodeAt(5) !== sep ||
+			s.charCodeAt(10) !== SPACE ||
+			s.charCodeAt(13) !== COLON ||
+			s.charCodeAt(16) !== COLON
+		) {
+			return false;
+		}
+		const d = num2(s, 0);
+		const m = num2(s, 3);
+		const y = num4(s, 6);
+		const h = num2(s, 11);
+		const mi = num2(s, 14);
+		const se = num2(s, 17);
+		if (y < 1700 || y > 2199 || m < 1 || m > 12 || d < 1 || d > 31 || h < 0 || h > 29 || mi < 0 || mi > 59 || se < 0 || se > 59) {
+			return false;
+		}
+		if (is_strict) {
+			if (h > 23 && !(h === 24 && mi === 0 && se === 0)) {
+				return false;
+			}
+			return isRealDate(y, m, d);
+		}
+		return true;
+	};
+	const dateTimeDmyMin = (sep) => (input, is_strict) => {
+		const s = asString(input);
+		if (s.length !== 16) {
+			return s.length === 14 && !is_strict && shortYearDateTime(s, sep, true, false);
+		}
+		if (s.charCodeAt(2) !== sep || s.charCodeAt(5) !== sep || s.charCodeAt(10) !== SPACE || s.charCodeAt(13) !== COLON) {
+			return false;
+		}
+		const d = num2(s, 0);
+		const m = num2(s, 3);
+		const y = num4(s, 6);
+		const h = num2(s, 11);
+		const mi = num2(s, 14);
+		if (y < 1700 || y > 2199 || m < 1 || m > 12 || d < 1 || d > 31 || h < 0 || h > 29 || mi < 0 || mi > 59) {
+			return false;
+		}
+		if (is_strict) {
+			if (h > 23 && !(h === 24 && mi === 0)) {
+				return false;
+			}
+			return isRealDate(y, m, d);
+		}
+		return true;
+	};
+
+	format_validators.set('YYYY-MM-DD', dateYmd(DASH));
+	format_validators.set('YYYY.MM.DD', dateYmd(DOT));
+	format_validators.set('DD.MM.YYYY', dateDmy(DOT));
+	format_validators.set('DD-MM-YYYY', dateDmy(DASH));
+	format_validators.set('YYYY-MM-DD HH:mm:ss', dateTimeYmdSec(DASH));
+	format_validators.set('YYYY.MM.DD HH:mm:ss', dateTimeYmdSec(DOT));
+	format_validators.set('YYYY-MM-DD HH:mm', dateTimeYmdMin(DASH));
+	format_validators.set('YYYY.MM.DD HH:mm', dateTimeYmdMin(DOT));
+	format_validators.set('DD.MM.YYYY HH:mm:ss', dateTimeDmySec(DOT));
+	format_validators.set('DD-MM-YYYY HH:mm:ss', dateTimeDmySec(DASH));
+	format_validators.set('DD.MM.YYYY HH:mm', dateTimeDmyMin(DOT));
+	format_validators.set('DD-MM-YYYY HH:mm', dateTimeDmyMin(DASH));
+	format_validators.set('MM/DD/YYYY', (input, is_strict) => {
+		const s = asString(input);
+		if (s.length !== 10 || s.charCodeAt(2) !== SLASH || s.charCodeAt(5) !== SLASH) {
+			return false;
+		}
+		const m = num2(s, 0);
+		const d = num2(s, 3);
+		const y = num4(s, 6);
+		if (y < 1700 || y > 2199 || m < 1 || m > 12 || d < 1 || d > 31) {
+			return false;
+		}
+		return !is_strict || isRealDate(y, m, d);
+	});
+	format_validators.set('DD/MM/YYYY', (input, is_strict) => {
+		const s = asString(input);
+		return s.length === 10 && dmy4At(s, SLASH, is_strict);
+	});
+	format_validators.set('YYYY-DD-MM', (input, is_strict) => {
+		const s = asString(input);
+		if (s.length !== 10 || s.charCodeAt(4) !== DASH || s.charCodeAt(7) !== DASH) {
+			return false;
+		}
+		const y = num4(s, 0);
+		const d = num2(s, 5);
+		const m = num2(s, 8);
+		if (y < 1700 || y > 2199 || m < 1 || m > 12 || d < 1 || d > 31) {
+			return false;
+		}
+		return !is_strict || isRealDate(y, m, d);
+	});
+	format_validators.set('YYYY-MM', (input) => {
+		const s = asString(input);
+		if (s.length !== 7 || s.charCodeAt(4) !== DASH) {
+			return false;
+		}
+		const y = num4(s, 0);
+		const m = num2(s, 5);
+		return y >= 1700 && y <= 2199 && m >= 1 && m <= 12;
+	});
+	format_validators.set('YYYYMMDD', (input, is_strict) => {
+		const s = asString(input);
+		if (s.length === 8) {
+			const y = num4(s, 0);
+			const m = num2(s, 4);
+			const d = num2(s, 6);
+			if (y < 1700 || y > 2199 || m < 1 || m > 12 || d < 1 || d > 31) {
+				return false;
+			}
+			return !is_strict || isRealDate(y, m, d);
+		}
+		if (s.length === 6 && !is_strict) {
+			if (num2(s, 0) < 0) {
+				return false;
+			}
+			const m = num2(s, 2);
+			const d = num2(s, 4);
+			return m >= 1 && m <= 12 && d >= 1 && d <= 31;
+		}
+		return false;
+	});
+	format_validators.set('YYYYMMDDHHmmss', (input, is_strict) => {
+		const s = asString(input);
+		let timeAt;
+		let y;
+		let m;
+		let d;
+		if (s.length === 14) {
+			y = num4(s, 0);
+			m = num2(s, 4);
+			d = num2(s, 6);
+			if (y < 1700 || y > 2199) {
+				return false;
+			}
+			timeAt = 8;
+		} else if (s.length === 12 && !is_strict) {
+			y = num2(s, 0);
+			m = num2(s, 2);
+			d = num2(s, 4);
+			if (y < 0) {
+				return false;
+			}
+			timeAt = 6;
+		} else {
+			return false;
+		}
+		if (m < 1 || m > 12 || d < 1 || d > 31) {
+			return false;
+		}
+		const h = num2(s, timeAt);
+		const mi = num2(s, timeAt + 2);
+		const se = num2(s, timeAt + 4);
+		if (h < 0 || h > 23 || mi < 0 || mi > 59 || se < 0 || se > 59) {
+			return false;
+		}
+		return !is_strict || isRealDate(y, m, d);
+	});
+	format_validators.set('YYYY-MM-DDTHH:mm:ss', (input, is_strict) => {
+		const s = asString(input);
+		if (
+			s.length !== 19 ||
+			s.charCodeAt(10) !== UPPER_T ||
+			s.charCodeAt(4) !== DASH ||
+			s.charCodeAt(7) !== DASH ||
+			s.charCodeAt(13) !== COLON ||
+			s.charCodeAt(16) !== COLON
+		) {
+			return false;
+		}
+		const y = num4(s, 0);
+		const m = num2(s, 5);
+		const d = num2(s, 8);
+		const h = num2(s, 11);
+		const mi = num2(s, 14);
+		const se = num2(s, 17);
+		// The legacy T-format regex caps hours at 23 (no day-overflow support here).
+		if (y < 1700 || y > 2199 || m < 1 || m > 12 || d < 1 || d > 31 || h < 0 || h > 23 || mi < 0 || mi > 59 || se < 0 || se > 59) {
+			return false;
+		}
+		return !is_strict || isRealDate(y, m, d);
+	});
+	format_validators.set('HH:mm:ss', (input, is_strict) => {
+		const s = asString(input);
+		return s.length === 8 && hmsAt(s, 0, is_strict, 29, false);
+	});
+	format_validators.set('HH:mm:ss.SSS', (input, is_strict) => {
+		const s = asString(input);
+		return s.length === 12 && hmsAt(s, 0, is_strict, 29, true);
+	});
+	format_validators.set('HH:mm', (input, is_strict) => {
+		const s = asString(input);
+		if (s.length === 5) {
+			return hmAt(s, 0, is_strict, 29);
+		}
+		// Legacy quirk: the HH:mm regex tolerates an optional :ss tail (default mode only).
+		return s.length === 8 && !is_strict && hmsAt(s, 0, false, 29, false);
+	});
+	format_validators.set('HH', (input, is_strict) => {
+		const s = asString(input);
+		if (s.length !== 2) {
+			return false;
+		}
+		const h = num2(s, 0);
+		return h >= 0 && h <= (is_strict ? 23 : 29);
+	});
+	format_validators.set('mm:ss', (input) => {
+		const s = asString(input);
+		if (s.length !== 5 || s.charCodeAt(2) !== COLON) {
+			return false;
+		}
+		const mi = num2(s, 0);
+		const se = num2(s, 3);
+		return mi >= 0 && mi <= 59 && se >= 0 && se <= 59;
+	});
+	format_validators.set('mm', (input) => {
+		const s = asString(input);
+		if (s.length !== 2) {
+			return false;
+		}
+		const v = num2(s, 0);
+		return v >= 0 && v <= 59;
+	});
+	format_validators.set('ss', format_validators.get('mm'));
+	format_validators.set('YYYY', (input) => {
+		const s = asString(input);
+		if (s.length !== 4) {
+			return false;
+		}
+		const y = num4(s, 0);
+		return y >= 1700 && y <= 2199;
+	});
+	format_validators.set('MM', (input) => {
+		const s = asString(input);
+		if (s.length !== 2) {
+			return false;
+		}
+		const m = num2(s, 0);
+		return m >= 1 && m <= 12;
+	});
+	format_validators.set('DD', (input) => {
+		const s = asString(input);
+		if (s.length !== 2) {
+			return false;
+		}
+		const d = num2(s, 0);
+		return d >= 1 && d <= 31;
+	});
+}
+
+/*
+ * ---------------------------------------------------------------------------
+ * Dynamic template validation: compiles any display-token template (the same
+ * moment/dayjs vocabulary the formatter accepts, see format_token_regex) into
+ * an anchored RegExp plus semantic slots for the post-match checks. This is
+ * what lets the static isValid accept arbitrary templates beyond the
+ * predefined format_types_regex table. Templates with no recognizable token
+ * keep throwing 'Invalid template !'.
+ * ---------------------------------------------------------------------------
+ */
+
+const ORDINAL_SUFFIX_SRC = '(?:st|nd|rd|th|\\.|er|ème|te|º|ª|-й|वां|日|일|z|день)?';
+const NAME_TOKEN_SRC = '([\\p{L}\\p{M}.]+)';
+
+// token -> { src: one-capture-group pattern, kind: semantic slot ('' = shape-only) }
+const validator_token_map = {
+	YYYY: { src: '(\\d{4})', kind: 'year' },
+	YY: { src: '(\\d{2})', kind: '' },
+	MMMM: { src: NAME_TOKEN_SRC, kind: '' },
+	MMM: { src: NAME_TOKEN_SRC, kind: '' },
+	MM: { src: '(0[1-9]|1[0-2])', kind: 'month' },
+	Mo: { src: `(0?[1-9]|1[0-2])${ORDINAL_SUFFIX_SRC}`, kind: 'month' },
+	M: { src: '(0?[1-9]|1[0-2])', kind: 'month' },
+	Qo: { src: `([1-4])${ORDINAL_SUFFIX_SRC}`, kind: '' },
+	Q: { src: '([1-4])', kind: '' },
+	DDDD: { src: '(\\d{3})', kind: 'doy' },
+	DDDo: { src: `([1-9]\\d{0,2})${ORDINAL_SUFFIX_SRC}`, kind: 'doy' },
+	DDD: { src: '([1-9]\\d{0,2})', kind: 'doy' },
+	Do: { src: `(0?[1-9]|[12]\\d|3[01])${ORDINAL_SUFFIX_SRC}`, kind: 'day' },
+	DD: { src: '(0[1-9]|[12]\\d|3[01])', kind: 'day' },
+	D: { src: '(0?[1-9]|[12]\\d|3[01])', kind: 'day' },
+	dddd: { src: NAME_TOKEN_SRC, kind: '' },
+	ddd: { src: NAME_TOKEN_SRC, kind: '' },
+	dd: { src: NAME_TOKEN_SRC, kind: '' },
+	do: { src: `([0-6])${ORDINAL_SUFFIX_SRC}`, kind: '' },
+	d: { src: '([0-6])', kind: '' },
+	E: { src: '([1-7])', kind: '' },
+	e: { src: '([0-6])', kind: '' },
+	wo: { src: `([1-9]|[1-4]\\d|5[0-3])${ORDINAL_SUFFIX_SRC}`, kind: '' },
+	ww: { src: '(0[1-9]|[1-4]\\d|5[0-3])', kind: '' },
+	w: { src: '([1-9]|[1-4]\\d|5[0-3])', kind: '' },
+	Wo: { src: `([1-9]|[1-4]\\d|5[0-3])${ORDINAL_SUFFIX_SRC}`, kind: '' },
+	WW: { src: '(0[1-9]|[1-4]\\d|5[0-3])', kind: '' },
+	W: { src: '([1-9]|[1-4]\\d|5[0-3])', kind: '' },
+	gggg: { src: '(\\d{4})', kind: '' },
+	gg: { src: '(\\d{2})', kind: '' },
+	GGGG: { src: '(\\d{4})', kind: '' },
+	GG: { src: '(\\d{2})', kind: '' },
+	HH: { src: '(\\d{2})', kind: 'hour' },
+	H: { src: '(\\d{1,2})', kind: 'hour' },
+	hh: { src: '(0[1-9]|1[0-2])', kind: '' },
+	h: { src: '(0?[1-9]|1[0-2])', kind: '' },
+	kk: { src: '(0[1-9]|1\\d|2[0-4])', kind: '' },
+	k: { src: '([1-9]|1\\d|2[0-4])', kind: '' },
+	mm: { src: '([0-5]\\d)', kind: 'minute' },
+	m: { src: '([0-5]?\\d)', kind: 'minute' },
+	ss: { src: '([0-5]\\d)', kind: 'second' },
+	s: { src: '([0-5]?\\d)', kind: 'second' },
+	SSS: { src: '(\\d{3})', kind: 'ms' },
+	A: { src: '(AM|PM)', kind: '' },
+	a: { src: '(am|pm)', kind: '' },
+	X: { src: '(\\d{1,12})', kind: '' },
+	x: { src: '(\\d{1,15})', kind: '' },
+	zzz: { src: '([\\p{L}\\p{M} ]+)', kind: '' },
+	zz: { src: '([\\p{L}\\p{M}+\\-:\\d]+)', kind: '' },
+	z: { src: '([\\p{L}\\p{M}+\\-:\\d]+)', kind: '' },
+	ZZ: { src: '([+-]\\d{4}|Z)', kind: '' },
+	Z: { src: '([+-]\\d{2}:\\d{2}|Z)', kind: '' },
+};
+
+function escapeForRegex(text) {
+	return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Compiles a display-token template into an anchored validation RegExp plus
+ * the semantic slots (capture-group index -> field kind) needed for the
+ * post-match range/calendar/strict checks. Throws 'Invalid template !' when
+ * the template is not a string or contains no recognizable token, matching
+ * the legacy isValid contract for unknown templates.
+ *
+ * @param {string} template
+ * @returns {{regex: RegExp, slots: Array<{g: number, kind: string}>}}
+ */
+function compileValidator(template) {
+	if (typeof template !== 'string') {
+		throw new Error('Invalid template !');
+	}
+	let src = '';
+	let tokenCount = 0;
+	let groupIndex = 0;
+	const slots = [];
+	let lastIndex = 0;
+	format_token_regex.lastIndex = 0;
+	let match = format_token_regex.exec(template);
+	while (match !== null) {
+		if (match.index > lastIndex) {
+			src += escapeForRegex(template.slice(lastIndex, match.index));
+		}
+		const token = match[0];
+		if (match[1] !== undefined) {
+			src += escapeForRegex(token.slice(1, -1));
+		} else {
+			tokenCount++;
+			// S-runs other than SSS (S, SS, SSSS..SSSSSSSSS) are the only tokens missing from the map.
+			const spec = validator_token_map[token] || { src: `(\\d{${token.length}})`, kind: 'ms' };
+			src += spec.src;
+			groupIndex++;
+			if (spec.kind !== '') {
+				slots.push({ g: groupIndex, kind: spec.kind });
+			}
+		}
+		lastIndex = format_token_regex.lastIndex;
+		match = format_token_regex.exec(template);
+	}
+	if (lastIndex < template.length) {
+		src += escapeForRegex(template.slice(lastIndex));
+	}
+	if (tokenCount === 0) {
+		throw new Error('Invalid template !');
+	}
+	return { regex: new RegExp(`^${src}$`, 'u'), slots };
+}
+
+const compiled_validators = new Map();
+
+/**
+ * Validates an input against an arbitrary display-token template (compiled and
+ * memoized on first use). Default mode is shape-only, mirroring the predefined
+ * templates' philosophy (hours up to 29 for day overflow); strict mode adds
+ * wall-clock hours (24 only as exactly 24:00[:00]), 4-digit years 1700-2199
+ * and real-calendar day checks when numeric year+month+day are all present.
+ *
+ * @param {string} template
+ * @param {*} input
+ * @param {boolean} is_strict
+ * @returns {boolean}
+ */
+function validateDynamicTemplate(template, input, is_strict) {
+	let compiled = compiled_validators.get(template);
+	if (compiled === undefined) {
+		compiled = compileValidator(template);
+		if (compiled_validators.size > 1000) {
+			compiled_validators.clear();
+		}
+		compiled_validators.set(template, compiled);
+	}
+	const m = compiled.regex.exec(asString(input));
+	if (m === null) {
+		return false;
+	}
+	const slots = compiled.slots;
+	let year = -1;
+	let month = -1;
+	let day = -1;
+	let hour = -1;
+	let minute = -1;
+	let second = -1;
+	let ms = -1;
+	let doy = -1;
+	for (let i = 0; i < slots.length; i++) {
+		const v = +m[slots[i].g];
+		switch (slots[i].kind) {
+			case 'year':
+				year = v;
+				break;
+			case 'month':
+				month = v;
+				break;
+			case 'day':
+				day = v;
+				break;
+			case 'hour':
+				hour = v;
+				break;
+			case 'minute':
+				minute = v;
+				break;
+			case 'second':
+				second = v;
+				break;
+			case 'ms':
+				if (v > ms) {
+					ms = v;
+				}
+				break;
+			case 'doy':
+				doy = v;
+				break;
+			default:
+				break;
+		}
+	}
+	if (doy !== -1 && (doy < 1 || doy > 366)) {
+		return false;
+	}
+	if (hour !== -1 && !checkHour(hour, minute, second, ms, is_strict, 29)) {
+		return false;
+	}
+	if (is_strict) {
+		if (year !== -1 && (year < 1700 || year > 2199)) {
+			return false;
+		}
+		// Year-less templates use a leap year so "29 Feb" stays acceptable without a year context.
+		if (month !== -1 && day !== -1 && !isRealDate(year !== -1 ? year : 2000, month, day)) {
+			return false;
+		}
+	}
+	return true;
+}
+
 module.exports.getTimezoneOffset = getTimezoneOffset;
 module.exports.parseWithTimezone = parseWithTimezone;
 module.exports.checkTimezone = checkTimezone;
@@ -829,6 +2036,21 @@ module.exports.absFloor = absFloor;
 module.exports.duration = duration;
 module.exports.dateTimeFormat = dateTimeFormat;
 module.exports.converter = converter;
+module.exports.compileFormat = compileFormat;
+module.exports.getCompiledTemplate = getCompiledTemplate;
 module.exports.isValidMonth = isValidMonth;
 module.exports.isValidDayName = isValidDayName;
+module.exports.getMonthNumber = getMonthNumber;
+module.exports.tryParseTextDate = tryParseTextDate;
+module.exports.num2 = num2;
+module.exports.num4 = num4;
 module.exports.getOrdinal = getOrdinal;
+module.exports.getDayOfWeek = getDayOfWeek;
+module.exports.getDayOfYear = getDayOfYear;
+module.exports.getIsoWeekInfo = getIsoWeekInfo;
+module.exports.getLocaleWeekInfo = getLocaleWeekInfo;
+module.exports.getTimezoneLongName = getTimezoneLongName;
+module.exports.format_validators = format_validators;
+module.exports.validateDynamicTemplate = validateDynamicTemplate;
+module.exports.compileValidator = compileValidator;
+module.exports.isRealDate = isRealDate;
