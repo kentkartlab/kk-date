@@ -24,9 +24,10 @@ jobs:
         with:
           node-version: 26
           registry-url: 'https://registry.npmjs.org'
+      - name: Ensure npm supports trusted publishing
+        run: npm install -g npm@latest
       - name: Publish and release if the version is new
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         # Idempotent: only publish when main's version is not on npm yet
         run: |
