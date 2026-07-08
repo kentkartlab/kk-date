@@ -16,11 +16,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check Out Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 26
           registry-url: 'https://registry.npmjs.org'
@@ -29,16 +29,25 @@ jobs:
       - name: Publish and release if the version is new
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        # Idempotent: only publish when main's version is not on npm yet
+        # Idempotent: publish and release are guarded independently, so a re-run
+        # after a partial failure (published, but the release step failed) still
+        # creates the missing tag + GitHub Release.
         run: |
           VERSION=$(node -p "require('./package.json').version")
+
+          # Publish to npm only if this version is not on npm yet.
           if npm view "kk-date@$VERSION" version >/dev/null 2>&1; then
-            echo "kk-date@$VERSION is already published on npm, skipping."
-            exit 0
+            echo "kk-date@$VERSION is already published on npm, skipping publish."
+          else
+            echo "Publishing kk-date@$VERSION ..."
+            npm publish --provenance --access public
           fi
 
-          echo "Publishing kk-date@$VERSION ..."
-          npm publish --provenance --access public
+          # Create the tag + release only if it does not exist yet.
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            echo "Release v$VERSION already exists, skipping release."
+            exit 0
+          fi
 
           # Release notes: use the merged PR's "## Release Notes" section if present,
           # otherwise fall back to notes generated from PR titles.
