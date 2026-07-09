@@ -17,6 +17,7 @@ const memory = {
 		lastKiller: 0,
 		nextKiller: 0,
 		totalHits: 0,
+		totalMisses: 0,
 		nextMemoryStatsTime: 0,
 		memoryStats: {},
 		totalKeys: 0,
@@ -70,9 +71,11 @@ function evictLRU() {
 	const keysToRemove = sortedKeys.slice(0, itemsToRemove);
 
 	keysToRemove.forEach((key) => {
-		delete memory.store[key];
+		if (memory.store[key] !== undefined) {
+			delete memory.store[key];
+			memory.config.totalKeys--;
+		}
 		memory.lru.delete(key);
-		memory.config.totalKeys--;
 	});
 }
 
@@ -96,6 +99,7 @@ module.exports.setItemSync = (key, value, ttl = defaultTtl) => {
 			evictLRU();
 		}
 
+		const isNewKey = memory.store[keyStr] === undefined;
 		memory.store[keyStr] = {
 			value: value,
 			hit: 0,
@@ -103,7 +107,9 @@ module.exports.setItemSync = (key, value, ttl = defaultTtl) => {
 		};
 		// Update LRU tracking
 		memory.lru.set(keyStr, Date.now());
-		memory.config.totalKeys++;
+		if (isNewKey) {
+			memory.config.totalKeys++;
+		}
 
 		return true;
 	} catch (error) {
@@ -168,6 +174,7 @@ module.exports.getItem = (key) => {
 
 			return memory.store[keyStr].value;
 		}
+		memory.config.totalMisses++;
 		return null;
 	} catch (error) {
 		console.error('nope-redis -> Crital error! ', error.message);
@@ -234,6 +241,7 @@ module.exports.stats = (config = { showKeys: true, showTotal: true, showSize: fa
 			criticalError,
 			defaultTtl,
 			totalHits: memory.config.totalHits,
+			totalMisses: memory.config.totalMisses,
 			cacheSize: Object.keys(memory.store).length,
 			maxCacheSize: MAX_CACHE_SIZE,
 		};
@@ -267,6 +275,7 @@ function defaultMemory(withConfig = false) {
 				lastKiller: 0,
 				nextKiller: 0,
 				totalHits: 0,
+				totalMisses: 0,
 				nextMemoryStatsTime: 0,
 				status: false,
 				memoryStats: {},
@@ -293,7 +302,7 @@ function defaultMemory(withConfig = false) {
 function roughSizeOfObject(object) {
 	try {
 		function formatSizeUnits(unit_bytes) {
-			if (bytes >= 1073741824) {
+			if (unit_bytes >= 1073741824) {
 				return `${(unit_bytes / 1073741824).toFixed(2)} GB`;
 			}
 			if (unit_bytes >= 1048576) {
@@ -345,6 +354,7 @@ function killer() {
 	for (const property in memory.store) {
 		if (memory.store[`${property}`].expires_at < Math.floor(Date.now() / 1000)) {
 			delete memory.store[`${property}`];
+			memory.lru.delete(`${property}`);
 			memory.config.totalKeys--;
 		}
 	}

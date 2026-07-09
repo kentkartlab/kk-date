@@ -384,11 +384,11 @@ node benchmark2.js  # Sequential operations benchmark
 <!-- BENCH:perf-seq -->
 | Operation | kk-date | Moment.js | Day.js | Luxon | vs Fastest Competitor |
 |-----------|---------|-----------|--------|-------|-----------------------|
-| **Date Creation & Formatting** | **190ms** | 1531ms | 879ms | 1190ms | **~362% faster** than Day.js |
-| **Time Operations** | **267ms** | 1759ms | 712ms | 3183ms | **~166% faster** than Day.js |
-| **Timezone Conversions** | **452ms** | 3509ms | 23787ms | 5036ms | **~676% faster** than Moment |
-| **Complex Operations** | **373ms** | 3404ms | 1710ms | 3718ms | **~358% faster** than Day.js |
-| **Overall** | **1.28s** | 10.20s | 27.09s | 13.13s | **~21.1x faster** than Day.js |
+| **Date Creation & Formatting** | **103ms** | 735ms | 523ms | 661ms | **~80% less time (5.1x faster)** than Day.js |
+| **Time Operations** | **135ms** | 813ms | 376ms | 1645ms | **~64% less time (2.8x faster)** than Day.js |
+| **Timezone Conversions** | **164ms** | 1109ms | 13317ms | 2347ms | **~85% less time (6.8x faster)** than Moment |
+| **Complex Operations** | **154ms** | 1393ms | 851ms | 1894ms | **~82% less time (5.5x faster)** than Day.js |
+| **Overall** | **0.56s** | 4.05s | 15.07s | 6.55s | **~27.1x faster** than Day.js |
 <!-- /BENCH:perf-seq -->
 
 #### Key Performance Metrics
@@ -396,9 +396,9 @@ node benchmark2.js  # Sequential operations benchmark
 *Measured in our benchmark suite on Node.js 26 and reproduced by CI on every PR (the "Performance Benchmarks" job). These are not guarantees — results vary by workload, hardware, and Node version. Reproduce them with `node benchmark.js` / `node benchmark2.js`.*
 
 <!-- BENCH:perf-metrics -->
-- **~95% faster** than the average of competing libraries (comprehensive benchmark)
-- **up to ~98% faster** in timezone operations
-- **~32% faster** with caching enabled
+- **~95% less time** on average vs competing libraries (comprehensive benchmark)
+- **up to ~99% less time** in timezone operations
+- **~23% less time** with caching enabled
 - **kk-date wins every scenario** in the current benchmark run
 - **Net memory delta is GC-dependent** (often negative for several libraries); stability comes from object pooling + LRU eviction
 - **Near-100% cache hit rate** for repeated operations
