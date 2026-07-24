@@ -1,0 +1,68 @@
+name: kk-date npm publish
+
+# Runs when code lands on main (only via a PR merge, since main is push-protected).
+# The version was already bumped inside the PR, so main's package.json is the source of truth.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write # create the git tag + GitHub Release
+  id-token: write # required for npm provenance
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Out Repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 26
+          registry-url: 'https://registry.npmjs.org'
+      - name: Ensure npm supports trusted publishing
+        run: npm install -g npm@latest
+      - name: Publish and release if the version is new
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Idempotent: publish and release are guarded independently, so a re-run
+        # after a partial failure (published, but the release step failed) still
+        # creates the missing tag + GitHub Release.
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+
+          # Publish to npm only if this version is not on npm yet.
+          if npm view "kk-date@$VERSION" version >/dev/null 2>&1; then
+            echo "kk-date@$VERSION is already published on npm, skipping publish."
+          else
+            echo "Publishing kk-date@$VERSION ..."
+            npm publish --provenance --access public
+          fi
+
+          # Create the tag + release only if it does not exist yet.
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            echo "Release v$VERSION already exists, skipping release."
+            exit 0
+          fi
+
+          # Release notes: use the merged PR's "## Release Notes" section if present,
+          # otherwise fall back to notes generated from PR titles.
+          NOTES_ARGS=(--generate-notes)
+          PR_BODY=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" --jq '.[0].body // ""' 2>/dev/null || echo "")
+          if [ -n "$PR_BODY" ]; then
+            CUSTOM=$(printf '%s\n' "$PR_BODY" | awk '/^##[[:space:]]+Release Notes[[:space:]]*$/{f=1;next} /^##[[:space:]]/&&f{exit} f{print}')
+            if printf '%s' "$CUSTOM" | grep -q '[^[:space:]]'; then
+              printf '%s\n' "$CUSTOM" > "$RUNNER_TEMP/notes.md"
+              NOTES_ARGS=(--notes-file "$RUNNER_TEMP/notes.md")
+            fi
+          fi
+
+          # Tag the released commit and create the GitHub Release
+          gh release create "v$VERSION" \
+            --title "v$VERSION" \
+            --target "$GITHUB_SHA" \
+            "${NOTES_ARGS[@]}"
