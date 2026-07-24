@@ -384,11 +384,11 @@ node benchmark2.js  # Sequential operations benchmark
 <!-- BENCH:perf-seq -->
 | Operation | kk-date | Moment.js | Day.js | Luxon | vs Fastest Competitor |
 |-----------|---------|-----------|--------|-------|-----------------------|
-| **Date Creation & Formatting** | **103ms** | 735ms | 523ms | 661ms | **~80% less time (5.1x faster)** than Day.js |
-| **Time Operations** | **135ms** | 813ms | 376ms | 1645ms | **~64% less time (2.8x faster)** than Day.js |
-| **Timezone Conversions** | **164ms** | 1109ms | 13317ms | 2347ms | **~85% less time (6.8x faster)** than Moment |
-| **Complex Operations** | **154ms** | 1393ms | 851ms | 1894ms | **~82% less time (5.5x faster)** than Day.js |
-| **Overall** | **0.56s** | 4.05s | 15.07s | 6.55s | **~27.1x faster** than Day.js |
+| **Date Creation & Formatting** | **130ms** | 1177ms | 759ms | 1008ms | **~83% less time (5.8x faster)** than Day.js |
+| **Time Operations** | **196ms** | 1280ms | 566ms | 2840ms | **~65% less time (2.9x faster)** than Day.js |
+| **Timezone Conversions** | **443ms** | 3320ms | 19494ms | 4515ms | **~87% less time (7.5x faster)** than Moment |
+| **Complex Operations** | **260ms** | 2599ms | 1280ms | 3051ms | **~80% less time (4.9x faster)** than Day.js |
+| **Overall** | **1.03s** | 8.38s | 22.10s | 11.41s | **~21.5x faster** than Day.js |
 <!-- /BENCH:perf-seq -->
 
 #### Key Performance Metrics
@@ -397,8 +397,8 @@ node benchmark2.js  # Sequential operations benchmark
 
 <!-- BENCH:perf-metrics -->
 - **~95% less time** on average vs competing libraries (comprehensive benchmark)
-- **up to ~99% less time** in timezone operations
-- **~23% less time** with caching enabled
+- **up to ~98% less time** in timezone operations
+- **~28% less time** with caching enabled
 - **kk-date wins every scenario** in the current benchmark run
 - **Net memory delta is GC-dependent** (often negative for several libraries); stability comes from object pooling + LRU eviction
 - **Near-100% cache hit rate** for repeated operations
