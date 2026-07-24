@@ -255,7 +255,9 @@ for (const scenario of scenarios) {
 	const fastest = sorted[0][1];
 
 	sorted.forEach(([lib, time], index) => {
-		const ratio = ((time / fastest - 1) * 100).toFixed(1);
+		// "% more time" than the fastest, plus the speed multiple (consistent with benchmark.js)
+		const pctMoreTime = ((time / fastest - 1) * 100).toFixed(1);
+		const multiple = (time / fastest).toFixed(1);
 		const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '  ';
 		const timeStr = time.toFixed(2).padStart(10);
 		const opsPerSec = ((DAYS_TO_TEST * ITERATIONS_PER_DAY) / (time / 1000)).toFixed(0);
@@ -263,7 +265,7 @@ for (const scenario of scenarios) {
 		if (index === 0) {
 			console.log(`${medal} ${lib.padEnd(10)} ${timeStr}ms (${opsPerSec.padStart(8)} ops/sec) ⚡ FASTEST`);
 		} else {
-			console.log(`${medal} ${lib.padEnd(10)} ${timeStr}ms (${opsPerSec.padStart(8)} ops/sec) +${ratio}% slower`);
+			console.log(`${medal} ${lib.padEnd(10)} ${timeStr}ms (${opsPerSec.padStart(8)} ops/sec) +${pctMoreTime}% more time (${multiple}x slower)`);
 		}
 	});
 }
@@ -285,7 +287,8 @@ const fastestTotal = sortedTotal[0][1];
 
 for (let index = 0; index < sortedTotal.length; index++) {
 	const [lib, time] = sortedTotal[index];
-	const ratio = ((time / fastestTotal - 1) * 100).toFixed(1);
+	const pctMoreTime = ((time / fastestTotal - 1) * 100).toFixed(1);
+	const multiple = (time / fastestTotal).toFixed(1);
 	const medal = index === 0 ? '🏆' : index === 1 ? '🥈' : index === 2 ? '🥉' : '  ';
 	const timeStr = time.toFixed(2).padStart(10);
 	const totalOps = DAYS_TO_TEST * ITERATIONS_PER_DAY * scenarios.length;
@@ -294,7 +297,7 @@ for (let index = 0; index < sortedTotal.length; index++) {
 	if (index === 0) {
 		console.log(`${medal} ${lib.padEnd(10)} ${timeStr}ms (${opsPerSec.padStart(8)} ops/sec) ⚡ OVERALL WINNER`);
 	} else {
-		console.log(`${medal} ${lib.padEnd(10)} ${timeStr}ms (${opsPerSec.padStart(8)} ops/sec) +${ratio}% slower`);
+		console.log(`${medal} ${lib.padEnd(10)} ${timeStr}ms (${opsPerSec.padStart(8)} ops/sec) +${pctMoreTime}% more time (${multiple}x slower)`);
 	}
 }
 

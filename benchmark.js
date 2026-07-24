@@ -538,6 +538,7 @@ let totalKkDateTime = 0;
 let totalMomentTime = 0;
 let totalDayjsTime = 0;
 let totalLuxonTime = 0;
+let totalKkDateTimeVsLuxon = 0;
 let totalLuxonTest = 0;
 let testCount = 0;
 
@@ -582,17 +583,23 @@ testScenarios.forEach((scenario) => {
 		const dayjsOps = calculateOpsPerSec(dayjsTime, iterations);
 		const luxonOps = test.luxon ? calculateOpsPerSec(luxonTime, iterations) : 0;
 
-		// Calculate improvements vs each library
-		const vsMoment = (((momentTime - kkDateTime) / momentTime) * 100).toFixed(1);
-		const vsDayjs = (((dayjsTime - kkDateTime) / dayjsTime) * 100).toFixed(1);
-		const vsLuxon = test.luxon ? (((luxonTime - kkDateTime) / luxonTime) * 100).toFixed(1) : null;
+		// Calculate improvements vs each library ("% faster" = how much LESS time kk-date takes)
+		const vsMoment = ((momentTime - kkDateTime) / momentTime) * 100;
+		const vsDayjs = ((dayjsTime - kkDateTime) / dayjsTime) * 100;
+		const vsLuxon = test.luxon ? ((luxonTime - kkDateTime) / luxonTime) * 100 : null;
 
+		// Unambiguous label: "% less time" (bounded at 100%) + the speed multiple.
+		// A bare "% faster" compresses near 100% (95% vs 98% hides a 21x-vs-44x gap).
+		const vsLabel = (pct, competitorTime) =>
+			pct >= 0
+				? `${pct.toFixed(1)}% less time (${(competitorTime / kkDateTime).toFixed(1)}x faster)`
+				: `${Math.abs(pct).toFixed(1)}% more time (${(kkDateTime / competitorTime).toFixed(1)}x slower)`;
 		console.log(`\n${test.name}:`);
 		console.log(`  kk-date:  ${kkDateTime.toFixed(3)}ms (${kkDateOps.toLocaleString()} ops/sec)`);
-		console.log(`  Moment:   ${momentTime.toFixed(3)}ms (${momentOps.toLocaleString()} ops/sec) | kk-date ${vsMoment > 0 ? '+' : ''}${vsMoment}%`);
-		console.log(`  Day.js:   ${dayjsTime.toFixed(3)}ms (${dayjsOps.toLocaleString()} ops/sec) | kk-date ${vsDayjs > 0 ? '+' : ''}${vsDayjs}%`);
+		console.log(`  Moment:   ${momentTime.toFixed(3)}ms (${momentOps.toLocaleString()} ops/sec) | kk-date ${vsLabel(vsMoment, momentTime)}`);
+		console.log(`  Day.js:   ${dayjsTime.toFixed(3)}ms (${dayjsOps.toLocaleString()} ops/sec) | kk-date ${vsLabel(vsDayjs, dayjsTime)}`);
 		if (test.luxon) {
-			console.log(`  Luxon:    ${luxonTime.toFixed(3)}ms (${luxonOps.toLocaleString()} ops/sec) | kk-date ${vsLuxon > 0 ? '+' : ''}${vsLuxon}%`);
+			console.log(`  Luxon:    ${luxonTime.toFixed(3)}ms (${luxonOps.toLocaleString()} ops/sec) | kk-date ${vsLabel(vsLuxon, luxonTime)}`);
 		}
 
 		totalKkDateTime += kkDateTime;
@@ -600,6 +607,9 @@ testScenarios.forEach((scenario) => {
 		totalDayjsTime += dayjsTime;
 		if (test.luxon) {
 			totalLuxonTime += luxonTime;
+			// Track kk-date over the SAME subset of tests Luxon runs, so the overall
+			// vs-Luxon comparison is like-for-like (21 of the tests have no Luxon case).
+			totalKkDateTimeVsLuxon += kkDateTime;
 		}
 		testCount++;
 	});
@@ -614,19 +624,25 @@ const avgKkDateTime = totalKkDateTime / testCount;
 const avgMomentTime = totalMomentTime / testCount;
 const avgDayjsTime = totalDayjsTime / testCount;
 const avgLuxonTime = totalLuxonTime / totalLuxonTest;
+// kk-date average restricted to the tests Luxon participates in (like-for-like)
+const avgKkDateTimeVsLuxon = totalKkDateTimeVsLuxon / totalLuxonTest;
 
-// Calculate vs each library
-const vsMomentOverall = (((avgMomentTime - avgKkDateTime) / avgMomentTime) * 100).toFixed(1);
-const vsDayjsOverall = (((avgDayjsTime - avgKkDateTime) / avgDayjsTime) * 100).toFixed(1);
-const vsLuxonOverall = (((avgLuxonTime - avgKkDateTime) / avgLuxonTime) * 100).toFixed(1);
+// Calculate vs each library ("% faster" = how much LESS time kk-date takes)
+const vsMomentOverall = ((avgMomentTime - avgKkDateTime) / avgMomentTime) * 100;
+const vsDayjsOverall = ((avgDayjsTime - avgKkDateTime) / avgDayjsTime) * 100;
+const vsLuxonOverall = ((avgLuxonTime - avgKkDateTimeVsLuxon) / avgLuxonTime) * 100;
 
+const fasterLabel = (v, ratio) =>
+	v >= 0
+		? `${v.toFixed(1)}% less time (${ratio.toFixed(1)}x faster)`
+		: `${Math.abs(v).toFixed(1)}% more time (${(1 / ratio).toFixed(1)}x slower)`;
 console.log(`Average kk-date time:  ${avgKkDateTime.toFixed(3)}ms`);
 console.log(`Average Moment time:   ${avgMomentTime.toFixed(3)}ms`);
 console.log(`Average Day.js time:   ${avgDayjsTime.toFixed(3)}ms`);
-console.log(`Average Luxon time:    ${avgLuxonTime.toFixed(3)}ms`);
-console.log(`\n🎯 kk-date vs Moment.js: ${vsMomentOverall > 0 ? '+' : ''}${vsMomentOverall}% ${vsMomentOverall > 0 ? 'faster' : 'slower'}`);
-console.log(`🎯 kk-date vs Day.js:    ${vsDayjsOverall > 0 ? '+' : ''}${vsDayjsOverall}% ${vsDayjsOverall > 0 ? 'faster' : 'slower'}`);
-console.log(`🎯 kk-date vs Luxon:     ${vsLuxonOverall > 0 ? '+' : ''}${vsLuxonOverall}% ${vsLuxonOverall > 0 ? 'faster' : 'slower'}`);
+console.log(`Average Luxon time:    ${avgLuxonTime.toFixed(3)}ms (kk-date on same tests: ${avgKkDateTimeVsLuxon.toFixed(3)}ms)`);
+console.log(`\n🎯 kk-date vs Moment.js: ${fasterLabel(vsMomentOverall, avgMomentTime / avgKkDateTime)}`);
+console.log(`🎯 kk-date vs Day.js:    ${fasterLabel(vsDayjsOverall, avgDayjsTime / avgKkDateTime)}`);
+console.log(`🎯 kk-date vs Luxon:     ${fasterLabel(vsLuxonOverall, avgLuxonTime / avgKkDateTimeVsLuxon)}`);
 
 // Memory usage comparison
 console.log('\n💾 MEMORY USAGE COMPARISON');
@@ -724,12 +740,14 @@ const cacheTestAllScenarios = () => {
 
 const cacheResult = cacheTestAllScenarios();
 
-// Cache statistics
+// Cache statistics — hit ratio is hits / (hits + misses), both tracked by nope-redis
 const cacheStats = KkDate.caching_status();
+const cacheLookups = cacheStats.totalHits + cacheStats.totalMisses;
+const hitRatioPct = cacheLookups > 0 ? (cacheStats.totalHits / cacheLookups) * 100 : 0;
 console.log('\n💾 Cache Statistics:');
 console.log(`Cache size: ${cacheStats.cacheSize}/${cacheStats.maxCacheSize}`);
-console.log(`Total hits: ${cacheStats.totalHits}`);
-console.log(`Hit ratio: ${((cacheStats.totalHits / (cacheStats.totalHits + cacheStats.cacheSize)) * 100).toFixed(2)}%`);
+console.log(`Total hits: ${cacheStats.totalHits} | Total misses: ${cacheStats.totalMisses}`);
+console.log(`Hit ratio: ${hitRatioPct.toFixed(2)}%`);
 
 // Memory usage
 const memUsage = process.memoryUsage();
@@ -748,12 +766,16 @@ if (JSON_MODE) {
 				type: 'comprehensive',
 				overall: {
 					avgMs: { 'kk-date': avgKkDateTime, Moment: avgMomentTime, 'Day.js': avgDayjsTime, Luxon: avgLuxonTime },
-					kkDateFasterPct: { Moment: parseFloat(vsMomentOverall), 'Day.js': parseFloat(vsDayjsOverall), Luxon: parseFloat(vsLuxonOverall) },
+					kkDateFasterPct: {
+						Moment: Number(vsMomentOverall.toFixed(1)),
+						'Day.js': Number(vsDayjsOverall.toFixed(1)),
+						Luxon: Number(vsLuxonOverall.toFixed(1)),
+					},
 				},
 				memory: memResult,
 				cache: {
 					...cacheResult,
-					hitRatioPct: (cacheStats.totalHits / (cacheStats.totalHits + cacheStats.cacheSize)) * 100,
+					hitRatioPct,
 				},
 			},
 			null,

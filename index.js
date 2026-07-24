@@ -830,7 +830,8 @@ class KkDate {
 			return date.getTime();
 		}
 		if (Number.isInteger(date)) {
-			return date <= 10 ? date * 1000 : date;
+			// Same seconds-vs-milliseconds rule as the constructor: up to 10 digits = Unix seconds
+			return `${date}`.length <= 10 ? date * 1000 : date;
 		}
 		// Only create KkDate instance for string inputs
 		return new KkDate(date).getTime();
@@ -863,7 +864,7 @@ class KkDate {
 	 * @returns {boolean|Error}
 	 */
 	isAfter(date) {
-		return this.date.getTime() > this._getTimestamp(date);
+		return this.getTime() > this._getTimestamp(date);
 	}
 
 	/**
@@ -873,7 +874,7 @@ class KkDate {
 	 * @returns {boolean|Error}
 	 */
 	isSameOrAfter(date) {
-		return this.date.getTime() >= this._getTimestamp(date);
+		return this.getTime() >= this._getTimestamp(date);
 	}
 
 	/**
@@ -883,7 +884,7 @@ class KkDate {
 	 * @returns {boolean|Error}
 	 */
 	isSame(date) {
-		return this.date.getTime() === this._getTimestamp(date);
+		return this.getTime() === this._getTimestamp(date);
 	}
 
 	/**
@@ -904,7 +905,7 @@ class KkDate {
 		}
 
 		if (!timeInMilliseconds[unit]) {
-			throw new Error('Invalid unit type. Must be one of: milliseconds, seconds, minutes, hours, days, months, years');
+			throw new Error('Invalid unit type. Must be one of: milliseconds, seconds, minutes, hours, days, weeks, months, years');
 		}
 
 		const startUnit = Math.floor(starts / timeInMilliseconds[unit]);
@@ -1071,10 +1072,13 @@ class KkDate {
 		isInvalid(this.date);
 
 		if (typeof amount === 'number' && amount === 0) {
+			if (timeInMilliseconds[type] === undefined) {
+				throw new Error('type is wrong');
+			}
 			return this;
 		}
 
-		if (typeof amount !== 'number' || (typeof amount !== 'number' && typeof amount === 'object' && amount.$kk_date === undefined)) {
+		if (typeof amount !== 'number' && !(typeof amount === 'object' && amount !== null && amount.$kk_date !== undefined)) {
 			throw new Error('amount is wrong');
 		}
 
@@ -1084,6 +1088,13 @@ class KkDate {
 		if (typeof amount === 'object' && amount.$kk_date) {
 			defined_type = 'seconds';
 			defined_amount = amount.$kk_date.milliseconds / 1000;
+		}
+
+		// Route years through the months branch so both share the end-of-month clamp
+		// (Feb 29 + 1 year = Feb 28, matching add(12, 'months'))
+		if (defined_type === 'years') {
+			defined_type = 'months';
+			defined_amount = defined_amount * 12;
 		}
 
 		const targetTimezone = this.temp_config.timezone || global_config.timezone;
@@ -1146,15 +1157,6 @@ class KkDate {
 					dateToModify.setMonth(currentMonth + defined_amount);
 					const lastDay = new Date(dateToModify.getFullYear(), dateToModify.getMonth() + 1, 0).getDate();
 					dateToModify.setDate(Math.min(currentDate, lastDay));
-				}
-				break;
-			}
-			case 'years': {
-				const year_amount = defined_amount * 12;
-				if (targetTimezone) {
-					dateToModify.setUTCMonth(dateToModify.getUTCMonth() + year_amount);
-				} else {
-					dateToModify.setMonth(dateToModify.getMonth() + year_amount);
 				}
 				break;
 			}
@@ -1349,6 +1351,7 @@ class KkDate {
 	config(options) {
 		ownTempConfig(this);
 		if (options.timezone) {
+			checkTimezone(options.timezone);
 			this.temp_config.timezone = options.timezone;
 			this.temp_config.rtf = {};
 			this._fmt_sig = -1;
@@ -1512,7 +1515,7 @@ class KkDate {
 				break;
 			case 'weeks': {
 				const dayOfWeek = targetTimezone ? dateToModify.getUTCDay() : dateToModify.getDay();
-				const weekStartDay = this.temp_config.weekStartDay || global_config.weekStartDay;
+				const weekStartDay = this.temp_config.weekStartDay ?? global_config.weekStartDay;
 				const diff = dayOfWeek < weekStartDay ? dayOfWeek + (7 - weekStartDay) : dayOfWeek - weekStartDay;
 				if (targetTimezone) {
 					dateToModify.setUTCDate(dateToModify.getUTCDate() - diff);
@@ -1606,7 +1609,7 @@ class KkDate {
 				if (targetTimezone) {
 					// Reuse startOf logic for consistency
 					const dayOfWeek = dateToModify.getUTCDay();
-					const weekStartDay = this.temp_config.weekStartDay || global_config.weekStartDay;
+					const weekStartDay = this.temp_config.weekStartDay ?? global_config.weekStartDay;
 					const diff = dayOfWeek < weekStartDay ? dayOfWeek + (7 - weekStartDay) : dayOfWeek - weekStartDay;
 					dateToModify.setUTCDate(dateToModify.getUTCDate() - diff + 6);
 					dateToModify.setUTCHours(23, 59, 59, 999);
@@ -1755,6 +1758,32 @@ function isKkDate(value = {}) {
 }
 
 /**
+ * Calendar-aware month difference between two KkDate instances (moment-parity
+ * anchor arithmetic). Positive when `endKk` is later. Anchors are built with the
+ * clamping add('months'), so month-end edges match moment (Jan 31 -> Feb 29 = 1).
+ *
+ * @param {KkDate} startKk
+ * @param {KkDate} endKk
+ * @returns {number} fractional months
+ */
+function calendarMonthDiff(startKk, endKk) {
+	const a = startKk.date;
+	const b = endKk.date;
+	const wholeMonthDiff = (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth());
+	const bMs = b.getTime();
+	const anchor = new KkDate(startKk).add(wholeMonthDiff, 'months').getTime();
+	let adjust;
+	if (bMs - anchor < 0) {
+		const anchor2 = new KkDate(startKk).add(wholeMonthDiff - 1, 'months').getTime();
+		adjust = (bMs - anchor) / (anchor - anchor2);
+	} else {
+		const anchor2 = new KkDate(startKk).add(wholeMonthDiff + 1, 'months').getTime();
+		adjust = (bMs - anchor) / (anchor2 - anchor);
+	}
+	return wholeMonthDiff + adjust || 0;
+}
+
+/**
  *
  * @param {string|Date|KkDate} start
  * @param {string|Date|KkDate} end
@@ -1763,6 +1792,14 @@ function isKkDate(value = {}) {
  * @returns {object}
  */
 function diff(start, end, type, is_decimal = false, turn_difftime = false) {
+	// Instance diff() (turn_difftime) counts months/years on the calendar; diff_range
+	// stays on the fixed-average object form below (its stepping relies on type_value).
+	if (turn_difftime && (type === 'months' || type === 'years')) {
+		const endKk = isKkDate(end) ? end : new KkDate(end);
+		const months = calendarMonthDiff(start, endKk);
+		const value = type === 'months' ? months : months / 12;
+		return is_decimal ? value : absFloor(value);
+	}
 	const startDate = start.getTime();
 	const endDate = new KkDate(end).getTime();
 	let type_value = 0;

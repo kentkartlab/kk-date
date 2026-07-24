@@ -203,14 +203,17 @@ console.log(date.toISOString()); // '2024-08-23T10:30:00.000Z' (input parsed as 
 Adds the specified amount of time to the date.
 
 **Parameters:**
-- `amount` (number) - Amount to add
-- `unit` (string) - Time unit ('years', 'months', 'weeks', 'days', 'hours', 'minutes', 'seconds')
+- `amount` (number | DurationObject) - Amount to add, or a duration created with `kk_date.duration()`
+- `unit` (string) - Time unit ('years', 'months', 'weeks', 'days', 'hours', 'minutes', 'seconds'); ignored when a duration object is passed
 
-**Returns:** (KkDate) - Modified date instance
+**Returns:** (KkDate) - The same instance (`this`)
+
+> **Mutation semantics:** `add()` mutates the instance in place and returns `this` for chaining.
+> Clone first (`new kk_date(date)`) if you need to keep the original value.
+> Month/year additions clamp at the end of the month: `2024-02-29` + 1 year = `2025-02-28` (same as adding 12 months).
 
 **Examples:**
 ```javascript
-// Each operation creates a new modified instance
 const date = new kk_date('2024-08-23 10:30:00');
 
 date.add(1, 'days');                   // Add 1 day: 2024-08-24 10:30:00
@@ -224,6 +227,10 @@ date3.add(3, 'months');                // Add 3 months: 2024-11-23 10:30:00
 // Negative values for subtraction
 const date4 = new kk_date('2024-08-23 10:30:00');
 date4.add(-1, 'days');                 // Subtract 1 day: 2024-08-22 10:30:00
+
+// Duration objects are accepted directly
+const date5 = new kk_date('2024-08-23 10:30:00');
+date5.add(kk_date.duration(90, 'minutes')); // 2024-08-23 12:00:00
 ```
 
 
@@ -399,19 +406,27 @@ date.isBetween(start, end);            // true
 date.isBetween(start, end, 'days');    // true
 ```
 
-#### `diff(date, unit, asFloat?)`
+#### `diff(date, unit, is_decimal?)`
 
 Returns the difference between two dates.
 
 **Parameters:**
 - `date` (KkDate|Date|string) - Date to compare with
 - `unit` (string) - Unit for difference
-- `asFloat` (boolean, optional) - Return as float (default: false)
+- `is_decimal` (boolean, optional) - Return a fractional value instead of flooring toward zero (default: false)
 
 **Returns:** (number) - Difference in specified unit
 
 The difference is measured as `(date - this)`, i.e. the argument minus the receiver. So when the argument is
 **later** than the receiver the result is **positive**; when it is earlier the result is negative.
+
+**Unit semantics:**
+- `seconds` / `minutes` / `hours` / `days` are exact elapsed-time arithmetic.
+- `months` / `years` are **calendar-aware** (moment-compatible anchor arithmetic): a full calendar year is `1` year,
+  `Jan 1 → Mar 1` is `2` months, and month-end edges clamp (`Jan 31 → Feb 29` is `1` month). With `is_decimal` the
+  fraction interpolates between month anchors.
+- Note: `duration()` uses fixed approximations (31-day months, 365-day years) because a duration has no anchor date,
+  and `diff_range()` steps by fixed average units (30.44-day months / 365.25-day years) for its iteration.
 
 **Examples:**
 ```javascript
@@ -421,7 +436,10 @@ const date2 = new kk_date('2024-08-25');
 date1.diff(date2, 'days');             // 2   (date2 is 2 days after date1)
 date2.diff(date1, 'days');             // -2  (date1 is 2 days before date2)
 date1.diff(date2, 'hours');            // 48
-date1.diff(date2, 'days', true);       // 2   (asFloat returns a fractional value when not a whole number)
+date1.diff(date2, 'days', true);       // 2   (is_decimal returns a fractional value when not a whole number)
+
+new kk_date('2023-01-01').diff('2024-01-01', 'years');   // 1 (calendar-aware)
+new kk_date('2024-01-31').diff('2024-02-29', 'months');  // 1 (month-end clamp)
 ```
 
 ### Timezone Methods
@@ -583,19 +601,26 @@ const date = new kk_date('2024-08-23 10:00:00');
 console.log(date.valueOfLocal()); // Local timestamp
 ```
 
-#### `duration(input?)`
+#### `duration(time)`
 
-Creates or returns duration information.
+Breaks a time span down into calendar-ish parts. The instance method interprets its argument as **seconds**;
+the static `kk_date.duration(time, type)` scales by the given unit.
 
 **Parameters:**
-- `input` (any, optional) - Duration input
+- `time` (number, required) - A **positive integer**; `0`, negative values and non-integers throw `Invalid time`
 
-**Returns:** (object) - Duration object
+**Returns:** (object) - Duration object (`years/months/weeks/days/hours/minutes/seconds/milliseconds` plus `asSeconds()`, `asDays()`, … helpers). The result can be passed directly to `add()`.
+
+> **Approximation note:** durations have no anchor date, so they use fixed unit sizes: 31-day months and 365-day years.
+> For calendar-accurate month/year differences between two dates use `diff()` instead.
 
 **Examples:**
 ```javascript
 const date = new kk_date('2024-08-23 10:00:00');
-const duration = date.duration(); // Duration information
+date.duration(90);                     // { minutes: 1, seconds: 30, ... } (argument = seconds)
+
+kk_date.duration(2, 'weeks');          // { weeks: 2, ... }, asDays() === 14
+kk_date.duration(90, 'minutes');       // { hours: 1, minutes: 30, ... }
 ```
 
 **Note:** The `clone()` method is not directly available. Create a new instance with the original date instead.

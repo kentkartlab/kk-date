@@ -136,10 +136,10 @@ declare class KkDate {
 	/**
 	 * Adds time to the date
 	 * @param amount - Amount to add (can be negative to subtract)
-	 * @param type - Unit of time
+	 * @param type - Unit of time ('weeks' is supported here in addition to TimeUnit)
 	 * @returns This instance for chaining
 	 */
-	add(amount: number | KkDate.DurationObject, type?: KkDate.TimeUnit): this;
+	add(amount: number | KkDate.DurationObject, type?: KkDate.TimeUnit | 'weeks'): this;
 
 	/**
 	 * Calculates difference between this date and another

@@ -1,5 +1,3 @@
-const cache_ttl = 7 * 24 * 60 * 60 * 1000; // 7 days
-
 const timeInMilliseconds = {
 	years: 365 * 24 * 60 * 60 * 1000, // 1 year (365 days)
 	months: 31 * 24 * 60 * 60 * 1000, // 1 month (31 days)
@@ -128,11 +126,6 @@ const format_types_regex = {
 	'YYYY-MM-DDTHH:mm:ss': /^(17|18|19|20|21)\d\d-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01]\d|2[0-3]):([0-5]\d):([0-5]\d)$/,
 	'DD MMMM': /^(0?[1-9]|[12][0-9]|3[01]) \p{L}+$/u,
 };
-
-const format_types_cache = new Map();
-for (const key in format_types) {
-	format_types_cache.set(key, format_types[key]);
-}
 
 const format_types_regex_cache = new Map();
 for (const key in format_types_regex) {
@@ -263,7 +256,6 @@ const timezone_cache = new Map();
 const timezone_check_cache = new Map();
 const timezone_abbreviation_cache = new Map();
 const timezone_long_name_cache = new Map();
-const target_timezone_cache = new Map();
 const long_timezone_cache = new Map();
 const timezone_formatter_cache = new Map();
 const cached_dateTimeFormat = {
@@ -399,10 +391,8 @@ const COMMON_TIMEZONES = [
 	'Australia/Melbourne',
 ];
 
-module.exports.cache_ttl = cache_ttl;
 module.exports.timeInMilliseconds = timeInMilliseconds;
 module.exports.format_types = format_types;
-module.exports.format_types_cache = format_types_cache;
 module.exports.format_types_regex_cache = format_types_regex_cache;
 module.exports.month_numbers = month_numbers;
 module.exports.day_numbers = day_numbers;
@@ -413,7 +403,6 @@ module.exports.timezone_cache = timezone_cache;
 module.exports.timezone_check_cache = timezone_check_cache;
 module.exports.timezone_abbreviation_cache = timezone_abbreviation_cache;
 module.exports.timezone_long_name_cache = timezone_long_name_cache;
-module.exports.target_timezone_cache = target_timezone_cache;
 module.exports.long_timezone_cache = long_timezone_cache;
 module.exports.timezone_formatter_cache = timezone_formatter_cache;
 module.exports.cached_dateTimeFormat = cached_dateTimeFormat;

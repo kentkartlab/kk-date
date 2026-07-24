@@ -1,5 +1,72 @@
 # Changelog
 
+## v5.0.1
+
+Bug-fix release driven by a full code audit: every fix below was reproduced first,
+locked with a failing test, then fixed (4 new test files, +71 tests, coverage
+84.7% → 87.4% statements).
+
+### 🐛 Fixed
+
+- **`add(duration)` works as documented.** A boolean logic error made the documented
+  `add(kk_date.duration(...))` form throw `amount is wrong` unconditionally; the duration
+  branch was unreachable dead code.
+- **Southern-hemisphere DST detection.** `getTimezoneInfo()`/`isDST()` assumed January is
+  standard time and July is daylight time. For zones like `Australia/Sydney` this inverted
+  `isDST` and swapped `standardOffset`/`daylightOffset`. Standard time is now derived as the
+  smaller of the January/July offsets, which is hemisphere-independent (verified incl. the
+  30-minute Lord Howe shift).
+- **`startOf('weeks')`/`endOf('weeks')` honor an instance `weekStartDay: 0` override** when the
+  global week start is non-zero (`||` → `??`, matching how the week format tokens resolve it).
+- **nope-redis cache accounting.** Expired keys removed by the periodic cleaner stayed in the
+  LRU index, wasting eviction slots and double-decrementing the key counter (which could stop
+  eviction entirely); overwriting an existing key inflated the counter, eventually purging the
+  cache. Both counters are now exact.
+- **Timezone offset cache is bounded.** The 7-day TTL check was dead code (the cache key embeds
+  the exact millisecond) and the cache had no size cap, growing without limit in long-running
+  processes. It is now bounded at 10,000 entries like the other caches.
+- **`isBetween` error message** now lists `weeks`, which was always a valid unit.
+- **`add(0, type)` validates the type** instead of silently succeeding on the zero fast path.
+- **Comparison methods are consistent on invalid instances**: `isAfter`/`isSame`/`isSameOrAfter`
+  now throw `Invalid Date` like `isBefore`/`isSameOrBefore` did.
+- Removed dead code: `target_timezone_cache`, `format_types_cache`, `cache_ttl` (all exported
+  but never read) and a latent shadowed-variable bug in the cache size reporter.
+- **Benchmark/report percentages corrected.** The cache hit ratio now uses real hit/miss counts —
+  nope-redis stats gained a `totalMisses` counter (previously the ratio divided by the entry count,
+  which is not the miss count); the overall vs-Luxon figure now averages kk-date over the same
+  test subset Luxon runs (21 of 58 scenarios have no Luxon case, so the old comparison mixed
+  test sets); an operator-precedence bug in the docs generator quantized the "Day.js takes ≈X%
+  more time" figure to multiples of 100 (`round(x - 1) * 100` → `round((x - 1) * 100)`); and every
+  published figure (benchmark console output, README/PERFORMANCE tables and bullets) now uses one
+  unambiguous convention: **"X% less/more time (Nx faster/slower)"** — the bounded time percentage
+  paired with the speed multiple — replacing the previous mix of two different "% faster" formulas.
+
+### ⚠️ Changed (outputs previously wrong or inconsistent)
+
+- **`diff('months')` / `diff('years')` are calendar-aware** (moment-compatible anchor
+  arithmetic; verified against moment on 6,000 date pairs with zero mismatches). Previously they
+  divided elapsed time by fixed averages, so a full 365-day year reported `diff('years') === 0`
+  and `Jan 1 → Mar 1` reported 1 month. Code relying on the old average-based numbers will see
+  different (correct) results. The sign convention `a.diff(b) = b − a` is unchanged;
+  sub-month units are unchanged; `diff_range()` keeps its fixed-average stepping; `duration()`
+  keeps its documented 31-day/365-day approximations (now called out in the docs).
+- **`add(n, 'years')` clamps at month end**: `2024-02-29` + 1 year is now `2025-02-28`
+  (was `2025-03-01`), making it consistent with `add(12, 'months')` and moment/dayjs.
+- **Numeric arguments to `isSame`/`isBefore`/`isAfter`/`isSameOrBefore`/`isSameOrAfter`** now
+  use the constructor's seconds-vs-milliseconds rule (≤10 digits = Unix seconds). Previously
+  `new kk_date(X).isSame(X)` was `false` for every 10-digit Unix timestamp.
+- **Instance `config({ timezone })` fails fast** with `Invalid timezone: ...` on invalid IANA
+  names (matching `tz()` and the global config) instead of failing later inside `format()`.
+
+### 📝 Docs
+
+- `add()` mutation semantics corrected (mutates in place, returns `this` — the docs claimed a
+  new instance was created); duration-object usage documented.
+- `diff()` third parameter documented under its real name (`is_decimal`, was `asFloat`) and the
+  new calendar-aware unit semantics explained.
+- `duration()` examples fixed (the previous no-argument example threw) and the integer/positive
+  input contract documented; `add()` TypeScript signature gains `'weeks'`.
+
 ## v5.0.0 — 2026-07-08
 
 kk-date 5.0 rebuilds the formatting and validation engines around a compile-once dynamic

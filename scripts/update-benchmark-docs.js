@@ -63,10 +63,13 @@ function seqRows(seq) {
 		const cell = (l) => (s[l] === min ? `**${round(s[l])}ms**` : `${round(s[l])}ms`);
 		let fc = COMPETS[0];
 		for (const c of COMPETS) if (s[c] < s[fc]) fc = c;
+		// Unambiguous convention used everywhere: "% less/more time" (bounded at 100% on the
+		// winning side) plus the speed multiple — a bare "% faster" compresses near 100%.
+		const ratio = s[fc] / s['kk-date'];
 		const vs =
 			s['kk-date'] <= s[fc]
-				? `**~${round(((s[fc] - s['kk-date']) / s['kk-date']) * 100)}% faster** than ${fc}`
-				: `**~${round(((s['kk-date'] - s[fc]) / s[fc]) * 100)}% slower** than ${fc}`;
+				? `**~${round(((s[fc] - s['kk-date']) / s[fc]) * 100)}% less time (${ratio.toFixed(1)}x faster)** than ${fc}`
+				: `**~${round(((s['kk-date'] - s[fc]) / s[fc]) * 100)}% more time (${(s['kk-date'] / s[fc]).toFixed(1)}x slower)** than ${fc}`;
 		return `| **${name}** | ${cell('kk-date')} | ${cell('Moment')} | ${cell('Day.js')} | ${cell('Luxon')} | ${vs} |`;
 	});
 }
@@ -88,7 +91,8 @@ function overallTable(seq) {
 	const rows = [`| **kk-date** | **${secs(kk.ms)}** | **${ops(kk.ops)} ops/sec** | 🏆 **Winner** |`];
 	for (const c of sortedComps) {
 		const pct = round(((o[c].ms - kk.ms) / kk.ms) * 100);
-		const perf = c === slowest ? `**~${pct}% slower**` : `~${pct}% slower`;
+		const perfTxt = `~${pct}% more time (${(o[c].ms / kk.ms).toFixed(1)}x slower)`;
+		const perf = c === slowest ? `**${perfTxt}**` : perfTxt;
 		rows.push(`| ${display(c)} | ${secs(o[c].ms)} | ${ops(o[c].ops)} ops/sec | ${perf} |`);
 	}
 	return ['| Library | Total Time | Operations/sec | Performance |', '|---------|------------|---------------|-------------|', ...rows].join('\n');
@@ -124,7 +128,7 @@ function memoryTable(comp) {
 function cacheBullets(comp) {
 	const c = comp.cache;
 	return [
-		`- **~${round(c.improvementPct)}% faster** repeated operations when cache is enabled`,
+		`- **~${round(c.improvementPct)}% less time** on repeated operations when cache is enabled`,
 		`- Average operation time: ~${round(c.withoutMs)}ms → ~${round(c.withMs)}ms with cache`,
 		`- Cache hit ratio: **${round(c.hitRatioPct)}%** for repeated operations`,
 	].join('\n');
@@ -132,15 +136,15 @@ function cacheBullets(comp) {
 
 // Headline stats derived from both benchmark JSONs (used by the prose-bullet regions).
 function derived(seq, comp) {
-	const fp = comp.overall.kkDateFasterPct; // kk-date is X% faster than each competitor (comprehensive)
+	const fp = comp.overall.kkDateFasterPct; // kk-date takes X% less time than each competitor (comprehensive)
 	const avgFaster = round((fp.Moment + fp['Day.js'] + fp.Luxon) / 3);
 	const tz = seq.scenarios['Timezone Conversions'];
 	const kkTz = tz['kk-date'];
-	// "% faster" here = how much LESS time kk-date takes than a competitor: (1 - kk/comp) * 100.
+	// "% less time" = how much LESS time kk-date takes than a competitor: (1 - kk/comp) * 100.
 	const tzMaxFaster = round(Math.max(...COMPETS.map((c) => (1 - kkTz / tz[c]) * 100)));
 	const tzX = tz['Day.js'] / kkTz; // kk-date is this many TIMES faster than Day.js at tz conversion
 	const tzXfloor = Math.floor(tzX / 10) * 10; // stable "over Nx" (only moves when it crosses a decade)
-	const tzXpct = round(tzX - 1) * 100; // Day.js takes ~this many % MORE time
+	const tzXpct = round((tzX - 1) * 100); // Day.js takes ~this many % MORE time
 	const cachePct = round(comp.cache.improvementPct);
 	// Sequential scenarios where any competitor beats kk-date in THIS run — drives the
 	// win/concession wording below so the prose can never contradict the tables.
@@ -153,31 +157,31 @@ function whyBullets(seq, comp) {
 	return [
 		`- **⚡ Lightning Fast** - Over ${d.tzXfloor}x faster timezone operations than Day.js`,
 		d.lostScenarios.length
-			? `- **🚀 ~${d.avgFaster}% Faster Overall** - Wins most scenarios vs Moment.js, Day.js, and Luxon (slower in isolated "${d.lostScenarios.join('", "')}")`
-			: `- **🚀 ~${d.avgFaster}% Faster Overall** - Fastest in every scenario vs Moment.js, Day.js, and Luxon`,
+			? `- **🚀 ~${d.avgFaster}% Less Time Overall** - Wins most scenarios vs Moment.js, Day.js, and Luxon (slower in isolated "${d.lostScenarios.join('", "')}")`
+			: `- **🚀 ~${d.avgFaster}% Less Time Overall** - Fastest in every scenario vs Moment.js, Day.js, and Luxon`,
 		'- **💾 Memory Efficient** - Object pooling + LRU cache eviction keep long-running processes stable',
-		`- **⚙️ Smart Caching** - ~${d.cachePct}% faster repeated operations with built-in caching`,
+		`- **⚙️ Smart Caching** - ~${d.cachePct}% less time on repeated operations with built-in caching`,
 	].join('\n');
 }
 
 function advantagesBullets(seq, comp) {
 	const d = derived(seq, comp);
 	return [
-		`- **⚡ ~${d.avgFaster}% faster** than the average of competing libraries (comprehensive benchmark)`,
-		`- **🚀 up to ~${d.tzMaxFaster}% faster** in timezone operations (critical for global apps)`,
+		`- **⚡ ~${d.avgFaster}% less time** on average vs competing libraries (comprehensive benchmark)`,
+		`- **🚀 up to ~${d.tzMaxFaster}% less time** in timezone operations (critical for global apps)`,
 		'- **📊 Big-data ready** - efficient for bulk/1M-operation workloads',
 		'- **💾 Stable memory** - object pooling + LRU eviction; net heap delta is GC-dependent (often negative)',
-		`- **⚙️ ~${d.cachePct}% boost** with smart caching enabled`,
-		`- **🌍 Over ${d.tzXfloor}x faster** (≈${d.tzXpct}%) than Day.js in timezone conversions`,
+		`- **⚙️ ~${d.cachePct}% less time** with smart caching enabled`,
+		`- **🌍 Over ${d.tzXfloor}x faster** than Day.js in timezone conversions (Day.js takes ≈${d.tzXpct}% more time)`,
 	].join('\n');
 }
 
 function perfMetricsBullets(seq, comp) {
 	const d = derived(seq, comp);
 	return [
-		`- **~${d.avgFaster}% faster** than the average of competing libraries (comprehensive benchmark)`,
-		`- **up to ~${d.tzMaxFaster}% faster** in timezone operations`,
-		`- **~${d.cachePct}% faster** with caching enabled`,
+		`- **~${d.avgFaster}% less time** on average vs competing libraries (comprehensive benchmark)`,
+		`- **up to ~${d.tzMaxFaster}% less time** in timezone operations`,
+		`- **~${d.cachePct}% less time** with caching enabled`,
 		d.lostScenarios.length
 			? `- **kk-date does not win every scenario** — slower in isolated "${d.lostScenarios.join('", "')}"`
 			: '- **kk-date wins every scenario** in the current benchmark run',

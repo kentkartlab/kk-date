@@ -2,7 +2,6 @@ const {
 	iso6391_languages,
 	default_en_day_number,
 	day_numbers,
-	cache_ttl,
 	month_numbers,
 	timeInMilliseconds,
 	format_types,
@@ -302,13 +301,12 @@ function getTimezoneOffset(timezone, date = new Date()) {
 	// Validate timezone first (outside try-catch for proper error handling)
 	checkTimezone(timezone);
 
-	// Check cache first (single lookup)
+	// Check cache first (single lookup). The key embeds the exact millisecond, so a
+	// hit is always current — no TTL needed, only a size bound at the write sites.
 	const cacheKey = `${timezone}_${date.getTime()}`;
 	const cachedOffset = timezone_cache.get(cacheKey);
 	if (cachedOffset !== undefined) {
-		if (date.getTime() - cachedOffset.timestamp < cache_ttl) {
-			return cachedOffset.offset;
-		}
+		return cachedOffset;
 	}
 
 	try {
@@ -378,11 +376,11 @@ function getTimezoneOffset(timezone, date = new Date()) {
 		// GMT+08:00 means the timezone is 8 hours ahead of UTC, so offset should be +8
 		const offsetMs = (isNegative ? -totalMinutes : totalMinutes) * 60 * 1000;
 
-		// Cache the result
-		timezone_cache.set(cacheKey, {
-			offset: offsetMs,
-			timestamp: date.getTime(),
-		});
+		// Cache the result (bounded like converter_results_cache)
+		if (timezone_cache.size > 10000) {
+			timezone_cache.clear();
+		}
+		timezone_cache.set(cacheKey, offsetMs);
 
 		return offsetMs;
 	} catch {
@@ -434,12 +432,12 @@ function getTimezoneOffsetFallback(timezone, date, cacheKey) {
 		// Add milliseconds from original date (formatter doesn't include ms)
 		const offsetMs = tzTimeAsUtc - (date.getTime() - date.getMilliseconds());
 
-		// Cache the result
+		// Cache the result (bounded like converter_results_cache)
 		if (cacheKey) {
-			timezone_cache.set(cacheKey, {
-				offset: offsetMs,
-				timestamp: date.getTime(),
-			});
+			if (timezone_cache.size > 10000) {
+				timezone_cache.clear();
+			}
+			timezone_cache.set(cacheKey, offsetMs);
 		}
 
 		return offsetMs;
@@ -482,16 +480,17 @@ function getTimezoneInfo(timezone, date = new Date()) {
 		// Get current offset
 		const currentOffset = getTimezoneOffset(timezone, date);
 
-		// Get offset for same date in winter (to detect DST)
-		const winterDate = new Date(date.getFullYear(), 0, 1); // January 1st
-		const winterOffset = getTimezoneOffset(timezone, winterDate);
+		// Sample both January and July: whichever has the smaller UTC offset is standard
+		// time (DST adds time), which holds in both hemispheres — Sydney Jan +11/Jul +10
+		// -> standard +10; New York Jan -5/Jul -4 -> standard -5.
+		const januaryOffset = getTimezoneOffset(timezone, new Date(date.getFullYear(), 0, 1));
+		const julyOffset = getTimezoneOffset(timezone, new Date(date.getFullYear(), 6, 1));
+		const standardOffset = Math.min(januaryOffset, julyOffset);
+		const daylightOffset = Math.max(januaryOffset, julyOffset);
 
-		// Get offset for same date in summer (to detect DST)
-		const summerDate = new Date(date.getFullYear(), 6, 1); // July 1st
-		const summerOffset = getTimezoneOffset(timezone, summerDate);
-
-		// Determine if DST is active
-		const isDST = currentOffset !== winterOffset;
+		// DST is active when the current offset exceeds the standard offset
+		// (false for zones without DST, where january === july)
+		const isDST = currentOffset > standardOffset;
 
 		let formatter;
 		if (timezone_abbreviation_cache.has(timezone)) {
@@ -511,8 +510,8 @@ function getTimezoneInfo(timezone, date = new Date()) {
 			offset: currentOffset,
 			isDST,
 			abbreviation,
-			standardOffset: winterOffset,
-			daylightOffset: summerOffset,
+			standardOffset,
+			daylightOffset,
 		};
 	} catch (error) {
 		throw new Error(`Failed to get timezone info for ${timezone}: ${error.message}`);
@@ -704,7 +703,7 @@ const padZero = (num) => String(num).padStart(2, '0');
  * @returns {{years: number, months: number, weeks: number, days: number, hours: number, minutes: number, seconds: number, milliseconds: number, $kk_date: {milliseconds: number}, asMilliseconds: function(): number, asSeconds: function(): number, asMinutes: function(): number, asHours: function(): number, asDays: function(): number, asWeeks: function(): number, asMonths: function(): number, asYears: function(): number}}
  * @example
  * // Example usage:
- * const result = duration(1234, 'minute');
+ * const result = duration(1234, 'minutes');
  * console.log(result);
  * // Output: { years: 0, months: 0, weeks: 0, days: 0, hours: 20, minutes: 34, seconds: 0, milliseconds: 0 }
  */

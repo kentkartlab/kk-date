@@ -344,7 +344,7 @@ describe('year tests', () => {
 			{ input: '2024-12-31', add: 1, expected: '2025-12-31' },
 			{ input: '2024-01-01', add: -1, expected: '2023-01-01' },
 			{ input: '2024-02-29', add: 4, expected: '2028-02-29' },
-			{ input: '2024-02-29', add: 1, expected: '2025-03-01' },
+			{ input: '2024-02-29', add: 1, expected: '2025-02-28' }, // month-end clamp, consistent with add(12, 'months')
 		];
 
 		for (const { input, add, expected } of testCases) {
