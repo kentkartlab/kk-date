@@ -60,7 +60,6 @@ jobs:
               NOTES_ARGS=(--notes-file "$RUNNER_TEMP/notes.md")
             fi
           fi
-
           # Tag the released commit and create the GitHub Release
           gh release create "v$VERSION" \
             --title "v$VERSION" \
