@@ -17,8 +17,8 @@ Thank you for your interest in contributing to kk-date! This guide will help you
 
 ### Prerequisites
 
-- Node.js (version 16 or higher)
-- npm or yarn
+- Node.js 22 or higher (`engines` in `package.json`; CI tests Node.js 22, 24 and 26)
+- npm (the repository's lockfile is `package-lock.json`; CI installs with `npm ci`)
 - Git
 
 ### Fork and Clone
@@ -26,12 +26,12 @@ Thank you for your interest in contributing to kk-date! This guide will help you
 1. Fork the repository on GitHub
 2. Clone your fork locally:
    ```bash
-   git clone https://github.com/kentkartlab/kk-date.git
+   git clone https://github.com/<your-username>/kk-date.git
    cd kk-date
    ```
 3. Add the original repository as upstream:
    ```bash
-   git remote add upstream https://github.com/original-owner/kk-date.git
+   git remote add upstream https://github.com/kentkartlab/kk-date.git
    ```
 
 ## Development Setup
@@ -39,11 +39,9 @@ Thank you for your interest in contributing to kk-date! This guide will help you
 ### Install Dependencies
 
 ```bash
-# Install dependencies
-npm install
-
-# Install development dependencies
-npm install --save-dev
+# Install dependencies (devDependencies included: Jest 30, Biome, and the benchmark
+# competitors dayjs / luxon / moment-timezone). The library itself has zero runtime dependencies.
+npm ci        # or: npm install
 ```
 
 ### Development Scripts
@@ -55,18 +53,25 @@ npm test
 # Run tests in watch mode
 npm test -- --watch
 
-# Run tests with coverage
-npm test -- --coverage
+# Run tests with coverage (enforces the coverageThreshold in package.json)
+npm run test:coverage
 
-# Run linting
+# Run linting (Biome)
 npm run lint
 
-# Run linting with auto-fix
+# Run linting and formatting with auto-fix (npx biome check --write)
 npm run lint:fix
 
-# Build the project
-npm run build
+# Check formatting (Biome)
+npm run format
+
+# Benchmarks against Moment.js, Day.js and Luxon (slow)
+npm run benchmark
+npm run benchmark2
 ```
+
+There is no build step: the package ships the source files `index.js`, `functions.js`,
+`constants.js`, `nope-redis.js` and `index.d.ts` as they are.
 
 ### Development Workflow
 
@@ -103,48 +108,59 @@ npm run build
 
 ### JavaScript Style Guide
 
-We follow the [JavaScript Standard Style](https://standardjs.com/) with some modifications:
+Formatting and linting are done by [Biome](https://biomejs.dev/), configured in `biome.json` —
+let the tool format the code instead of formatting by hand:
 
-- Use 2 spaces for indentation
-- Use single quotes for strings
-- Use semicolons
-- Use camelCase for variables and functions
-- Use PascalCase for classes
-- Use UPPER_CASE for constants
+- Tab indentation
+- Single quotes for strings
+- Semicolons at the end of statements
+- Line width: 150 characters
+- Trailing commas in multi-line literals and calls; parentheses around arrow-function parameters
+- CommonJS modules (`require` / `module.exports`)
+- Zero runtime dependencies: only devDependencies may be added
+- Lint: Biome's recommended rules plus the overrides in `biome.json` (`noUndeclaredVariables` is an error)
+
+Run `npm run lint:fix` (`npx biome check --write`) before committing: it applies safe lint fixes,
+formats the code and organizes imports. CI runs `npm run lint`.
 
 ### Code Formatting
 
 ```javascript
-// Good
-const kk_date = require('kk-date')
+// Good: what Biome produces (tabs, single quotes, semicolons)
+const kk_date = require('kk-date');
+
+function formatDate(dateString) {
+	const date = new kk_date(dateString);
+	return date.format('YYYY-MM-DD');
+}
+
+// Bad: double quotes, missing semicolons, space indentation
+const kk_date = require("kk-date")
 
 function formatDate (dateString) {
   const date = new kk_date(dateString)
-  return date.format('YYYY-MM-DD')
-}
-
-// Bad
-const kk_date = require("kk-date");
-
-function formatDate(dateString) {
-    const date = new kk_date(dateString);
-    return date.format("YYYY-MM-DD");
+  return date.format("YYYY-MM-DD")
 }
 ```
 
 ### File Organization
 
-- **Source files**: Place in root directory (`index.js`, `functions.js`, etc.)
-- **Test files**: Place in `test/` directory
-- **Documentation**: Place in `docs/` directory
-- **Examples**: Place in `examples/` directory
+- **Source files**: Repository root (`index.js`, `functions.js`, `constants.js`, `nope-redis.js`) plus the type definitions in `index.d.ts`
+- **Test files**: `test/` directory (fixtures in `test/fixtures/`)
+- **Documentation**: `docs/` directory; user-facing changes also go into `CHANGELOG.md`
+- **Benchmarks**: `benchmark.js` and `benchmark2.js` in the repository root
+- **Maintenance scripts**: `scripts/` (format-fixture generator, benchmark-docs updater)
 
 ### Naming Conventions
 
-- **Files**: Use kebab-case for file names (`user-timezone-scenarios.test.js`)
-- **Functions**: Use camelCase (`formatDate`, `getTimezoneInfo`)
-- **Classes**: Use PascalCase (`KkDate`)
-- **Constants**: Use UPPER_SNAKE_CASE (`MAX_CACHE_SIZE`)
+Follow the naming of the surrounding code:
+
+- **Files**: kebab-case for new files (`dst-arithmetic.test.js`)
+- **Functions**: camelCase (`parseWithTimezone`, `getTimezoneOffset`)
+- **Module-level caches and configuration objects**: snake_case (`global_config`, `timezone_cache`)
+- **Classes**: PascalCase (`KkDate`)
+- **Constants**: UPPER_SNAKE_CASE (`INTL_CACHE_LIMIT`, `MAX_CACHE_SIZE`)
+- **Public API names are fixed**: existing exports such as `caching_status` or `diff_range` keep their names
 - **Test files**: End with `.test.js`
 
 ## Testing
@@ -155,32 +171,32 @@ All new functionality must include tests. Follow these guidelines:
 
 1. **Test file structure**:
    ```javascript
-   const kk_date = require('../index')
+   const kk_date = require('../index');
 
    describe('Feature Name', () => {
-     beforeEach(() => {
-       // Reset global configuration
-       kk_date.setTimezone('UTC')
-       kk_date.config({ locale: 'en' })
-     })
+   	beforeEach(() => {
+   		// Reset global configuration
+   		kk_date.setTimezone('UTC');
+   		kk_date.config({ locale: 'en' });
+   	});
 
-     describe('Sub-feature', () => {
-       test('should handle basic case', () => {
-         const date = new kk_date('2024-08-23 10:00:00')
-         expect(date.format('YYYY-MM-DD')).toBe('2024-08-23')
-       })
+   	describe('Sub-feature', () => {
+   		test('should handle basic case', () => {
+   			const date = new kk_date('2024-08-23 10:00:00');
+   			expect(date.format('YYYY-MM-DD')).toBe('2024-08-23');
+   		});
 
-       test('should handle edge case', () => {
-         // Test edge cases
-       })
+   		test('should handle edge case', () => {
+   			// Test edge cases
+   		});
 
-       test('should throw error for invalid input', () => {
-         expect(() => {
-           new kk_date('invalid-date')
-         }).toThrow('Invalid Date')
-       })
-     })
-   })
+   		test('should throw error for invalid input', () => {
+   			expect(() => {
+   				new kk_date('invalid-date');
+   			}).toThrow('Invalid Date');
+   		});
+   	});
+   });
    ```
 
 2. **Test categories**:
@@ -189,7 +205,15 @@ All new functionality must include tests. Follow these guidelines:
    - **Edge case tests**: Test boundary conditions and error cases
    - **Performance tests**: Test performance characteristics
 
-3. **Test coverage**: Aim for at least 90% code coverage
+3. **Test coverage**: `package.json` sets a global Jest `coverageThreshold` — statements 88%,
+   branches 85%, functions 95%, lines 88% — which Jest enforces whenever coverage is collected
+   (`npm run test:coverage`), and the Node.js 26 CI job runs exactly that. The suite currently
+   measures about 91% statements, 88% branches, 97% functions and 91% lines; new code should not
+   lower these numbers.
+
+4. **Expected values**: take them from an independent source (moment / moment-timezone, Luxon or
+   `Intl`), not from kk-date's own output, and make tests pass under any system timezone (see the
+   [Testing Guide](TESTING-GUIDE.md#independent-oracles-and-pinned-timezones)).
 
 ### Running Tests
 
@@ -200,11 +224,14 @@ npm test
 # Run specific test file
 npm test -- test/timezone.test.js
 
-# Run tests matching pattern
-npm test -- --testPathPattern="timezone"
+# Run test files whose path matches a pattern (Jest 30: --testPathPatterns)
+npm test -- --testPathPatterns="timezone"
 
 # Run tests with coverage
-npm test -- --coverage
+npm run test:coverage
+
+# Run the suite under another system timezone, as CI does
+TZ=America/New_York npm test
 
 # Run tests in watch mode
 npm test -- --watch
@@ -214,14 +241,16 @@ npm test -- --watch
 
 ### Before Submitting
 
-1. **Ensure tests pass**:
+1. **Ensure tests pass** (and keep coverage above the thresholds):
    ```bash
    npm test
+   npm run test:coverage
    ```
 
 2. **Check code style**:
    ```bash
-   npm run lint
+   npm run lint        # what CI runs
+   npm run lint:fix    # apply fixes and formatting
    ```
 
 3. **Update documentation**:
@@ -261,10 +290,12 @@ npm test -- --watch
 
 ### Review Process
 
-1. **Automated checks** must pass:
-   - Tests
-   - Linting
-   - Code coverage
+1. **Automated checks** (`.github/workflows/pr-checks.yml`) must pass:
+   - Lint (`npm run lint`)
+   - Unit tests on Node.js 22, 24 and 26
+   - The test suite under a matrix of system timezones
+   - Hermes/React Native fallback and simulation tests
+   - The "All checks passed" gate job, which fails if any of the above failed or was skipped
 
 2. **Code review**:
    - At least one maintainer must approve
@@ -305,9 +336,10 @@ When reporting bugs, please include:
 ## Bug Report
 
 ### Environment
-- Node.js version: [e.g., 18.0.0]
-- Operating system: [e.g., macOS 12.0]
-- kk-date version: [e.g., 3.3.1]
+- Node.js version: [e.g., 22.11.0]
+- Operating system: [e.g., macOS 14.0]
+- System timezone (`TZ`) and any `kk_date.setTimezone()` / `config()` calls: [e.g., Europe/Istanbul]
+- kk-date version: [e.g., 5.0.1]
 
 ### Steps to Reproduce
 1. [First step]
@@ -451,7 +483,7 @@ test(timezone): add comprehensive timezone conversion tests
 
 ### Resources
 
-- **Documentation**: Check the [docs/](docs/) directory
+- **Documentation**: Check the [docs/](./) directory
 - **Issues**: Search existing issues on GitHub
 - **Discussions**: Use GitHub Discussions for questions
 - **Code**: Review the source code for examples

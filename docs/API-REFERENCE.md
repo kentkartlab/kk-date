@@ -29,7 +29,20 @@ Creates a new kk-date instance.
 
 **Parameters:**
 - `date` (string|Date|kk_date|number, optional) - Date input to parse. If omitted, uses current date
-- `date_format` (string, optional) - Format to use for parsing ('YYYY-MM-DD' or 'YYYY-DD-MM')
+- `date_format` (string, optional) - A predefined template the input must match (any key of
+  `format_types` in constants.js, e.g. `'DD/MM/YYYY'`, `'YYYY-MM-DD HH:mm'`, `'DD MMMM YYYY'`,
+  `'hh:mm'`, `'MMMM'`). The template's fields define the date and missing fields follow moment:
+  - no date field at all (`'HH:mm'`, `'mm:ss'`) → today;
+  - a missing year → the current year;
+  - a missing month → the current month when a day is given (`'DD'`), otherwise January (`'YYYY'`, `'MMMM YYYY'` → the 1st);
+  - a missing day → the 1st;
+  - a bare weekday name (`'dddd'`, `'ddd'`) → that day of the current week;
+  - missing time fields → 0;
+  - a 2-digit year in a `YYYY` field → 2000-2068 for `00`-`68`, 1969-1999 for `69`-`99` (moment):
+    `new kk_date('12-11-10', 'DD-MM-YYYY')` is 2010-11-12.
+
+  "Today" is the date in the global timezone. An unsupported template throws
+  `Unsupported Format! … !`, an input that does not match it `Invalid format ! … !`.
 
 **Supported Input Formats:**
 ```javascript
@@ -40,11 +53,21 @@ new kk_date('2024-08-23T10:30:00+03:00')
 // Date strings
 new kk_date('2024-08-23 10:30:00')
 new kk_date('23.08.2024 10:30:00')
-new kk_date('08/23/2024 10:30:00')
+new kk_date('08/23/2024 10:30:00')   // auto-detected slash dates use the engine's (US) order
 
 // Compact formats
 new kk_date('20240823')           // YYYYMMDD
 new kk_date('20240823103000')     // YYYYMMDDHHmmss
+
+// Text dates (month names in ~90 languages; the configured locale's language wins on clashes)
+new kk_date('23 August 2024')
+new kk_date('Friday, 23 August 2024 14:30')   // a trailing time is kept
+new kk_date('Pazartesi, 15 Ocak 2024 14:30')  // also in other languages
+new kk_date('Fri, 23 Aug 2024 10:30:00 GMT')  // RFC 2822 / HTTP date
+
+// Other forms the JavaScript engine itself parses ('08/23/2024 10:30', 'Aug 23, 2024 10:30 PM');
+// an ES5 date-only form such as '2024' or '+002024-08-23' is a date (midnight in the global
+// timezone), not the engine's UTC midnight
 
 // Date objects
 new kk_date(new Date())
@@ -52,14 +75,28 @@ new kk_date(new Date())
 // kk_date objects
 new kk_date(existingKkDate)
 
-// Timestamps (Unix seconds or milliseconds)
-new kk_date(1724407200)    // Unix timestamp (seconds)
-new kk_date(1724407200000) // JavaScript timestamp (milliseconds)
+// Timestamps: up to 10 digits (sign included) are Unix seconds, longer values milliseconds;
+// fractional values follow the same rule on their integer part
+new kk_date(1724407200)      // Unix timestamp (seconds)
+new kk_date(1724407200000)   // JavaScript timestamp (milliseconds)
+new kk_date(1724407200.5)    // 1724407200500 ms
 
-// With explicit format
+// With an explicit template (applied for every predefined template)
 new kk_date('2024-23-08', 'YYYY-DD-MM')
-new kk_date('2024-08-23', 'YYYY-MM-DD')
+new kk_date('23/08/2024', 'DD/MM/YYYY')   // day first
+new kk_date('2024-08-23 14', 'YYYY-MM-DD HH')
+new kk_date('August', 'MMMM')            // August 1 of the current year
 ```
+
+**Absolute vs naive inputs:** strings that carry their own offset or zone (`Z`, `+03:00`,
+`+0300`, `+3`, `GMT`, `UTC`, `GMT+0300`, US zone names such as `EST`, `Date#toString()` output) are
+absolute instants and are never reinterpreted in the global timezone (`detected_format` is
+`'ISO8601'` or `'RFC2822'`); whether a string has a zone is decided exactly as the engine's own date
+parser decides it. All other strings are naive wall-clock times read in the global timezone (see
+[Timezone Guide](TIMEZONE-GUIDE.md)).
+
+**Invalid input** throws `Error('Invalid Date')` — including text with trailing junk such as
+`'1st Jan 2024 foo'`.
 
 **Configuration (after creation):**
 ```javascript
@@ -127,7 +164,7 @@ console.log(date.format('[Today is] dddd'));         // 'Today is Friday'
 > (see [Migrating from format_c](FORMATTING-GUIDE.md#migrating-from-format_c-removed-in-v500)).
 
 **Tokens:**
-- `YYYY` - 4-digit year
+- `YYYY` - 4-digit year (years below 1000 zero-padded: `0050`)
 - `MM` - 2-digit month
 - `DD` - 2-digit day
 - `D` - day without padding
@@ -210,7 +247,20 @@ Adds the specified amount of time to the date.
 
 > **Mutation semantics:** `add()` mutates the instance in place and returns `this` for chaining.
 > Clone first (`new kk_date(date)`) if you need to keep the original value.
-> Month/year additions clamp at the end of the month: `2024-02-29` + 1 year = `2025-02-28` (same as adding 12 months).
+
+**Unit semantics** (same as moment):
+- `milliseconds`, `seconds`, `minutes`, `hours` are elapsed time: `add(1, 'hours')` is always
+  3,600,000 ms, also across a DST change, and fractions are exact (`add(1.5, 'hours')` = 90 minutes).
+- `days`, `weeks`, `months`, `years` move the **calendar** in the instance's timezone (instance
+  timezone, else the global one): the wall-clock time is kept, so a day that is 23 or 25 hours long
+  because of a DST change still counts as one day. Fractional amounts are rounded
+  (`add(1.5, 'days')` adds 2 days); a week is 7 days and a year is 12 months.
+- Month/year additions clamp at the end of the month: `2024-01-31` + 1 month = `2024-02-29`,
+  `2024-02-29` + 1 year = `2025-02-28` (same as adding 12 months).
+- When the resulting wall-clock time does not exist (it falls into a DST gap) it moves forward by
+  the length of the gap. When it exists twice (DST overlap) the result stays on the side of the
+  change the original instant was on, if that reading exists (moment-timezone and Luxon do the
+  same): `2024-11-04 01:30 EST` − 1 day in New York is `2024-11-03 01:30 EST`, not EDT.
 
 **Examples:**
 ```javascript
@@ -231,6 +281,17 @@ date4.add(-1, 'days');                 // Subtract 1 day: 2024-08-22 10:30:00
 // Duration objects are accepted directly
 const date5 = new kk_date('2024-08-23 10:30:00');
 date5.add(kk_date.duration(90, 'minutes')); // 2024-08-23 12:00:00
+
+// Subtraction using negative amounts - each operation on separate instances
+new kk_date('2024-08-23 10:30:00').add(-2, 'hours');   // 2024-08-23 08:30:00
+new kk_date('2024-08-23 10:30:00').add(-1, 'weeks');   // 2024-08-16 10:30:00
+
+// Fractions: exact for elapsed units, rounded for calendar units
+new kk_date('2024-08-23 10:30:00').add(1.5, 'hours');  // 2024-08-23 12:00:00
+new kk_date('2024-08-23 10:30:00').add(1.5, 'days');   // 2024-08-25 10:30:00
+
+// Month-end clamp
+new kk_date('2024-01-31').add(1, 'months');            // 2024-02-29 00:00:00
 ```
 
 
@@ -240,9 +301,14 @@ Sets a specific unit of time to the given value.
 
 **Parameters:**
 - `unit` (string) - Time unit ('years', 'months', 'days', 'hours', 'minutes', 'seconds')
-- `value` (number) - Value to set
+- `value` (number) - Value to set. Months are 0-based (`0` = January); `'days'` is the day of the month
 
-**Returns:** (KkDate) - Modified date instance
+**Returns:** (KkDate) - The same instance (`this`)
+
+The wall clock in the instance's timezone (instance timezone, else the global one) is edited and
+the other fields are kept. Like moment, setting `months`/`years` clamps the day to the target
+month (`2024-01-31` → `set('months', 1)` → `2024-02-29`); out-of-range values for the other units
+roll over like the native `Date` setters. DST gaps and overlaps resolve as in `add()`.
 
 **Examples:**
 ```javascript
@@ -255,19 +321,24 @@ date.set('days', 1);                   // Set day to 1st: 2025-01-01 10:30:45
 date.set('hours', 0);                  // Set hour to 00: 2025-01-01 00:30:45
 date.set('minutes', 0);                // Set minutes to 00: 2025-01-01 00:00:45
 date.set('seconds', 0);                // Set seconds to 00: 2025-01-01 00:00:00
+
+new kk_date('2024-02-29').set('years', 2025); // 2025-02-28 00:00:00 (day clamped)
 ```
 
-**Examples:**
+#### `get(unit)`
+
+Returns one field of the wall clock in the instance's timezone (instance timezone, else the
+global one).
+
+**Parameters:**
+- `unit` (string) - 'years', 'months' (0-based), 'days' (day of the month), 'hours', 'minutes', 'seconds'
+
+**Returns:** (number)
+
 ```javascript
-// Subtraction using negative amounts - each operation on separate instances
-const date1 = new kk_date('2024-08-23 10:30:00');
-date1.add(-1, 'days');                 // Subtract 1 day: 2024-08-22 10:30:00
-
-const date2 = new kk_date('2024-08-23 10:30:00');
-date2.add(-2, 'hours');                // Subtract 2 hours: 2024-08-23 08:30:00
-
-const date3 = new kk_date('2024-08-23 10:30:00');
-date3.add(-1, 'weeks');                // Subtract 1 week: 2024-08-16 10:30:00
+const date = new kk_date('2024-08-23 10:30:45');
+date.get('months');                    // 7 (August)
+date.get('days');                      // 23
 ```
 
 #### `startOf(unit)`
@@ -278,6 +349,13 @@ Sets the date to the start of the specified unit.
 - `unit` (string) - Time unit ('years', 'months', 'weeks', 'days', 'hours', 'minutes', 'seconds')
 
 **Returns:** (KkDate) - Modified date instance
+
+Periods are calendar periods in the instance's timezone (instance timezone, else the global one);
+weeks start on `weekStartDay` (default Sunday). When the start of the period does not exist on the
+wall clock — e.g. a DST change at midnight skips `00:00` (America/Santiago, Asia/Beirut,
+America/Havana) — the first existing instant of the period is returned (`01:00`). An hour never
+spans a change of the UTC offset: in the repeated hour of a DST overlap, `startOf('hours')` stays
+on the same side of the change.
 
 **Examples:**
 ```javascript
@@ -308,6 +386,9 @@ Sets the date to the end of the specified unit.
 - `unit` (string) - Time unit
 
 **Returns:** (KkDate) - Modified date instance
+
+The end of a period is the start of the next period minus 1 ms, so it stays correct when the
+period is shorter or longer than usual (a 23- or 25-hour day, a day whose midnight is skipped).
 
 **Examples:**
 ```javascript
@@ -387,12 +468,15 @@ date1.isSame(date2);                   // false
 
 #### `isBetween(start, end, unit?)`
 
-Checks if the date is between two other dates.
+Checks if the date is between two other dates. Both bounds are inclusive.
 
 **Parameters:**
 - `start` (KkDate|Date|string) - Start date
 - `end` (KkDate|Date|string) - End date
-- `unit` (string, optional) - Unit for comparison
+- `unit` (string, optional) - 'seconds', 'minutes', 'hours', 'days', 'weeks', 'months' or 'years'.
+  Without it the instants are compared to the millisecond. With it, whole calendar periods in this
+  instance's timezone are compared (moment's `isBetween(start, end, unit, '[]')`): the period
+  containing the date must lie between the periods containing `start` and `end`.
 
 **Returns:** (boolean) - True if between
 
@@ -404,6 +488,10 @@ const end = new kk_date('2024-08-25');
 
 date.isBetween(start, end);            // true
 date.isBetween(start, end, 'days');    // true
+
+const evening = new kk_date('2024-08-25 15:00');
+evening.isBetween(start, end);         // false (after 2024-08-25 00:00:00.000)
+evening.isBetween(start, end, 'days'); // true  (same day as end)
 ```
 
 #### `diff(date, unit, is_decimal?)`
@@ -420,13 +508,16 @@ Returns the difference between two dates.
 The difference is measured as `(date - this)`, i.e. the argument minus the receiver. So when the argument is
 **later** than the receiver the result is **positive**; when it is earlier the result is negative.
 
-**Unit semantics:**
-- `seconds` / `minutes` / `hours` / `days` are exact elapsed-time arithmetic.
+**Unit semantics** (same as moment):
+- `milliseconds` / `seconds` / `minutes` / `hours` are exact elapsed time.
+- `days` / `weeks` count calendar days in this instance's timezone (a week is 7 days): a 23- or
+  25-hour DST day counts as one day, so `2024-03-09 12:00 → 2024-03-11 12:00` in New York is `2`
+  days but `47` hours.
 - `months` / `years` are **calendar-aware** (moment-compatible anchor arithmetic): a full calendar year is `1` year,
   `Jan 1 → Mar 1` is `2` months, and month-end edges clamp (`Jan 31 → Feb 29` is `1` month). With `is_decimal` the
   fraction interpolates between month anchors.
-- Note: `duration()` uses fixed approximations (31-day months, 365-day years) because a duration has no anchor date,
-  and `diff_range()` steps by fixed average units (30.44-day months / 365.25-day years) for its iteration.
+- Without `is_decimal` the value is truncated toward zero.
+- Note: `duration()` uses fixed approximations (31-day months, 365-day years) because a duration has no anchor date.
 
 **Examples:**
 ```javascript
@@ -438,6 +529,8 @@ date2.diff(date1, 'days');             // -2  (date1 is 2 days before date2)
 date1.diff(date2, 'hours');            // 48
 date1.diff(date2, 'days', true);       // 2   (is_decimal returns a fractional value when not a whole number)
 
+new kk_date('2024-08-01').diff('2024-08-23', 'weeks');       // 3
+new kk_date('2024-08-01').diff('2024-08-23', 'weeks', true); // 3.142857142857143
 new kk_date('2023-01-01').diff('2024-01-01', 'years');   // 1 (calendar-aware)
 new kk_date('2024-01-31').diff('2024-02-29', 'months');  // 1 (month-end clamp)
 ```
@@ -446,12 +539,15 @@ new kk_date('2024-01-31').diff('2024-02-29', 'months');  // 1 (month-end clamp)
 
 #### `tz(timezone)`
 
-Converts the date to the specified timezone.
+Sets the timezone the instance is displayed and manipulated in. The represented instant does not
+change (`getTime()` is the same before and after); `format()`, `get()`, `add()` with calendar
+units, `startOf()`/`endOf()` and `diff()` in days/weeks/months/years then work on this zone's wall
+clock. Mutates the instance and returns `this`.
 
 **Parameters:**
 - `timezone` (string) - IANA timezone identifier
 
-**Returns:** (KkDate) - Date in specified timezone
+**Returns:** (KkDate) - The same instance (`this`)
 
 **Examples:**
 ```javascript
@@ -472,7 +568,11 @@ Gets timezone information for the date.
 **Parameters:**
 - `timezone` (string, optional) - Timezone to get info for (defaults to current timezone)
 
-**Returns:** (object) - Timezone information
+**Returns:** (object) - Timezone information:
+- `offset` - UTC offset at this date, in milliseconds
+- `isDST` - same as `isDST()` below
+- `abbreviation` - short zone name from the runtime's ICU data (e.g. `'EDT'`, or `'GMT+10'` where ICU has no abbreviation)
+- `standardOffset` / `daylightOffset` - the smaller / larger of the offsets on January 1 and July 1 of the date's year (equal for zones without DST)
 
 **Examples:**
 ```javascript
@@ -499,6 +599,10 @@ Checks if the date is in Daylight Saving Time.
 
 **Returns:** (boolean) - True if in DST
 
+Uses moment's definition: the offset at this date is larger than the offset at the same day and
+time in January or in June of the same year. It works in both hemispheres (Sydney is in DST in
+January, not in August).
+
 **Examples:**
 ```javascript
 const date = new kk_date('2024-08-23 10:00:00');
@@ -506,6 +610,7 @@ const date = new kk_date('2024-08-23 10:00:00');
 date.isDST('America/New_York');        // true (EDT)
 date.isDST('Europe/London');           // true (BST)
 date.isDST('Asia/Tokyo');              // false (no DST)
+date.isDST('Australia/Sydney');        // false (southern-hemisphere winter)
 ```
 
 #### `getTimezoneAbbreviation(timezone?)`
@@ -569,36 +674,48 @@ const date = new kk_date('2024-08-23 10:00:00');
 console.log(date.valueOf()); // 1724407200000
 ```
 
-#### `diff_range(startDate, endDate, unit?)`
+#### `diff_range(end, unit, template?)`
 
-Calculates the difference between a date range.
+Lists the dates from this date up to `end`, one per `unit`, as formatted strings.
 
 **Parameters:**
-- `startDate` (kk_date|Date|string) - Start date
-- `endDate` (kk_date|Date|string) - End date  
-- `unit` (string, optional) - Unit for difference calculation
+- `end` (KkDate|Date|string|number) - Last date of the range
+- `unit` (string) - Step: 'seconds', 'minutes', 'hours', 'days', 'weeks', 'months' or 'years'
+- `template` (string, optional, default `'YYYY-MM-DD'`) - Format of the returned strings
 
-**Returns:** (number|object) - Range difference
+**Returns:** (string[]) - This date first, then this date + 1 unit, + 2 units, … for as many whole
+units as `diff(end, unit)` counts. Every entry is computed from this date with `add()`, so month
+ends clamp without drifting (`Jan 31 → Feb 29 → Mar 31`).
 
 **Examples:**
 ```javascript
-const date = new kk_date('2024-08-23');
-const start = new kk_date('2024-08-20');
-const end = new kk_date('2024-08-25');
+new kk_date('2024-08-20').diff_range('2024-08-23', 'days');
+// ['2024-08-20', '2024-08-21', '2024-08-22', '2024-08-23']
 
-date.diff_range(start, end, 'days'); // Range difference calculation
+new kk_date('2024-01-31').diff_range('2024-04-30', 'months');
+// ['2024-01-31', '2024-02-29', '2024-03-31', '2024-04-30']
+
+new kk_date('2024-08-23 10:00').diff_range('2024-08-23 13:00', 'hours', 'HH:mm');
+// ['10:00', '11:00', '12:00', '13:00']
 ```
 
 #### `valueOfLocal()`
 
-Returns the local timestamp value.
+Legacy helper: `valueOf()` shifted by the difference between the system timezone and the global
+timezone, i.e. the instant at which the global timezone's wall clock shows what the system
+timezone's wall clock shows at this date. Both offsets are taken at this date (DST-safe, and the
+result does not depend on when it is called). Equals `valueOf()` when no global timezone other
+than the system one is configured.
 
-**Returns:** (number) - Local timestamp
+**Returns:** (number) - Timestamp in milliseconds
 
 **Examples:**
 ```javascript
-const date = new kk_date('2024-08-23 10:00:00');
-console.log(date.valueOfLocal()); // Local timestamp
+// process timezone UTC, global timezone America/New_York
+kk_date.setTimezone('America/New_York');
+const date = new kk_date('2024-08-23 10:00:00'); // 10:00 New York = 14:00 UTC
+date.valueOf();      // 1724421600000 (2024-08-23T14:00:00Z)
+date.valueOfLocal(); // 1724436000000 (2024-08-23T18:00:00Z = 14:00 in New York)
 ```
 
 #### `duration(time)`
@@ -676,7 +793,8 @@ console.log(currentTimezone); // 'UTC'
 
 #### `setUserTimezone(timezone)`
 
-Sets the user's preferred timezone.
+Stores a "user" timezone. kk-date uses it only as the default source zone of
+`convertToTimezone()`; it does not affect parsing or display (use `setTimezone()` / `tz()` for that).
 
 **Note:** This is a module-level export, not a class static method.
 
@@ -692,7 +810,7 @@ kk_date.setUserTimezone('America/New_York');
 
 #### `getUserTimezone()`
 
-Gets the user's preferred timezone.
+Returns the timezone stored with `setUserTimezone()` (the system timezone until it is called).
 
 **Note:** This is a module-level export, not a class static method.
 
@@ -758,15 +876,18 @@ Checks whether a date string matches a given format template.
 **Parameters:**
 - `input` (string) - Date string to validate
 - `format` (string, **required**) - Format to validate against. Accepts every predefined template ('YYYY-MM-DD', 'HH:mm:ss', 'mm:ss', etc.) **plus any display-token template** the formatter understands (e.g. 'DD/MM/YYYY HH:mm'), compiled on first use. Omitting it, or passing a template with no recognizable token, throws `Error: Invalid template !`.
-- `is_strict` (boolean, optional, default `false`) - Layers wall-clock semantics on top of the shape check, matching moment's strict parsing: 4-digit years (1700-2199), real calendar days including leap years, hours 00-23 plus exactly `24:00[:00]`, and no `:ss` tail on `HH:mm`. Strict always accepts a subset of the default mode.
+- `is_strict` (boolean, optional, default `false`) - Layers moment's strict-parsing rules on top of the shape check: real calendar days including leap years, hours 00-23 plus exactly `24:00[:00]`, no `:ss` tail on `HH:mm`, plus kk-date's 4-digit year range (1700-2199). Strict always accepts a subset of the default mode.
 
 **Returns:** (boolean) - True if valid
 
 **Default mode is a pure shape check** and deliberately keeps kk-date's leniencies for backward compatibility: hours 24-29 are accepted on the `HH`-based templates (they feed the constructor's day-overflow feature, e.g. `'25:00:00'` → next day 01:00), `HH:mm` tolerates an optional `:ss` tail, and impossible calendar days like `'2021-02-30'` pass the shape check. Pass `is_strict = true` to reject all of these.
 
 **Scope notes:**
-- Strict calendar/hour checks apply to the numeric templates and to dynamically compiled templates. The name-based predefined templates (e.g. `'DD MMMM YYYY'`) keep their legacy regex behavior; `is_strict` has no additional effect for them.
-- Dynamic templates validate shape and field ranges (plus strict semantics); cross-field consistency (e.g. that a `dddd` weekday name matches the date) is not checked — same as moment strict.
+- Strict mode applies to every template — numeric, name-based (`'DD MMMM YYYY'`, `'dddd, DD MMMM YYYY'`, …) and dynamically compiled. Besides the calendar/hour rules above it requires, like moment strict:
+  - month and weekday names of the template's form: `MMMM` full names, `MMM` short names, `dddd` / `ddd` / `dd` likewise (names in any language kk-date knows);
+  - a weekday name that matches the date (`'Monday, 23 August 2024'` is rejected — it was a Friday);
+  - no leading zero on unpadded tokens (`D`, `M`, `H`, `h`, `m`, `s`, …);
+  - week numbers that exist in their week-year (`W`/`WW`, `w`/`ww`) and UTC offsets within ±14:00.
 - A template accepted by `isValid` is not necessarily parseable by the constructor: `new kk_date(input, format)` still supports only the predefined formats.
 
 **Examples:**
@@ -791,6 +912,10 @@ kk_date.isValid('2024-02-29', 'YYYY-MM-DD', true); // true  - leap year
 kk_date.isValid('25:00:00', 'HH:mm:ss', true);     // false - wall-clock hours only
 kk_date.isValid('24:00:00', 'HH:mm:ss', true);     // true  - end-of-day midnight
 kk_date.isValid('05-12-31', 'YYYY-MM-DD', true);   // false - 2-digit years rejected
+kk_date.isValid('31 February 2024', 'DD MMMM YYYY');        // true  - shape only
+kk_date.isValid('31 February 2024', 'DD MMMM YYYY', true);  // false - not a real calendar day
+kk_date.isValid('23 Aug 2024', 'DD MMMM YYYY', true);       // false - MMMM needs the full month name
+kk_date.isValid('Monday, 23 August 2024', 'dddd, DD MMMM YYYY', true); // false - 2024-08-23 is a Friday
 ```
 
 #### `getTimezoneOffset(timezone, date?)`
@@ -819,7 +944,7 @@ Gets all available timezones.
 
 **Note:** This is a module-level export, not a class static method.
 
-**Returns:** (string[]) - Array of timezone identifiers
+**Returns:** (string[]) - Every IANA timezone the runtime supports (`Intl.supportedValuesOf('timeZone')`, about 420 zones on Node.js 22), plus `'UTC'`, which is prepended when the engine's list omits it. Runtimes without `Intl.supportedValuesOf` (e.g. older Hermes) get a built-in list of common zones that they support.
 
 **Examples:**
 ```javascript
@@ -827,7 +952,7 @@ const kk_date = require('kk-date');
 
 const timezones = kk_date.getAvailableTimezones();
 console.log(timezones);
-// ['UTC', 'Europe/London', 'America/New_York', ...]
+// ['UTC', 'Africa/Abidjan', 'Africa/Accra', ...]
 ```
 
 ## Properties
@@ -923,43 +1048,37 @@ try {
 }
 
 try {
-    date.tz('Invalid/Timezone');
+    new kk_date('2024-08-23').tz('Invalid/Timezone');
 } catch (error) {
+    console.log(error.message); // 'Invalid timezone: Invalid/Timezone'
+}
+
+try {
+    kk_date.config({ locale: 'tr', timezone: 'Invalid/Timezone' });
+} catch (error) {
+    // config() validates every option first: on error nothing is applied (locale is unchanged)
     console.log(error.message); // 'Invalid timezone: Invalid/Timezone'
 }
 ```
 
 ## Performance Considerations
 
-- **Caching**: The library caches timezone calculations for better performance
-- **Object Pooling**: Reuses objects where possible to reduce garbage collection
-- **Lazy Loading**: Loads timezone data only when needed
-- **Memory Management**: Automatically cleans up cached data
+- **Caching**: The library caches timezone offsets, compiled format templates, format results and `Intl` formatters
+- **Lazy Loading**: Month/weekday name tables and `Intl` formatters are built on first use
+- **Memory Management**: Every cache is bounded (oldest entries are evicted or the cache is cleared when full)
 
 ## Browser Compatibility
 
-The library works in all modern browsers and Node.js environments. For older browsers, consider using polyfills for:
+The library is shipped as untranspiled ES2020 (optional chaining, nullish coalescing, Unicode
+property escapes in regular expressions) and needs `Intl.DateTimeFormat` with time zone support and
+`formatToParts`:
 
-- `Intl.DateTimeFormat` (IE 11+)
-- `Intl.DateTimeFormat.prototype.formatToParts`
-- `Array.prototype.find`
-
-**Browser Support Levels:**
-
-**Basic Functionality (Chrome 60+, Firefox 55+, Safari 12+, Edge 79+, IE 11+):**
-- Date construction and parsing
-- Basic formatting
-- Timezone conversions
-- Date manipulation
-- Comparison operations
-
-**Advanced Features:**
-- **Locale Configuration:** Chrome 74+, Firefox 75+, Safari 14.1+, Edge 79+ (requires `Intl.Locale`)
-- **Relative Time Formatting:** Chrome 71+, Firefox 65+, Safari 14.1+, Edge 79+ (requires `Intl.RelativeTimeFormat`, has fallback)
-
-**Graceful Degradation:**
-- Without `Intl.Locale`: Locale configuration fails, but basic functionality works
-- Without `Intl.RelativeTimeFormat`: Relative time uses fallback mechanism
+- **Chrome / Edge 80+, Firefox 78+, Safari 14+, Node.js 22+** (the `engines` range; CI runs 22, 24 and 26)
+- Internet Explorer is not supported
+- `fromNow()` requires `Intl.RelativeTimeFormat` and throws a descriptive error without it
+- `Intl.Locale` is used to validate locales when available; without it locales are validated by creating the formatters
+- `Intl.supportedValuesOf` (Chrome 99+, Firefox 93+, Safari 15.4+) is optional; without it `getAvailableTimezones()` returns a built-in list
+- React Native / Hermes: timezone offsets fall back to `formatToParts` field arithmetic when `longOffset` names are unavailable
 
 ## Migration from Other Libraries
 

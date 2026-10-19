@@ -21,9 +21,11 @@ on:
 permissions:
   contents: write
 
+# Runs queue instead of cancelling each other: a later push (even one without JavaScript changes,
+# whose benchmark job is skipped) must not cancel a benchmark that is already running.
 concurrency:
   group: bench-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   # Benchmark numbers can only move when JavaScript changes. Docs-only pushes skip the

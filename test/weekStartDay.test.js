@@ -67,19 +67,33 @@ describe('weekStartDay tests for startOf and endOf', () => {
 	test('should throw an error when weekStartDay', () => {
 		expect(() => new kk_date().config({ weekStartDay: 8 })).toThrow();
 	});
-	test('Should be six days weekStartDay when 0-1 is entered, the difference between the start and end ', () => {
-		kk_date.config({ weekStartDay: 0 });
-		const kkdate1 = new kk_date();
-		expect(new kk_date(kkdate1.startOf('weeks')).diff(new kk_date(kkdate1.endOf('weeks')), 'days')).toBe(6);
-
-		kk_date.config({ weekStartDay: 2 });
-		const kkdate2 = new kk_date();
-		expect(new kk_date(kkdate2.startOf('weeks')).diff(new kk_date(kkdate2.endOf('weeks')), 'days')).toBe(6);
-	});
-
-	test('Should be six days weekStartDay when random 0-6 is entered, the difference between the start and end ', () => {
-		kk_date.config({ weekStartDay: Math.floor(Math.random() * 7) });
-		const kkdate1 = new kk_date();
-		expect(new kk_date(kkdate1.startOf('weeks')).diff(new kk_date(kkdate1.endOf('weeks')), 'days')).toBe(6);
+	// Fixed instants (these tests used to read the current date and a random weekStartDay, so they
+	// failed whenever "this week" contained a DST change in the CI zone). Ordinary weeks and weeks
+	// with a 25- or 23-hour day, in several zones, for every weekStartDay.
+	const SYSTEM_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
+	test.each([
+		['UTC', '2024-01-17T12:00:00Z'],
+		['Europe/Istanbul', '2026-10-21T12:00:00Z'],
+		['Europe/London', '2026-10-27T12:00:00Z'],
+		['Europe/London', '2026-03-31T12:00:00Z'],
+		['America/New_York', '2026-11-04T12:00:00Z'],
+		['America/New_York', '2026-03-10T12:00:00Z'],
+		['Asia/Beirut', '2026-10-21T12:00:00Z'],
+		['Australia/Sydney', '2026-04-06T00:00:00Z'],
+		['Australia/Sydney', '2026-10-06T00:00:00Z'],
+	])('start and end of the week are six calendar days apart (%s, %s)', (zone, instant) => {
+		try {
+			kk_date.config({ timezone: zone });
+			for (let weekStartDay = 0; weekStartDay < 7; weekStartDay++) {
+				kk_date.config({ weekStartDay });
+				const date = new kk_date(instant);
+				const start = new kk_date(date.startOf('weeks'));
+				expect(start.diff(new kk_date(date.endOf('weeks')), 'days')).toBe(6);
+				// the week starts on the configured weekday (format 'd': 0 = Sunday)
+				expect(start.format('d')).toBe(String(weekStartDay));
+			}
+		} finally {
+			kk_date.config({ timezone: SYSTEM_TIMEZONE, weekStartDay: 0 });
+		}
 	});
 });

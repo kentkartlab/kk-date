@@ -19,6 +19,7 @@ kk-date provides comprehensive timezone support using the IANA timezone database
 
 > **How to read the examples in this guide:**
 > - A **naive** string like `'2024-08-23 10:00:00'` is parsed in the **global/process timezone**. Examples that use naive inputs assume that timezone is **UTC** (`kk_date.setTimezone('UTC')` or `TZ=UTC`).
+> - A string that carries its own offset or zone (`'…Z'`, `'…+03:00'`, `'…+0300'`, `'Fri, 23 Aug 2024 07:00:00 GMT'`, `Date#toString()` output) is an **absolute instant**: it is never reinterpreted in the global timezone.
 > - `.tz()` and instance `config({ timezone })` change only the **display** timezone — they do **not** reinterpret the input string. To represent a specific zone's wall-clock time unambiguously, pass an **absolute instant** (ISO-8601 with `Z`/offset). Many examples below do exactly that (e.g. 2 PM New York = `2024-08-23T18:00:00.000Z`).
 > - `.tz()` **mutates** the instance and returns it — use a **fresh instance per conversion**.
 
@@ -102,6 +103,53 @@ console.log(isDST); // true (EDT)
 const info = date.getTimezoneInfo('America/New_York');
 console.log(info.isDST);        // true
 console.log(info.abbreviation); // 'EDT'
+```
+
+### Wall-Clock Arithmetic Across DST
+
+Calendar operations work on the wall clock of the instance's timezone (the `.tz()`/instance zone,
+else the global one) and follow the same rules as moment, Luxon and the native `Date`:
+
+- `add()` with `days`/`weeks`/`months`/`years`, `set()`, `startOf()`/`endOf()` keep the wall-clock
+  time: one day later is the same time on the next calendar day, even when that day has 23 or 25 hours.
+- `add()` with `hours`/`minutes`/`seconds`/`milliseconds` adds elapsed time.
+- A wall-clock time that does not exist (DST gap) moves forward by the length of the gap
+  (`02:30` on a spring-forward night becomes `03:30`). One that exists twice (DST overlap) stays on
+  the side of the change the original instant was on, when that reading exists (moment-timezone and
+  Luxon do the same); a parsed time that exists twice is the earlier instant.
+- `startOf('days')` on a day whose midnight is skipped (America/Santiago, Asia/Beirut,
+  America/Havana) is the first existing instant (`01:00`); `endOf()` is the next period's start − 1 ms.
+- `diff()` in `days`/`weeks` counts calendar days in the receiver's timezone; `hours` and smaller
+  units count elapsed time.
+
+```javascript
+kk_date.setTimezone('America/New_York');
+
+// Naive strings are New York wall-clock times; nonexistent / repeated times resolve like moment
+new kk_date('2024-03-10 02:30:00').format('YYYY-MM-DD HH:mm Z'); // '2024-03-10 03:30 -04:00' (gap)
+new kk_date('2024-11-03 01:30:00').format('YYYY-MM-DD HH:mm Z'); // '2024-11-03 01:30 -04:00' (earlier of two)
+
+// Arithmetic onto the repeated hour keeps the side of the original instant
+new kk_date('2024-11-04 01:30:00').add(-1, 'days').format('YYYY-MM-DD HH:mm Z'); // '2024-11-03 01:30 -05:00'
+new kk_date('2024-11-02 01:30:00').add(1, 'days').format('YYYY-MM-DD HH:mm Z');  // '2024-11-03 01:30 -04:00'
+
+// Calendar vs elapsed units across the spring-forward night (a 23-hour day)
+new kk_date('2024-03-09 12:00:00').add(1, 'days').format('YYYY-MM-DD HH:mm');   // '2024-03-10 12:00'
+new kk_date('2024-03-09 12:00:00').add(24, 'hours').format('YYYY-MM-DD HH:mm'); // '2024-03-10 13:00'
+new kk_date('2024-03-09 12:00:00').diff(new kk_date('2024-03-11 12:00:00'), 'days');  // 2
+new kk_date('2024-03-09 12:00:00').diff(new kk_date('2024-03-11 12:00:00'), 'hours'); // 47
+
+// Day boundaries of the 23-hour day
+new kk_date('2024-03-10 12:00:00').startOf('days').format('HH:mm Z');      // '00:00 -05:00'
+new kk_date('2024-03-10 12:00:00').endOf('days').format('HH:mm:ss.SSS Z'); // '23:59:59.999 -04:00'
+
+// Strings with their own offset are absolute instants and are not reinterpreted
+new kk_date('2024-08-23T10:00:00+03:00').format('YYYY-MM-DD HH:mm Z'); // '2024-08-23 03:00 -04:00'
+
+// Where DST changes at midnight, the day starts at 01:00 and adding a day keeps the date
+kk_date.setTimezone('America/Santiago');
+new kk_date('2024-09-08 12:00:00').startOf('days').format('YYYY-MM-DD HH:mm'); // '2024-09-08 01:00'
+new kk_date('2024-04-06 00:00:00').add(1, 'days').format('YYYY-MM-DD HH:mm');  // '2024-04-07 00:00'
 ```
 
 ### DST Transition Dates
@@ -236,12 +284,14 @@ console.log(date.format('HH:mm')); // '06:00'
 ### 1. User Preferences
 
 ```javascript
-// Store user's preferred timezone
-kk_date.setUserTimezone('America/New_York');
 kk_date.setTimezone('UTC'); // server works in UTC
 
+// Keep the user's zone with the user (setUserTimezone() would only store it: kk-date uses that value
+// solely as the default source zone of convertToTimezone(), never for parsing or display)
+const user = { timezone: 'America/New_York' };
+
 // Convert a fresh instance to the user's timezone for display
-const userTime = new kk_date('2024-08-23 15:00:00').tz(kk_date.getUserTimezone());
+const userTime = new kk_date('2024-08-23 15:00:00').tz(user.timezone);
 console.log('Time for user:', userTime.format('HH:mm')); // '11:00'
 ```
 
@@ -317,37 +367,42 @@ console.log(displayDate.format('HH:mm')); // '14:00'
 ### 3. Handle Invalid Timezones
 
 ```javascript
+const date = new kk_date('2024-08-23 10:00:00');
+let converted;
 try {
-    const date = new kk_date('2024-08-23 10:00:00');
-    const converted = date.tz('Invalid/Timezone');
+    converted = date.tz('Invalid/Timezone');
 } catch (error) {
-    console.log('Invalid timezone:', error.message);
-    // Fallback to UTC
-    const fallback = date.tz('UTC');
+    console.log(error.message); // 'Invalid timezone: Invalid/Timezone'
+    // Fallback to UTC (a failed tz() leaves the instance unchanged)
+    converted = date.tz('UTC');
 }
 ```
 
 ### 4. Use IANA Timezone Identifiers
 
 ```javascript
-// ❌ Don't use abbreviations
-date.tz('EST');  // Ambiguous
-date.tz('PST');  // Ambiguous
+const instant = '2024-08-23T18:00:00.000Z';
+
+// ❌ Don't use abbreviations: the runtime may accept them, but not with the meaning you expect
+new kk_date(instant).tz('EST').format('HH:mm');  // '13:00' — 'EST' is a fixed UTC-5 zone without DST
 
 // ✅ Use IANA identifiers
-date.tz('America/New_York');  // Clear and unambiguous
-date.tz('America/Los_Angeles'); // Clear and unambiguous
+new kk_date(instant).tz('America/New_York').format('HH:mm');    // '14:00' (EDT)
+new kk_date(instant).tz('America/Los_Angeles').format('HH:mm'); // '11:00' (PDT)
 ```
 
 ### 5. Consider DST Transitions
 
 ```javascript
-// Be careful with DST transition times
-const dstTransition = new kk_date('2024-03-10 02:30:00');
-dstTransition.config({timezone: 'America/New_York'});
+// A wall-clock time inside a DST gap does not exist; it resolves forward (see
+// "Wall-Clock Arithmetic Across DST" above). Note that .tz()/config({ timezone }) only change the
+// display zone: the naive input is read in the GLOBAL timezone.
+kk_date.setTimezone('America/New_York');
+console.log(new kk_date('2024-03-10 02:30:00').format('HH:mm')); // '03:30'
 
-// This time doesn't exist during spring forward
-console.log(dstTransition.format('HH:mm')); // May show unexpected result
+// Use calendar units to move by days and elapsed units to move by hours
+console.log(new kk_date('2024-03-09 12:00:00').add(1, 'days').format('HH:mm'));   // '12:00'
+console.log(new kk_date('2024-03-09 12:00:00').add(24, 'hours').format('HH:mm')); // '13:00'
 ```
 
 ## Troubleshooting
@@ -361,11 +416,13 @@ console.log(dstTransition.format('HH:mm')); // May show unexpected result
 **Solution**: Check if you're using the correct IANA timezone identifier.
 
 ```javascript
-// ❌ Wrong
-date.tz('EST');
+const instant = '2024-08-23T18:00:00.000Z';
+
+// ❌ Wrong: a fixed UTC-5 zone, one hour off from New York in summer
+new kk_date(instant).tz('EST').format('HH:mm'); // '13:00'
 
 // ✅ Correct
-date.tz('America/New_York');
+new kk_date(instant).tz('America/New_York').format('HH:mm'); // '14:00'
 ```
 
 #### 2. DST Issues
@@ -375,12 +432,12 @@ date.tz('America/New_York');
 **Solution**: Use specific timezone identifiers and test DST transitions.
 
 ```javascript
-// Test DST transitions
+// Test DST transitions (process/global timezone UTC: the inputs are UTC wall-clock times)
 const springForward = new kk_date('2024-03-10 02:00:00');
 const fallBack = new kk_date('2024-11-03 02:00:00');
 
-console.log(springForward.tz('America/New_York').format('HH:mm'));
-console.log(fallBack.tz('America/New_York').format('HH:mm'));
+console.log(springForward.tz('America/New_York').format('YYYY-MM-DD HH:mm')); // '2024-03-09 21:00' (EST)
+console.log(fallBack.tz('America/New_York').format('YYYY-MM-DD HH:mm'));      // '2024-11-02 22:00' (EDT)
 ```
 
 #### 3. Cross-Platform Differences
@@ -399,15 +456,18 @@ console.log('Available timezones:', timezones.length);
 
 **Problem**: Slow timezone conversions.
 
-**Solution**: The library caches timezone calculations automatically.
+**Solution**: The library caches timezone offsets and `Intl` formatters automatically; for
+repeated inputs, also enable the parse/format cache with `kk_date.caching({ status: true })`.
 
 ```javascript
-// First conversion may be slower
-const first = date.tz('America/New_York');
+const instant = '2024-08-23T18:00:00.000Z';
 
-// Subsequent conversions are faster
-const second = date.tz('America/New_York');
-const third = date.tz('America/New_York');
+// The first conversion to a zone creates its Intl formatters
+const first = new kk_date(instant).tz('America/New_York');
+
+// Later conversions to the same zone reuse them
+const second = new kk_date(instant).tz('America/New_York');
+const third = new kk_date(instant).tz('America/New_York');
 ```
 
 ### Debugging Tips
@@ -424,14 +484,16 @@ console.log('Timezone info:', {
     isDST: info.isDST,
     abbreviation: info.abbreviation
 });
+// { timezone: 'America/New_York', offset: '-4 hours', isDST: true, abbreviation: 'EDT' }
 ```
 
 #### 2. Verify UTC Base
 
 ```javascript
-const date = new kk_date('2024-08-23 10:00:00');
-console.log('UTC time:', date.tz('UTC').format('HH:mm'));
-console.log('Local time:', date.format('HH:mm'));
+// tz() changes the instance, so compare two instances of the same instant
+const instant = '2024-08-23T10:00:00.000Z';
+console.log('UTC time:', new kk_date(instant).tz('UTC').format('HH:mm'));                  // '10:00'
+console.log('Istanbul time:', new kk_date(instant).tz('Europe/Istanbul').format('HH:mm')); // '13:00'
 ```
 
 #### 3. Test Edge Cases
@@ -449,14 +511,18 @@ dstDates.forEach(dateStr => {
     const nyTime = date.tz('America/New_York');
     console.log(`${dateStr} → ${nyTime.format('HH:mm')}`);
 });
+// (global timezone UTC)
+// 2024-03-10 02:00:00 → 21:00
+// 2024-11-03 02:00:00 → 22:00
+// 2024-08-23 10:00:00 → 06:00
 ```
 
 ### Error Messages
 
 Common error messages and their solutions:
 
-- **"Invalid timezone: [timezone]"**: Use a valid IANA timezone identifier
-- **"Could not determine timezone offset"**: The timezone may not be supported in your environment
+- **"Invalid timezone: [timezone]"**: Use a valid IANA timezone identifier (thrown by `tz()`, `config()`, `setTimezone()`)
+- **"Failed to get timezone info for [timezone]: …"**: `getTimezoneInfo()` was given an invalid timezone
 - **"Invalid Date"**: Check your date input format
 
 ### Getting Help

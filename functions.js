@@ -25,8 +25,28 @@ const {
 	timezone_long_name_cache,
 } = require('./constants');
 
-const months = {};
-const days = {};
+// Prototype-less so inherited keys ("constructor", "toString") can never resolve as names.
+const months = Object.create(null);
+const days = Object.create(null);
+
+// Upper bound for caches keyed by caller-supplied timezone/locale strings. Timezone ids are
+// accepted case-insensitively and BCP 47 tags are open-ended, so such keys are unbounded.
+const INTL_CACHE_LIMIT = 500;
+
+/**
+ * Map.set with a size bound: the map is cleared once it reaches INTL_CACHE_LIMIT entries
+ * (the same wholesale-clear policy as the other bounded caches).
+ *
+ * @param {Map} map
+ * @param {*} key
+ * @param {*} value
+ */
+function boundedSet(map, key, value) {
+	if (map.size >= INTL_CACHE_LIMIT) {
+		map.clear();
+	}
+	map.set(key, value);
+}
 
 /**
  * Returns ordinal suffix for a number (1st, 2nd, 3rd, 4th, etc.)
@@ -122,32 +142,196 @@ function getLocaleWeekInfo(y, m, d, weekStartDay) {
 	return { week: (weekStart - week1Start) / 604800000 + 1, year: weekYear };
 }
 
-for (const key in iso6391_languages) {
-	const month_long = new Intl.DateTimeFormat(key, { month: 'long' });
-	const month_short = new Intl.DateTimeFormat(key, { month: 'short' });
-	const day_long = new Intl.DateTimeFormat(key, { weekday: 'long' });
-	const day_short = new Intl.DateTimeFormat(key, { weekday: 'short' });
-	for (let i = 1; i < 13; i++) {
-		const date = new Date(2021, i, '0');
-		months[month_long.format(date).toLowerCase()] = i;
-		months[month_short.format(date).toLowerCase()] = i;
+// Month/day name tables are built lazily: ~360 Intl formatters across all supported languages
+// cost tens of milliseconds, which only text-month parsing ever needs (not module load).
+let name_tables_built = false;
+// Lowercased name forms across all supported languages, for strict validation (moment strict
+// requires MMMM/dddd long names, MMM/ddd short names and dd the two-letter form).
+const month_long_names = new Set();
+const month_short_names = new Set();
+const day_long_names = new Set();
+const day_short_names = new Set();
+const day_min_names = new Set();
+
+function buildNameTables() {
+	for (const key in iso6391_languages) {
+		const month_long = new Intl.DateTimeFormat(key, { month: 'long' });
+		const month_short = new Intl.DateTimeFormat(key, { month: 'short' });
+		const day_long = new Intl.DateTimeFormat(key, { weekday: 'long' });
+		const day_short = new Intl.DateTimeFormat(key, { weekday: 'short' });
+		for (let i = 1; i < 13; i++) {
+			const date = new Date(2021, i, '0');
+			const long = month_long.format(date).toLowerCase();
+			const short = month_short.format(date).toLowerCase();
+			months[long] = i;
+			months[short] = i;
+			month_long_names.add(long);
+			month_short_names.add(short);
+		}
+		for (let i = 1; i < 8; i++) {
+			const date = new Date(2021, 1, i);
+			const number = parseInt(default_en_day_number.format(date), 10);
+			const long = day_long.format(date).toLowerCase();
+			const short = day_short.format(date).toLowerCase();
+			days[long] = number;
+			days[short] = number;
+			day_long_names.add(long);
+			day_short_names.add(short);
+			day_min_names.add(short.slice(0, 2));
+		}
 	}
-	for (let i = 1; i < 8; i++) {
-		const date = new Date(2021, 1, i);
-		const number = parseInt(default_en_day_number.format(date), 10);
-		days[day_long.format(date).toLowerCase()] = number;
-		days[day_short.format(date).toLowerCase()] = number;
+	name_tables_built = true;
+}
+
+/**
+ * Whether a month or weekday name has the form a token formats (any supported language):
+ * MMMM/dddd long, MMM/ddd short, dd the first two letters of the short weekday.
+ *
+ * @param {string} name
+ * @param {string} token - MMMM, MMM, dddd, ddd or dd
+ * @returns {boolean}
+ */
+function isNameOfForm(name, token) {
+	if (!name_tables_built) {
+		buildNameTables();
 	}
+	const lower = name.toLowerCase();
+	switch (token) {
+		case 'MMMM':
+			return month_long_names.has(lower);
+		case 'MMM':
+			return month_short_names.has(lower);
+		case 'dddd':
+			return day_long_names.has(lower);
+		case 'ddd':
+			return day_short_names.has(lower);
+		case 'dd':
+			return day_min_names.has(lower);
+		default:
+			return false;
+	}
+}
+
+// Primary language subtag of the global locale ('tr-TR' -> 'tr'), memoized per locale string.
+let configured_language_locale = null;
+let configured_language = 'en';
+
+/**
+ * Language whose month/weekday names win when parsing (see getMonthNumber/getWeekdayIndex).
+ *
+ * @returns {string}
+ */
+function configuredLanguage() {
+	const locale = global_config.locale || 'en';
+	if (locale !== configured_language_locale) {
+		configured_language = `${locale}`.split('-')[0].toLowerCase();
+		configured_language_locale = locale;
+	}
+	return configured_language;
+}
+
+// Set whenever a name is resolved with the configured language's preference: such a parse depends
+// on the global locale, so the constructor's parse cache records the language (see takeLocaleNamesUsed).
+let locale_names_used = false;
+// Date (UTC-encoded midnight) the most recent parse took as "today" (see parseToday), NaN when it
+// used no current date: the constructor's parse cache only reuses such a parse on that date.
+let parsed_today = Number.NaN;
+
+// Per-language weekday tables (locale preference, like the month tables), name -> 0-6 (Sunday 0).
+const language_weekday_tables = new Map();
+
+function getLanguageWeekdayTable(language) {
+	let table = language_weekday_tables.get(language);
+	if (table === undefined) {
+		table = new Map();
+		if (iso6391_languages[language] !== undefined) {
+			const day_long = new Intl.DateTimeFormat(language, { weekday: 'long' });
+			const day_short = new Intl.DateTimeFormat(language, { weekday: 'short' });
+			for (let i = 1; i < 8; i++) {
+				const date = new Date(2021, 1, i); // Feb 1 2021 was a Monday
+				table.set(day_long.format(date).toLowerCase(), date.getDay());
+				table.set(day_short.format(date).toLowerCase(), date.getDay());
+			}
+		}
+		language_weekday_tables.set(language, table);
+	}
+	return table;
+}
+
+/**
+ * Weekday name (any supported language, long or short form) to its day number, Sunday = 0.
+ * Names of the globally configured locale's language win over other languages.
+ *
+ * @param {string} dayName
+ * @returns {number} 0-6, or -1 when the name is unknown
+ */
+function getWeekdayIndex(dayName) {
+	const name = dayName.toLowerCase();
+	locale_names_used = true;
+	const language = configuredLanguage();
+	const own = getLanguageWeekdayTable(language).get(name);
+	if (own !== undefined) {
+		return own;
+	}
+	// English names mean the same day in every language: no need for the all-language table yet
+	const english = language === 'en' ? undefined : getLanguageWeekdayTable('en').get(name);
+	if (english !== undefined) {
+		return english;
+	}
+	if (!name_tables_built) {
+		buildNameTables();
+	}
+	// days[] holds 1 (Monday) .. 7 (Sunday)
+	return days[name] ? days[name] % 7 : -1;
+}
+
+// Per-language month tables: a few names mean different months in different languages
+// (Croatian "listopad" is October, Polish/Czech "listopad" is November), so the configured
+// locale's own language is consulted before the shared all-language table.
+const language_month_tables = new Map();
+
+function getLanguageMonthTable(language) {
+	let table = language_month_tables.get(language);
+	if (table === undefined) {
+		table = new Map();
+		if (iso6391_languages[language] !== undefined) {
+			const month_long = new Intl.DateTimeFormat(language, { month: 'long' });
+			const month_short = new Intl.DateTimeFormat(language, { month: 'short' });
+			for (let i = 1; i < 13; i++) {
+				const date = new Date(2021, i, '0');
+				table.set(month_long.format(date).toLowerCase(), i);
+				table.set(month_short.format(date).toLowerCase(), i);
+			}
+		}
+		language_month_tables.set(language, table);
+	}
+	return table;
 }
 
 /**
  * Month name (any supported language, long or short form) to its 1-based month number.
+ * Names of the globally configured locale's language win over other languages.
  *
  * @param {string} monthName
  * @returns {number} 1-12, or 0 when the name is unknown
  */
 function getMonthNumber(monthName) {
-	return months[monthName.toLowerCase()] || 0;
+	const name = monthName.toLowerCase();
+	locale_names_used = true;
+	const language = configuredLanguage();
+	const own = getLanguageMonthTable(language).get(name);
+	if (own !== undefined) {
+		return own;
+	}
+	// English names mean the same month in every language: no need for the all-language table yet
+	const english = language === 'en' ? undefined : getLanguageMonthTable('en').get(name);
+	if (english !== undefined) {
+		return english;
+	}
+	if (!name_tables_built) {
+		buildNameTables();
+	}
+	return months[name] || 0;
 }
 
 /**
@@ -168,8 +352,130 @@ function isValidMonth(monthName) {
  * @returns {string|Boolean}
  */
 function isValidDayName(dayname) {
+	if (!name_tables_built) {
+		buildNameTables();
+	}
 	const dayNameLower = dayname.toLowerCase();
 	return days[dayNameLower] ? day_numbers[days[dayNameLower]] : false;
+}
+
+// Wall clock (UTC-encoded ms) of the most recent local construction by a parser. Parsers build
+// system-local Dates; when the global timezone differs from the system zone the constructor
+// reinterprets that wall clock in the global zone, and reading it back from the local Date would
+// be wrong whenever the reading falls in a system-zone DST gap (the local Date shifts forward).
+let parsed_wall = Number.NaN;
+// Needed while the global timezone differs from the system one (the default, kept in sync by
+// index.js) and for a parse the constructor caches (enabled for that parse, see captureWallForParse).
+let capture_default = false;
+let capture_wall = false;
+
+/**
+ * Sets whether parses record their wall clock by default (see takeParsedWall).
+ *
+ * @param {boolean} enabled
+ */
+function setWallCapture(enabled) {
+	capture_default = enabled;
+	capture_wall = enabled;
+}
+
+/**
+ * Records the wall clock of the current parse even when the default is off (a cached parse must
+ * still reinterpret exactly if the global timezone changes later). resetParseCapture() restores
+ * the default.
+ */
+function captureWallForParse() {
+	capture_wall = true;
+}
+
+/**
+ * Whether the current parse records its wall clock.
+ *
+ * @returns {boolean}
+ */
+function isWallCaptureEnabled() {
+	return capture_wall;
+}
+
+// 400 Gregorian years: the calendar (leap years, weekdays) repeats with this period.
+const GREGORIAN_CYCLE_YEARS = 400;
+const GREGORIAN_CYCLE_MS = 146097 * 86400000;
+
+/**
+ * new Date(y, mo, d, h, mi, s, ms) (system-local) that also records the requested wall clock for
+ * the constructor's timezone reinterpretation (see takeParsedWall). The Date constructor and
+ * Date.UTC read years 0-99 as 1900-1999, so such a year is built one 400-year cycle later and
+ * moved back: '1st Jan 0050' is the year 50.
+ *
+ * @returns {Date}
+ */
+function localFromFields(y, mo, d, h, mi, s, ms) {
+	if (y >= 0 && y < 100) {
+		const local = new Date(y + GREGORIAN_CYCLE_YEARS, mo, d, h, mi, s, ms);
+		local.setFullYear(local.getFullYear() - GREGORIAN_CYCLE_YEARS);
+		if (capture_wall) {
+			parsed_wall = Date.UTC(y + GREGORIAN_CYCLE_YEARS, mo, d, h, mi, s, ms) - GREGORIAN_CYCLE_MS;
+		}
+		return local;
+	}
+	if (capture_wall) {
+		parsed_wall = Date.UTC(y, mo, d, h, mi, s, ms);
+	}
+	return new Date(y, mo, d, h, mi, s, ms);
+}
+
+/**
+ * Records the wall clock (UTC-encoded ms) of a local parse that did not go through localFromFields.
+ *
+ * @param {number} wall
+ */
+function recordParsedWall(wall) {
+	parsed_wall = wall;
+}
+
+/**
+ * Returns and clears the wall clock recorded by the last localFromFields() call (NaN if none).
+ *
+ * @returns {number}
+ */
+function takeParsedWall() {
+	const wall = parsed_wall;
+	parsed_wall = Number.NaN;
+	return wall;
+}
+
+/**
+ * Returns and clears whether a month/weekday name was resolved with the configured language's
+ * preference since the last reset (see getMonthNumber/getWeekdayIndex).
+ *
+ * @returns {boolean}
+ */
+function takeLocaleNamesUsed() {
+	const used = locale_names_used;
+	locale_names_used = false;
+	return used;
+}
+
+/**
+ * Returns and clears the date the last parse took as "today" (NaN when it used no current date).
+ *
+ * @returns {number}
+ */
+function takeParsedToday() {
+	const stamp = parsed_today;
+	parsed_today = Number.NaN;
+	return stamp;
+}
+
+/**
+ * Starts a parse: clears what a previous (possibly throwing) parse recorded — its wall clock, name
+ * resolution and current date — and restores the default wall-clock capture.
+ */
+function resetParseCapture() {
+	parsed_wall = Number.NaN;
+	locale_names_used = false;
+	parsed_today = Number.NaN;
+	capture_wall = capture_default;
 }
 
 // Ordinal day tokens accepted by the 'Do MMM YYYY' template ("1st", "3.", "1er", "3-й", ...).
@@ -210,7 +516,7 @@ function claimTextDate(kkDate, input, template, year, monthToken, day) {
 	if (!monthNumber) {
 		return false;
 	}
-	kkDate.date = new Date(year, monthNumber - 1, day, 0, 0, 0, 0);
+	kkDate.date = localFromFields(year, monthNumber - 1, day, 0, 0, 0, 0);
 	kkDate.detected_format = format_types[template];
 	return true;
 }
@@ -245,7 +551,7 @@ function tryParseTextDate(kkDate, input) {
 			}
 			if (lastDigits === 0) {
 				// "15 January Monday" — the weekday token is not validated (legacy behavior)
-				return claimTextDate(kkDate, input, 'DD MMMM dddd', new Date().getFullYear(), parts[1], +parts[0]);
+				return claimTextDate(kkDate, input, 'DD MMMM dddd', parseToday().year, parts[1], +parts[0]);
 			}
 			return false;
 		}
@@ -261,6 +567,12 @@ function tryParseTextDate(kkDate, input) {
 	}
 	if (count === 4) {
 		if (digitCount(parts[3]) !== 4) {
+			// "15 January 2024 Monday" — the weekday must be a real weekday name (no legacy rung ever
+			// claimed this shape, so junk words keep failing)
+			const dayDigits = digitCount(parts[0]);
+			if (dayDigits >= 1 && dayDigits <= 2 && digitCount(parts[2]) === 4 && isValidDayName(parts[3])) {
+				return claimTextDate(kkDate, input, 'DD MMMM YYYY dddd', +parts[2], parts[1], +parts[0]);
+			}
 			return false;
 		}
 		const day = digitCount(parts[1]) ? +parts[1] : +parts[0];
@@ -273,13 +585,18 @@ function tryParseTextDate(kkDate, input) {
 			// rung historically mislabeled it (see the constructor ladder).
 			return claimTextDate(kkDate, input, 'DD MMMM dddd, YYYY', +parts[3], parts[1], +parts[0]);
 		}
+		const dayDigits = digitCount(parts[0]);
+		if (dayDigits >= 1 && dayDigits <= 2 && isValidDayName(parts[2])) {
+			// "15 January Monday 2024" — a real weekday name is required (new shape, see above)
+			return claimTextDate(kkDate, input, 'DD MMMM dddd YYYY', +parts[3], parts[1], +parts[0]);
+		}
 		return false;
 	}
 	if (count === 2) {
 		const dayDigits = digitCount(parts[0]);
 		if (dayDigits >= 1 && dayDigits <= 2) {
-			// "15 January" — current year (legacy behavior)
-			return claimTextDate(kkDate, input, 'DD MMMM', new Date().getFullYear(), parts[1], +parts[0]);
+			// "15 January" — current year in the global timezone (legacy behavior)
+			return claimTextDate(kkDate, input, 'DD MMMM', parseToday().year, parts[1], +parts[0]);
 		}
 		if (dayDigits === 0 && digitCount(parts[1]) === 4) {
 			// "January 2024" — new rung with no legacy equivalent: unknown month names must keep
@@ -300,25 +617,108 @@ function tryParseTextDate(kkDate, input) {
 function getTimezoneOffset(timezone, date = new Date()) {
 	// Validate timezone first (outside try-catch for proper error handling)
 	checkTimezone(timezone);
+	return zoneOffsetMs(timezone, date.getTime(), date);
+}
 
-	// Check cache first (single lookup). The key embeds the exact millisecond, so a
-	// hit is always current — no TTL needed, only a size bound at the write sites.
-	const cacheKey = `${timezone}_${date.getTime()}`;
-	const cachedOffset = timezone_cache.get(cacheKey);
+/**
+ * Offset (ms) of an already validated `timezone` at instant `ms` — the cached core of
+ * getTimezoneOffset, used directly by the internal arithmetic (no validation, and a Date is only
+ * allocated when Intl must actually be asked).
+ *
+ * @param {string} timezone
+ * @param {number} ms
+ * @param {Date} [date] - the same instant as a Date, when the caller has one
+ * @returns {number}
+ */
+function zoneOffsetMs(timezone, ms, date) {
+	// Per-zone record, stored in timezone_cache under the zone name so that clearing timezone_cache
+	// resets everything: `days` maps a UTC day to its offset once the day is verified to have a
+	// constant one (see verifyConstantDay), to false for a day with a transition, and to null for a
+	// day seen once; `exact` maps instants to offsets (a repeated instant needs no Intl call and no
+	// string key).
+	let zone = timezone_cache.get(timezone);
+	if (zone === undefined) {
+		zone = { days: new Map(), exact: new Map() };
+		boundedTimezoneCacheSet(timezone, zone);
+	}
+	const day = Math.floor(ms / DAY_MS);
+	const dayOffset = zone.days.get(day);
+	if (typeof dayOffset === 'number') {
+		return dayOffset;
+	}
+	const cachedOffset = zone.exact.get(ms);
 	if (cachedOffset !== undefined) {
 		return cachedOffset;
 	}
+	if (Number.isNaN(day)) {
+		return exactTimezoneOffset(timezone, date || new Date(ms));
+	}
+	if (dayOffset === null) {
+		// A second instant on this day: verify the day once, so later lookups are free.
+		return verifyConstantDay(timezone, zone, day, ms, date || new Date(ms));
+	}
+	if (dayOffset === undefined) {
+		countZoneOffsetEntry();
+		zone.days.set(day, null);
+	}
+	return rememberExactOffset(zone, ms, exactTimezoneOffset(timezone, date || new Date(ms)));
+}
 
+// Entries held by the per-zone records (days + exact instants, all zones together): above this
+// many, timezone_cache is cleared wholesale like the other result caches.
+const ZONE_OFFSET_ENTRY_LIMIT = 50000;
+let zone_offset_entries = 0;
+
+/**
+ * Counts one new per-zone entry, clearing timezone_cache when the limit is passed.
+ */
+function countZoneOffsetEntry() {
+	if (++zone_offset_entries > ZONE_OFFSET_ENTRY_LIMIT) {
+		timezone_cache.clear();
+		zone_offset_entries = 1;
+	}
+}
+
+/**
+ * Stores the offset of instant `ms` in a per-zone record.
+ *
+ * @returns {number} the offset
+ */
+function rememberExactOffset(zone, ms, offset) {
+	countZoneOffsetEntry();
+	zone.exact.set(ms, offset);
+	return offset;
+}
+
+/**
+ * Bounded write to timezone_cache (cleared wholesale above 10,000 entries).
+ *
+ * @param {string} key
+ * @param {*} value
+ */
+function boundedTimezoneCacheSet(key, value) {
+	if (timezone_cache.size > 10000) {
+		timezone_cache.clear();
+	}
+	timezone_cache.set(key, value);
+}
+
+/**
+ * Offset of `timezone` at exactly `date` from Intl (longOffset), with the Hermes fallback.
+ *
+ * @param {string} timezone
+ * @param {Date} date
+ * @returns {number}
+ */
+function exactTimezoneOffset(timezone, date) {
 	try {
-		let formatter;
-		if (long_timezone_cache.has(timezone)) {
-			formatter = long_timezone_cache.get(timezone);
-		} else {
+		let formatter = long_timezone_cache.get(timezone);
+		if (formatter === undefined) {
 			formatter = new Intl.DateTimeFormat('en-US', {
 				timeZone: timezone,
 				timeZoneName: 'longOffset',
 			});
-			long_timezone_cache.set(timezone, formatter);
+			boundedSet(long_timezone_cache, timezone, formatter);
 		}
 		// Get timezone offset using Intl.DateTimeFormat with timeZoneName
 		const parts = formatter.formatToParts(date);
@@ -362,31 +762,43 @@ function getTimezoneOffset(timezone, date = new Date()) {
 
 		const isNegative = offsetStr.startsWith('-');
 		const timeStr = offsetStr.replace(/[+-]/, '');
-		const [hours, minutes = '0'] = timeStr.split(':').map(Number);
+		// Historical local mean time carries seconds ("GMT+01:55:52"); they are part of the offset.
+		const [hours, minutes = 0, seconds = 0] = timeStr.split(':').map(Number);
 
-		const totalMinutes = hours * 60 + minutes;
+		const totalSeconds = hours * 3600 + minutes * 60 + seconds;
 
 		// Check for NaN (Hermes splits timeZoneName into multiple parts)
-		if (Number.isNaN(totalMinutes)) {
+		if (Number.isNaN(totalSeconds)) {
 			throw new Error('Invalid offset parsing - falling back');
 		}
 
 		// For timezone conversion, we need the offset from UTC to the target timezone
 		// GMT-05:00 means the timezone is 5 hours behind UTC, so offset should be -5
 		// GMT+08:00 means the timezone is 8 hours ahead of UTC, so offset should be +8
-		const offsetMs = (isNegative ? -totalMinutes : totalMinutes) * 60 * 1000;
-
-		// Cache the result (bounded like converter_results_cache)
-		if (timezone_cache.size > 10000) {
-			timezone_cache.clear();
-		}
-		timezone_cache.set(cacheKey, offsetMs);
+		const offsetMs = (isNegative ? -totalSeconds : totalSeconds) * 1000;
 
 		return offsetMs;
 	} catch {
 		// Fallback: Use date comparison method (Hermes/React Native compatible)
-		return getTimezoneOffsetFallback(timezone, date, cacheKey);
+		return getTimezoneOffsetFallback(timezone, date);
 	}
+}
+
+/**
+ * Exact offset for `date` plus a one-time check of its UTC day: when the offset is identical at
+ * the day's start, every six hours and its last millisecond, no transition happens that day (two
+ * transitions cancelling out within six hours do not occur in tzdata) and all later lookups on
+ * that day are answered from the cache without Intl.
+ *
+ * @returns {number}
+ */
+function verifyConstantDay(timezone, zone, day, ms, date) {
+	const start = day * DAY_MS;
+	const probes = [start, start + 6 * HOUR_MS, start + 12 * HOUR_MS, start + 18 * HOUR_MS, start + DAY_MS - 1];
+	const offsets = probes.map((probe) => exactTimezoneOffset(timezone, new Date(probe)));
+	const constant = offsets.every((offset) => offset === offsets[0]);
+	zone.days.set(day, constant ? offsets[0] : false);
+	return constant ? offsets[0] : rememberExactOffset(zone, ms, exactTimezoneOffset(timezone, date));
 }
 
 /**
@@ -395,10 +807,9 @@ function getTimezoneOffset(timezone, date = new Date()) {
  *
  * @param {string} timezone - IANA timezone identifier
  * @param {Date} date - Date for which to calculate offset
- * @param {string} cacheKey - Cache key for storing result
  * @returns {number} - Offset in milliseconds
  */
-function getTimezoneOffsetFallback(timezone, date, cacheKey) {
+function getTimezoneOffsetFallback(timezone, date) {
 	try {
 		const formatter = new Intl.DateTimeFormat('en-CA', {
 			timeZone: timezone,
@@ -417,30 +828,25 @@ function getTimezoneOffsetFallback(timezone, date, cacheKey) {
 			p[part.type] = part.value;
 		}
 
-		// Handle hour: '24' edge case (midnight)
+		// Engines that resolve hour12:false to the h24 cycle render midnight as "24" on the SAME
+		// calendar day (CLDR "k" pattern), so it is hour 0 of that day — exactly how converter()
+		// reads it. Adding a day here would skew the offset by +24h.
 		let hour = parseInt(p.hour, 10);
-		let dayOffset = 0;
 		if (hour === 24) {
 			hour = 0;
-			dayOffset = 86400000; // 1 day in ms
 		}
 
-		const tzTimeAsUtc =
-			Date.UTC(parseInt(p.year, 10), parseInt(p.month, 10) - 1, parseInt(p.day, 10), hour, parseInt(p.minute, 10), parseInt(p.second, 10)) +
-			dayOffset;
+		const tzTimeAsUtc = Date.UTC(
+			parseInt(p.year, 10),
+			parseInt(p.month, 10) - 1,
+			parseInt(p.day, 10),
+			hour,
+			parseInt(p.minute, 10),
+			parseInt(p.second, 10),
+		);
 
 		// Add milliseconds from original date (formatter doesn't include ms)
-		const offsetMs = tzTimeAsUtc - (date.getTime() - date.getMilliseconds());
-
-		// Cache the result (bounded like converter_results_cache)
-		if (cacheKey) {
-			if (timezone_cache.size > 10000) {
-				timezone_cache.clear();
-			}
-			timezone_cache.set(cacheKey, offsetMs);
-		}
-
-		return offsetMs;
+		return tzTimeAsUtc - (date.getTime() - date.getMilliseconds());
 	} catch {
 		throw new Error(`Invalid timezone: ${timezone}`);
 	}
@@ -453,17 +859,668 @@ function getTimezoneOffsetFallback(timezone, date, cacheKey) {
  * @returns {boolean}
  */
 function checkTimezone(timezone) {
+	// Intl treats an undefined timeZone as "use the default zone", so non-strings must be
+	// rejected explicitly or setTimezone(undefined)/tz(undefined) would silently pass.
+	if (typeof timezone !== 'string' || timezone === '') {
+		throw new Error(`Invalid timezone: ${timezone}`);
+	}
 	try {
 		if (timezone_check_cache.has(timezone)) {
 			return true;
 		}
 		// Test if timezone is valid by trying to format a date
 		new Intl.DateTimeFormat('en-US', { timeZone: timezone }).format(new Date());
-		timezone_check_cache.set(timezone, true);
+		boundedSet(timezone_check_cache, timezone, true);
 		return true;
 	} catch {
 		throw new Error(`Invalid timezone: ${timezone}`);
 	}
+}
+
+/**
+ * UTC offset (ms) of `timezone` at instant `ms`. The system zone (and an unset zone) use the
+ * native Date offset — identical to Intl there, without a formatToParts call — and UTC is 0.
+ *
+ * @param {string|undefined} timezone
+ * @param {number} ms
+ * @returns {number}
+ */
+function offsetAt(timezone, ms) {
+	if (isUtcZone(timezone)) {
+		return 0;
+	}
+	if (!timezone || timezone === systemTimezone) {
+		return systemOffsetAt(ms);
+	}
+	// Internal callers only pass zones validated by tz()/config()/setTimezone().
+	return zoneOffsetMs(timezone, ms);
+}
+
+// Names of the zero-offset zone; when the system zone is one of them, local time is UTC.
+const UTC_ZONE_NAMES = new Set([
+	'UTC',
+	'Etc/UTC',
+	'Etc/UCT',
+	'UCT',
+	'Etc/Universal',
+	'Universal',
+	'Etc/Zulu',
+	'Zulu',
+	'Etc/GMT',
+	'GMT',
+	'Etc/GMT0',
+	'GMT0',
+	'Etc/GMT+0',
+	'GMT+0',
+	'Etc/GMT-0',
+	'GMT-0',
+	'Etc/Greenwich',
+	'Greenwich',
+]);
+const SYSTEM_IS_UTC = UTC_ZONE_NAMES.has(systemTimezone);
+
+/**
+ * Whether `timezone` (undefined = system) has a constant zero offset, so wall clock = UTC.
+ *
+ * @param {string|undefined} timezone
+ * @returns {boolean}
+ */
+function isUtcZone(timezone) {
+	return timezone ? UTC_ZONE_NAMES.has(timezone) : SYSTEM_IS_UTC;
+}
+
+// From 1973 on every zone's offset is a whole number of minutes (Liberia, the last zone on a
+// local-mean-time offset with seconds, moved to GMT in 1972).
+const WHOLE_MINUTE_OFFSETS_FROM = Date.UTC(1973, 0, 1);
+
+/**
+ * UTC offset (ms) of the system timezone at instant `ms`. Date#getTimezoneOffset truncates
+ * historical local-mean-time offsets to whole minutes (Istanbul 1869: +01:55:52 reads as 115
+ * minutes) while the local field getters use the exact offset, so before 1973 the offset is
+ * derived from the fields to stay consistent with them.
+ *
+ * @param {number} ms
+ * @returns {number}
+ */
+function systemOffsetAt(ms) {
+	const d = new Date(ms);
+	if (!(ms < WHOLE_MINUTE_OFFSETS_FROM)) {
+		return -d.getTimezoneOffset() * 60000;
+	}
+	const utc = new Date(0);
+	utc.setUTCFullYear(d.getFullYear(), d.getMonth(), d.getDate());
+	utc.setUTCHours(d.getHours(), d.getMinutes(), d.getSeconds(), d.getMilliseconds());
+	return utc.getTime() - ms;
+}
+
+/**
+ * Wall-clock reading of instant `ms` in `timezone`, encoded as UTC milliseconds (read it back
+ * with the getUTC* accessors).
+ *
+ * @param {string|undefined} timezone
+ * @param {number} ms
+ * @returns {number}
+ */
+function toWallClock(timezone, ms) {
+	return ms + offsetAt(timezone, ms);
+}
+
+const DAY_MS = 86400000;
+const HOUR_MS = 3600000;
+
+/**
+ * Converts a wall-clock reading in `timezone` (encoded as UTC milliseconds) to the real instant.
+ *
+ * The offsets in force a day before and a day after the reading bracket any DST transition that
+ * can affect it (real instants lie within ±14h of the reading). Without a transition the answer
+ * is immediate. Around one, both candidates are checked against the offset at the candidate
+ * itself, so the result never depends on where the reading happens to fall relative to the
+ * transition in UTC terms:
+ * - exactly one candidate is consistent → that instant;
+ * - both are (fall-back overlap) → the one with `preferOffset` (add()/set() pass the offset of
+ *   the instant they started from, so the result stays on the same side of the change, like
+ *   moment-timezone and Luxon), else the earlier instant (parsing, like moment and Luxon);
+ * - neither is (spring-forward gap) → shifted forward by the gap, like moment/luxon.
+ *
+ * @param {string|undefined} timezone
+ * @param {number} wallMs
+ * @param {number} [preferOffset=NaN] - offset (ms) to keep when the reading is ambiguous
+ * @returns {number} instant in ms (NaN for a NaN reading)
+ */
+function wallClockToInstant(timezone, wallMs, preferOffset = Number.NaN) {
+	if (Number.isNaN(wallMs) || isUtcZone(timezone)) {
+		return wallMs;
+	}
+	if (!timezone || timezone === systemTimezone) {
+		// The engine's own local-time resolution has exactly these semantics (ECMA-262 resolves a
+		// skipped wall time with the offset before the transition, i.e. forward, and a repeated
+		// one to the earlier instant) and costs no offset lookups.
+		const instant = systemWallClockToInstant(wallMs);
+		return Number.isNaN(preferOffset) ? instant : keepSystemOffset(instant, preferOffset);
+	}
+	// Probes are snapped to the hour so neighbouring readings share cached offset lookups.
+	const probe = wallMs - (((wallMs % HOUR_MS) + HOUR_MS) % HOUR_MS);
+	const before = offsetAt(timezone, probe - DAY_MS);
+	const after = offsetAt(timezone, probe + DAY_MS);
+	if (before === after) {
+		return wallMs - before;
+	}
+	const earlyCandidate = wallMs - before;
+	const lateCandidate = wallMs - after;
+	const earlyValid = offsetAt(timezone, earlyCandidate) === before;
+	const lateValid = offsetAt(timezone, lateCandidate) === after;
+	if (earlyValid && lateValid) {
+		if (preferOffset === after) {
+			return lateCandidate;
+		}
+		return preferOffset === before ? earlyCandidate : Math.min(earlyCandidate, lateCandidate);
+	}
+	if (earlyValid) {
+		return earlyCandidate;
+	}
+	if (lateValid) {
+		return lateCandidate;
+	}
+	return wallMs - Math.min(before, after);
+}
+
+/**
+ * `instant` resolved by the system zone (the earlier one for a repeated wall clock), moved to the
+ * same wall clock at `preferOffset` when that is a valid reading too (DST overlap): add()/set()
+ * then stay on the same side of the change as the instant they started from (moment-timezone,
+ * Luxon).
+ *
+ * @param {number} instant
+ * @param {number} preferOffset - offset (ms)
+ * @returns {number}
+ */
+function keepSystemOffset(instant, preferOffset) {
+	const offset = systemOffsetAt(instant);
+	if (offset === preferOffset || Number.isNaN(instant)) {
+		return instant;
+	}
+	const candidate = instant + offset - preferOffset;
+	return systemOffsetAt(candidate) === preferOffset ? candidate : instant;
+}
+
+/**
+ * Wall-clock reading (UTC-encoded ms) in the system timezone -> instant, via the Date constructor.
+ * Years 0-99 go through setFullYear because the constructor maps them to 1900-1999.
+ *
+ * @param {number} wallMs
+ * @returns {number}
+ */
+function systemWallClockToInstant(wallMs) {
+	const w = new Date(wallMs);
+	const year = w.getUTCFullYear();
+	if (year >= 0 && year <= 99) {
+		const local = new Date(0);
+		local.setFullYear(year, w.getUTCMonth(), w.getUTCDate());
+		local.setHours(w.getUTCHours(), w.getUTCMinutes(), w.getUTCSeconds(), w.getUTCMilliseconds());
+		return local.getTime();
+	}
+	return new Date(year, w.getUTCMonth(), w.getUTCDate(), w.getUTCHours(), w.getUTCMinutes(), w.getUTCSeconds(), w.getUTCMilliseconds()).getTime();
+}
+
+/**
+ * Number of days in a month of a (proleptic Gregorian) year. Works for any year, including
+ * 0-99 which Date.UTC would map to 1900-1999; month overflow is normalized.
+ *
+ * @param {number} year
+ * @param {number} month0 - 0-based month
+ * @returns {number}
+ */
+function daysInMonth(year, month0) {
+	// integer parts like the Date setters; NaN in, NaN out
+	const months = Math.trunc(year) * 12 + Math.trunc(month0);
+	if (Number.isNaN(months)) {
+		return Number.NaN;
+	}
+	const y = Math.floor(months / 12);
+	const m = months - y * 12;
+	if (m === 1) {
+		return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0 ? 29 : 28;
+	}
+	return m === 3 || m === 5 || m === 8 || m === 10 ? 30 : 31;
+}
+
+// Today's date in the global timezone, the zone naive inputs are interpreted in (a server running
+// in UTC with setTimezone('Europe/Istanbul') must resolve '14:30' onto Istanbul's date, not UTC's).
+// Valid while Date.now() lies inside [from, until) and the global zone is unchanged; both
+// boundaries are real instants of that zone's midnights, so the window stays exact across DST
+// transitions (23/25-hour days). stamp is the date as a UTC-encoded midnight.
+const today = { year: 0, month: 0, day: 0, stamp: Number.NaN, from: 1, until: 0, zone: null };
+
+function refreshToday(nowMs) {
+	const zone = global_config.timezone;
+	const wall = new Date(toWallClock(zone, nowMs));
+	today.year = wall.getUTCFullYear();
+	today.month = wall.getUTCMonth();
+	today.day = wall.getUTCDate();
+	today.stamp = Date.UTC(today.year, today.month, today.day);
+	today.from = wallClockToInstant(zone, today.stamp);
+	today.until = wallClockToInstant(zone, Date.UTC(today.year, today.month, today.day + 1));
+	today.zone = zone;
+}
+
+/**
+ * Today's date in the global timezone, refreshed when the day or the global timezone changed.
+ *
+ * @returns {{year: number, month: number, day: number, stamp: number}} month is 0-based
+ */
+function ensureToday() {
+	const nowMs = Date.now();
+	if (nowMs < today.from || nowMs >= today.until || today.zone !== global_config.timezone) {
+		refreshToday(nowMs);
+	}
+	return today;
+}
+
+/**
+ * ensureToday() for a parse that depends on the current date: the date is also recorded as the
+ * one the parse used (see takeParsedToday), so the constructor's parse cache reuses the result on
+ * that date only.
+ *
+ * @returns {{year: number, month: number, day: number, stamp: number}} month is 0-based
+ */
+function parseToday() {
+	ensureToday();
+	parsed_today = today.stamp;
+	return today;
+}
+
+// How the engine's Date parser reads the zone of a string it accepts (see nativeZoneKind).
+const ZONE_NONE = 0; // no zone: read as local time (a naive wall clock)
+const ZONE_EXPLICIT = 1; // own offset or zone name: an absolute instant
+const ZONE_UTC_DATE = 2; // ES5 date-only form ('2024', '2024-01'): read as UTC midnight by ECMA-262
+
+// ES5 Date Time String Format as the engine accepts it, plus its ±hhmm extension:
+// (YYYY|±YYYYYY)[-MM[-DD]][THH:mm[:ss[.s+]][Z|±hh:mm|±hhmm]]
+const ES5_DATE_TIME_REGEX = /^(?:[+-]\d{6}|\d{4})(?:-(\d{2})(?:-(\d{2}))?)?(?:([Tt])\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?([Zz]|[+-]\d{2}:?\d{2})?)?$/;
+
+// Words of the engine's legacy date parser, keyed by their first three characters with the ASCII
+// case bit set (c0 << 16 | c1 << 8 | c2, 0 for a shorter word): time zone names with their offset
+// in hours, and month names (longer words allowed).
+const wordKey = (word) => (word.charCodeAt(0) << 16) | ((word.charCodeAt(1) || 0) << 8) | (word.charCodeAt(2) || 0);
+const LEGACY_ZONE_WORDS = new Map(
+	[
+		['ut', 0],
+		['utc', 0],
+		['z', 0],
+		['gmt', 0],
+		['cdt', -5],
+		['cst', -6],
+		['edt', -4],
+		['est', -5],
+		['mdt', -6],
+		['mst', -7],
+		['pdt', -7],
+		['pst', -8],
+	].map(([word, offset]) => [wordKey(word), offset]),
+);
+const LEGACY_MONTH_WORDS = new Set(['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'].map(wordKey));
+const TOKEN_END = 0;
+const TOKEN_NUMBER = 1;
+const TOKEN_SYMBOL = 2;
+const TOKEN_ZONE = 3;
+const TOKEN_MONTH = 4;
+const TOKEN_OTHER = 5;
+
+/**
+ * @param {number} code
+ * @returns {boolean} ECMAScript WhiteSpace or LineTerminator
+ */
+function isWhiteSpaceCode(code) {
+	return (
+		code === 32 ||
+		(code >= 9 && code <= 13) ||
+		code === 160 ||
+		code === 0x1680 ||
+		(code >= 0x2000 && code <= 0x200a) ||
+		code === 0x2028 ||
+		code === 0x2029 ||
+		code === 0x202f ||
+		code === 0x205f ||
+		code === 0x3000 ||
+		code === 0xfeff
+	);
+}
+
+// Token buffers shared by the calls on short strings (a string has at most one token per character,
+// plus the end marker); a longer string gets buffers of its own, so memory never stays proportional
+// to the longest input seen.
+const TOKEN_BUFFER_SIZE = 128;
+const token_kinds = new Int32Array(TOKEN_BUFFER_SIZE);
+const token_values = new Int32Array(TOKEN_BUFFER_SIZE);
+const token_lengths = new Int32Array(TOKEN_BUFFER_SIZE);
+
+/**
+ * Tokens of the engine's legacy date parser (V8 DateStringTokenizer) into the given buffers:
+ * numbers (value of the first nine significant digits — leading zeros are skipped — and the
+ * length), the symbols : - + . ), words (characters from 'A' up; zone names carry their offset in
+ * hours), and everything else (whitespace, parenthesised comments, other characters) as ignorable
+ * tokens. Ends with TOKEN_END.
+ *
+ * @param {string} s - text up to (not including) any NUL character
+ * @param {Int32Array} kinds
+ * @param {Int32Array} values
+ * @param {Int32Array} lengths
+ */
+function tokenizeLegacyDate(s, kinds, values, lengths) {
+	const n = s.length;
+	const token_kinds = kinds;
+	const token_values = values;
+	const token_lengths = lengths;
+	let count = 0;
+	let i = 0;
+	while (i < n) {
+		const c = s.charCodeAt(i);
+		let kind = TOKEN_OTHER;
+		let value = 0;
+		const start = i;
+		if (c >= 48 && c <= 57) {
+			while (i < n && s.charCodeAt(i) === 48) {
+				i++;
+			}
+			let digits = 0;
+			while (i < n && isDigitCode(s.charCodeAt(i))) {
+				if (digits < 9) {
+					value = value * 10 + s.charCodeAt(i) - 48;
+				}
+				digits++;
+				i++;
+			}
+			kind = TOKEN_NUMBER;
+		} else if (c === 58 || c === 45 || c === 43 || c === 46 || c === 41) {
+			kind = TOKEN_SYMBOL;
+			value = c;
+			i++;
+		} else if (c >= 65 && !isWhiteSpaceCode(c)) {
+			while (i < n && s.charCodeAt(i) >= 65 && !isWhiteSpaceCode(s.charCodeAt(i))) {
+				i++;
+			}
+			// the engine compares the first three characters with the ASCII case bit set
+			const length = i - start;
+			const key = ((c | 0x20) << 16) | (length > 1 ? (s.charCodeAt(start + 1) | 0x20) << 8 : 0) | (length > 2 ? s.charCodeAt(start + 2) | 0x20 : 0);
+			if (length <= 3 && LEGACY_ZONE_WORDS.has(key)) {
+				kind = TOKEN_ZONE;
+				value = LEGACY_ZONE_WORDS.get(key);
+			} else if (length >= 3 && LEGACY_MONTH_WORDS.has(key)) {
+				kind = TOKEN_MONTH;
+			}
+		} else if (c === 40) {
+			// parenthesised comment, skipped as a whole
+			let balance = 0;
+			do {
+				const d = s.charCodeAt(i);
+				if (d === 41) {
+					balance--;
+				} else if (d === 40) {
+					balance++;
+				}
+				i++;
+			} while (balance > 0 && i < n);
+		} else {
+			i++;
+		}
+		token_kinds[count] = kind;
+		token_values[count] = value;
+		token_lengths[count] = i - start;
+		count++;
+	}
+	token_kinds[count] = TOKEN_END;
+}
+
+/**
+ * Whether the engine's legacy date parser (V8 DateParser, non-ES5 strings) reads a zone from a
+ * string it accepts: a zone name after a number, or a sign after a time or after a UTC name
+ * ("GMT+3", "10:00 PM -0500", "22:00 +3"). Mirrors the parser's state machine as far as the zone
+ * depends on it (a '-' right after a date number or month name is a separator, not a sign).
+ *
+ * @param {string} s
+ * @returns {number} ZONE_EXPLICIT or ZONE_NONE
+ */
+function legacyZoneKind(s) {
+	const shared = s.length < TOKEN_BUFFER_SIZE;
+	const kinds = shared ? token_kinds : new Int32Array(s.length + 1);
+	const values = shared ? token_values : new Int32Array(s.length + 1);
+	const lengths = shared ? token_lengths : new Int32Array(s.length + 1);
+	tokenizeLegacyDate(s, kinds, values, lengths);
+	let i = 0;
+	let hasReadNumber = false;
+	// The engine first reads an ES5 date prefix — (±YYYYYY|YYYY)[-MM[-DD]] — and hands the rest to
+	// its legacy rules with the year already read; a part it rejects is read again by those rules.
+	if (kinds[0] === TOKEN_SYMBOL && (values[0] === 43 || values[0] === 45)) {
+		if (kinds[1] === TOKEN_NUMBER && lengths[1] === 6) {
+			// the year -000000 is rejected after being read: it is dropped, not re-read
+			i = 2;
+			hasReadNumber = !(values[0] === 45 && values[1] === 0);
+		}
+	} else if (kinds[0] === TOKEN_NUMBER && lengths[0] === 4) {
+		i = 1;
+		hasReadNumber = true;
+	}
+	if (hasReadNumber && kinds[i] === TOKEN_SYMBOL && values[i] === 45) {
+		i++;
+		if (kinds[i] === TOKEN_NUMBER && lengths[i] === 2 && values[i] >= 1 && values[i] <= 12) {
+			i++;
+			if (kinds[i] === TOKEN_SYMBOL && values[i] === 45) {
+				i++;
+				if (kinds[i] === TOKEN_NUMBER && lengths[i] === 2 && values[i] >= 1 && values[i] <= 31) {
+					i++;
+				}
+			}
+		}
+	}
+	// time components read so far (4 once the time is final); zone hour/minute (-1: none)
+	let timeIndex = 0;
+	let zoneSet = false;
+	let zoneHour = -1;
+	let zoneMinute = -1;
+	for (let kind = kinds[i++]; kind !== TOKEN_END; kind = kinds[i++]) {
+		if (kind === TOKEN_NUMBER) {
+			hasReadNumber = true;
+			const n = values[i - 1];
+			const timeExpecting = timeIndex === 1 || timeIndex === 2 ? n <= 59 : timeIndex === 3 && n <= 999;
+			if (kinds[i] === TOKEN_SYMBOL && values[i] === 58) {
+				i++;
+				if (kinds[i] === TOKEN_SYMBOL && values[i] === 58) {
+					i++;
+					timeIndex += 2;
+				} else {
+					timeIndex++;
+					if (kinds[i] === TOKEN_SYMBOL && values[i] === 46) {
+						i++;
+					}
+				}
+			} else {
+				// a following '.' is consumed even when the time does not expect this number
+				const dot = kinds[i] === TOKEN_SYMBOL && values[i] === 46;
+				if (dot) {
+					i++;
+				}
+				if (dot && timeExpecting) {
+					timeIndex = 4; // seconds and milliseconds end the time
+					i++;
+				} else if (zoneHour !== -1 && zoneMinute === -1 && n <= 59) {
+					zoneMinute = n;
+				} else if (timeExpecting) {
+					timeIndex = 4;
+				} else if (kinds[i] === TOKEN_SYMBOL && values[i] === 45) {
+					i++; // a '-' after a date number is a separator
+				}
+			}
+		} else if (kind === TOKEN_ZONE && hasReadNumber) {
+			zoneSet = true;
+			zoneHour = Math.abs(values[i - 1]);
+			zoneMinute = 0;
+		} else if (kind === TOKEN_MONTH) {
+			if (kinds[i] === TOKEN_SYMBOL && values[i] === 45) {
+				i++;
+			}
+		} else if (kind === TOKEN_SYMBOL && (values[i - 1] === 43 || values[i - 1] === 45) && ((zoneHour === 0 && zoneMinute === 0) || timeIndex !== 0)) {
+			zoneSet = true;
+			let value = 0;
+			let length = 0;
+			if (kinds[i] === TOKEN_NUMBER) {
+				value = values[i];
+				length = lengths[i];
+				i++;
+			}
+			hasReadNumber = true;
+			if (kinds[i] === TOKEN_SYMBOL && values[i] === 58) {
+				zoneHour = value;
+				zoneMinute = -1;
+			} else if (length === 1 || length === 2) {
+				zoneHour = value;
+				zoneMinute = 0;
+			} else {
+				zoneHour = Math.floor(value / 100);
+				zoneMinute = value % 100;
+			}
+		}
+	}
+	return zoneSet ? ZONE_EXPLICIT : ZONE_NONE;
+}
+
+/**
+ * How the engine's Date parser reads the zone of a string it parsed successfully: an ES5 date-time
+ * with Z/offset or a legacy string with a zone name or offset is ZONE_EXPLICIT (absolute), an ES5
+ * date-only form is ZONE_UTC_DATE (the engine reads it as UTC midnight), anything else ZONE_NONE
+ * (local time).
+ *
+ * @param {string} input
+ * @returns {number}
+ */
+function nativeZoneKind(text) {
+	// the engine reads a string up to its first NUL character
+	const nul = text.indexOf('\u0000');
+	const input = nul === -1 ? text : text.slice(0, nul);
+	// Cheap exact answers first. Without a letter (or other character from 'A' up) and without a
+	// sign there is neither a zone name nor an offset: only a bare 4-digit year ("2024") is then an
+	// ES5 date-only form. A zone name as the last word, after a number, always sets the zone —
+	// unless a parenthesis opens a comment, which may run to the end and swallow it.
+	let i = input.length - 1;
+	let letters = false;
+	let parenthesis = false;
+	for (let k = 0; k <= i; k++) {
+		const c = input.charCodeAt(k);
+		if (c >= 65 || c === 43 || c === 45) {
+			letters = true;
+		} else if (c === 40) {
+			parenthesis = true;
+		}
+	}
+	if (!letters) {
+		return input.length === 4 && ES5_DATE_TIME_REGEX.test(input) ? ZONE_UTC_DATE : ZONE_NONE;
+	}
+	while (!parenthesis && i >= 0 && isWhiteSpaceCode(input.charCodeAt(i))) {
+		i--;
+	}
+	let wordStart = i;
+	while (wordStart >= 0 && input.charCodeAt(wordStart) >= 65 && !isWhiteSpaceCode(input.charCodeAt(wordStart))) {
+		wordStart--;
+	}
+	const wordLength = i - wordStart;
+	if (!parenthesis && wordLength >= 1 && wordLength <= 3) {
+		const c0 = input.charCodeAt(wordStart + 1) | 0x20;
+		const key =
+			(c0 << 16) |
+			(wordLength > 1 ? (input.charCodeAt(wordStart + 2) | 0x20) << 8 : 0) |
+			(wordLength > 2 ? input.charCodeAt(wordStart + 3) | 0x20 : 0);
+		if (LEGACY_ZONE_WORDS.has(key)) {
+			for (let k = wordStart; k >= 0; k--) {
+				if (isDigitCode(input.charCodeAt(k))) {
+					return ZONE_EXPLICIT;
+				}
+			}
+		}
+	}
+	const es5 = input.startsWith('-000000') ? null : ES5_DATE_TIME_REGEX.exec(input);
+	// an out-of-range month or day (or the year -000000) makes the engine continue with its legacy parser
+	if (es5 !== null && (es5[1] === undefined || (+es5[1] >= 1 && +es5[1] <= 12)) && (es5[2] === undefined || (+es5[2] >= 1 && +es5[2] <= 31))) {
+		if (es5[4] !== undefined) {
+			return ZONE_EXPLICIT;
+		}
+		return es5[3] === undefined ? ZONE_UTC_DATE : ZONE_NONE;
+	}
+	return legacyZoneKind(input);
+}
+
+/**
+ * The text of a naive date string as the engine's parser reads it, ready for a zone to be
+ * appended: cut at the first NUL character (where the engine stops) and with a parenthesised
+ * comment that is still open at the end closed (it would swallow anything appended).
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+function closedEngineText(text) {
+	const nul = text.indexOf('\u0000');
+	const s = nul === -1 ? text : text.slice(0, nul);
+	const n = s.length;
+	let open = 0;
+	let i = 0;
+	while (i < n) {
+		if (s.charCodeAt(i) !== 40) {
+			i++;
+			continue;
+		}
+		// '(' always starts a comment (it is part of no other token); it runs to the matching ')'
+		let balance = 0;
+		do {
+			const c = s.charCodeAt(i);
+			if (c === 41) {
+				balance--;
+			} else if (c === 40) {
+				balance++;
+			}
+			i++;
+		} while (balance > 0 && i < n);
+		open = balance;
+	}
+	return open > 0 ? s + ')'.repeat(open) : s;
+}
+
+/**
+ * True when a date string carries its own UTC offset / zone, i.e. denotes an absolute instant
+ * that must never be reinterpreted in the global timezone. Only meaningful for strings the
+ * engine's Date parser accepts.
+ *
+ * @param {string} input
+ * @returns {boolean}
+ */
+function hasExplicitZone(input) {
+	// Fast path for the common ISO 8601 form "YYYY-MM-DDT…d:dd±hh:mm" (the engine reads a string of
+	// this shape with its ES5 parser, so nothing but the trailing offset can be a zone).
+	const len = input.length;
+	const sign = input.charCodeAt(len - 6);
+	if (
+		input.charCodeAt(4) === 45 &&
+		input.charCodeAt(7) === 45 &&
+		(input.charCodeAt(10) | 0x20) === 116 &&
+		(sign === 43 || sign === 45) &&
+		input.charCodeAt(len - 3) === 58 &&
+		input.charCodeAt(len - 9) === 58 &&
+		isDigitCode(input.charCodeAt(len - 1)) &&
+		isDigitCode(input.charCodeAt(len - 2)) &&
+		isDigitCode(input.charCodeAt(len - 4)) &&
+		isDigitCode(input.charCodeAt(len - 5)) &&
+		isDigitCode(input.charCodeAt(len - 7)) &&
+		isDigitCode(input.charCodeAt(len - 8)) &&
+		isDigitCode(input.charCodeAt(len - 10))
+	) {
+		return true;
+	}
+	return nativeZoneKind(input) === ZONE_EXPLICIT;
+}
+
+/**
+ * @param {number} code - a charCode (NaN past the end of a string)
+ * @returns {boolean} true for '0'-'9'
+ */
+function isDigitCode(code) {
+	return code >= 48 && code <= 57;
 }
 
 /**
@@ -480,27 +1537,28 @@ function getTimezoneInfo(timezone, date = new Date()) {
 		// Get current offset
 		const currentOffset = getTimezoneOffset(timezone, date);
 
-		// Sample both January and July: whichever has the smaller UTC offset is standard
-		// time (DST adds time), which holds in both hemispheres — Sydney Jan +11/Jul +10
+		// Standard/daylight offsets: whichever of January 1 and July 1 has the smaller UTC offset is
+		// standard time (DST adds time), which holds in both hemispheres — Sydney Jan +11/Jul +10
 		// -> standard +10; New York Jan -5/Jul -4 -> standard -5.
 		const januaryOffset = getTimezoneOffset(timezone, new Date(date.getFullYear(), 0, 1));
 		const julyOffset = getTimezoneOffset(timezone, new Date(date.getFullYear(), 6, 1));
 		const standardOffset = Math.min(januaryOffset, julyOffset);
 		const daylightOffset = Math.max(januaryOffset, julyOffset);
 
-		// DST is active when the current offset exceeds the standard offset
-		// (false for zones without DST, where january === july)
-		const isDST = currentOffset > standardOffset;
+		// isDST is moment's definition: the current offset exceeds the offset in force at the same
+		// wall-clock day and time in January or in June of the same (zone-local) year. For regular
+		// zones this equals "current > standard"; sampling the same day also keeps years where a zone
+		// changed its base offset mid-year in line with moment (e.g. Africa/Sao_Tome 2018).
+		const wall = new Date(date.getTime() + currentOffset);
+		const isDST = currentOffset > offsetAtWallMonth(timezone, wall, 0) || currentOffset > offsetAtWallMonth(timezone, wall, 5);
 
-		let formatter;
-		if (timezone_abbreviation_cache.has(timezone)) {
-			formatter = timezone_abbreviation_cache.get(timezone);
-		} else {
+		let formatter = timezone_abbreviation_cache.get(timezone);
+		if (formatter === undefined) {
 			formatter = new Intl.DateTimeFormat('en-US', {
 				timeZone: timezone,
 				timeZoneName: 'short',
 			});
-			timezone_abbreviation_cache.set(timezone, formatter);
+			boundedSet(timezone_abbreviation_cache, timezone, formatter);
 		}
 		// Get timezone abbreviation
 		const abbreviation = formatter.formatToParts(date).find((part) => part.type === 'timeZoneName')?.value || timezone;
@@ -519,13 +1577,33 @@ function getTimezoneInfo(timezone, date = new Date()) {
 }
 
 /**
+ * Offset of `timezone` at the wall-clock reading `wall` moved to `month0` of the same year
+ * (day clamped to the month length, time of day kept) — moment's `clone().month(m)`.
+ *
+ * @param {string} timezone
+ * @param {Date} wall - UTC-encoded wall clock
+ * @param {number} month0
+ * @returns {number}
+ */
+function offsetAtWallMonth(timezone, wall, month0) {
+	const year = wall.getUTCFullYear();
+	const sample = new Date(wall.getTime());
+	sample.setUTCFullYear(year, month0, Math.min(wall.getUTCDate(), daysInMonth(year, month0)));
+	return getTimezoneOffset(timezone, new Date(wallClockToInstant(timezone, sample.getTime())));
+}
+
+// detected_format values that denote absolute instants: never reinterpreted in the global zone.
+const ABSOLUTE_FORMATS = new Set(['ISO8601', 'RFC2822', 'now', 'Xx', 'kkDate']);
+
+/**
  * Enhanced timezone parsing with automatic DST detection
  *
  * @param {KkDate} kkDate - KkDate instance
- * @param {boolean} is_init - Whether this is initial parsing
+ * @param {number} [wallHint=NaN] - the wall clock the input denoted (UTC-encoded ms) when the
+ * parser knows it; otherwise it is read back from the system-local date.
  * @returns {Date} - Parsed date with timezone conversion
  */
-function parseWithTimezone(kkDate) {
+function parseWithTimezone(kkDate, wallHint = Number.NaN) {
 	// If this is a .tz() call, convert to target timezone
 	if (kkDate.temp_config.timezone) {
 		const targetTimezone = kkDate.temp_config.timezone;
@@ -548,22 +1626,12 @@ function parseWithTimezone(kkDate) {
 	// 4. Input is not 'now' (current time should not be reinterpreted)
 	const globalTimezone = global_config.timezone;
 
-	if (
-		globalTimezone &&
-		globalTimezone !== systemTimezone &&
-		kkDate.detected_format !== 'ISO8601' &&
-		kkDate.detected_format !== 'now' &&
-		kkDate.detected_format !== 'Xx' &&
-		kkDate.detected_format !== 'kkDate'
-	) {
-		// Reinterpret the input as being in global timezone
-		const systemOffset = getTimezoneOffset(systemTimezone, kkDate.date);
-		const globalOffset = getTimezoneOffset(globalTimezone, kkDate.date);
-		const offsetDiff = globalOffset - systemOffset;
-
-		// Adjust the date to represent the same clock time in global timezone
-		const adjustedTime = kkDate.date.getTime() - offsetDiff;
-		return new Date(adjustedTime);
+	if (globalTimezone && globalTimezone !== systemTimezone && !ABSOLUTE_FORMATS.has(kkDate.detected_format)) {
+		// Reinterpret the input's wall clock in the global timezone. The offset is resolved at the
+		// target instant itself (wallClockToInstant), not at the system-parsed instant, so readings
+		// near a DST transition of either zone land on the right side of it.
+		const wall = Number.isNaN(wallHint) ? toWallClock(systemTimezone, kkDate.date.getTime()) : wallHint;
+		return new Date(wallClockToInstant(globalTimezone, wall));
 	}
 
 	return kkDate.date;
@@ -598,6 +1666,19 @@ function convertToTimezone(date, targetTimezone, sourceTimezone = global_config.
  * @returns {string[]} - Array of available timezone identifiers
  */
 function getAvailableTimezones() {
+	// Every IANA zone the engine supports (Node 18+, modern browsers). V8 omits the "UTC" alias
+	// from the list, so it is added. Engines without Intl.supportedValuesOf (e.g. older Hermes)
+	// fall back to the common-zone list below.
+	if (typeof Intl.supportedValuesOf === 'function') {
+		try {
+			const zones = Intl.supportedValuesOf('timeZone');
+			if (zones.length > 0) {
+				return zones.includes('UTC') ? zones.slice() : ['UTC', ...zones];
+			}
+		} catch {
+			// fall through to the static list
+		}
+	}
 	try {
 		return COMMON_TIMEZONES.filter((tz) => {
 			try {
@@ -661,7 +1742,7 @@ function getTimezoneLongName(timezone, date = new Date(), locale = 'en') {
 		let formatter = timezone_long_name_cache.get(cacheKey);
 		if (formatter === undefined) {
 			formatter = new Intl.DateTimeFormat(locale, { timeZone: timezone, timeZoneName: 'long' });
-			timezone_long_name_cache.set(cacheKey, formatter);
+			boundedSet(timezone_long_name_cache, cacheKey, formatter);
 		}
 		const parts = formatter.formatToParts(date);
 		for (let i = 0; i < parts.length; i++) {
@@ -762,95 +1843,56 @@ function duration(time, type) {
 	return response;
 }
 
+// Intl options per locale-aware name token. dd is a formatting-only token (never in
+// format_types): the short weekday name, sliced to 2 chars by formatNameToken.
+const name_token_options = {
+	dddd: { weekday: 'long' },
+	ddd: { weekday: 'short' },
+	dd: { weekday: 'short' },
+	MMMM: { month: 'long' },
+	MMM: { month: 'short' },
+};
+const global_name_token_ids = { dddd: '1', ddd: '2', MMMM: '3', MMM: '4', dd: '5' };
+
 /**
  * @description It formats the date with the locale and template.
  * @param {KkDate} orj_this
  * @param {string} template
- * @returns {Intl.DateTimeFormat}
+ * @returns {{value: Intl.DateTimeFormat, id: string}}
  */
 function dateTimeFormat(orj_this, template) {
+	const options = name_token_options[template];
+	if (options === undefined) {
+		throw new Error('unkown template for dateTimeFormat !');
+	}
 	const tempLocale = orj_this.temp_config.locale;
-
-	// For timestamp inputs with configured timezone, use timezone-aware formatting
-	// For timestamp inputs with configured timezone, use timezone-aware formatting
 	const timezone = orj_this.temp_config.timezone || global_config.timezone;
 	if (timezone) {
 		const locale = tempLocale || global_config.locale;
-
-		if (template === format_types.dddd) {
-			if (cached_dateTimeFormat_with_locale.dddd[`${locale}_${timezone}`]) {
-				return cached_dateTimeFormat_with_locale.dddd[`${locale}_${timezone}`];
-			}
-			cached_dateTimeFormat_with_locale.dddd[`${locale}_${timezone}`] = {
-				value: new Intl.DateTimeFormat(locale, { weekday: 'long', timeZone: timezone }),
-				id: `${locale}_${timezone}_dddd`,
+		const cache = cached_dateTimeFormat_with_locale[template];
+		const key = `${locale}_${timezone}`;
+		let entry = cache.get(key);
+		if (entry === undefined) {
+			entry = {
+				value: new Intl.DateTimeFormat(locale, { ...options, timeZone: timezone }),
+				id: `${key}_${template}`,
 			};
-			return cached_dateTimeFormat_with_locale.dddd[`${locale}_${timezone}`];
+			boundedSet(cache, key, entry);
 		}
-		if (template === format_types.ddd) {
-			if (cached_dateTimeFormat_with_locale.ddd[`${locale}_${timezone}`]) {
-				return cached_dateTimeFormat_with_locale.ddd[`${locale}_${timezone}`];
-			}
-			cached_dateTimeFormat_with_locale.ddd[`${locale}_${timezone}`] = {
-				value: new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: timezone }),
-				id: `${locale}_${timezone}_ddd`,
-			};
-			return cached_dateTimeFormat_with_locale.ddd[`${locale}_${timezone}`];
-		}
-		// dd is a formatting-only token (never in format_types): short weekday
-		// name, sliced to 2 chars by formatNameToken.
-		if (template === 'dd') {
-			if (cached_dateTimeFormat_with_locale.dd[`${locale}_${timezone}`]) {
-				return cached_dateTimeFormat_with_locale.dd[`${locale}_${timezone}`];
-			}
-			cached_dateTimeFormat_with_locale.dd[`${locale}_${timezone}`] = {
-				value: new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: timezone }),
-				id: `${locale}_${timezone}_dd`,
-			};
-			return cached_dateTimeFormat_with_locale.dd[`${locale}_${timezone}`];
-		}
-		if (template === format_types.MMMM) {
-			if (cached_dateTimeFormat_with_locale.MMMM[`${locale}_${timezone}`]) {
-				return cached_dateTimeFormat_with_locale.MMMM[`${locale}_${timezone}`];
-			}
-			cached_dateTimeFormat_with_locale.MMMM[`${locale}_${timezone}`] = {
-				value: new Intl.DateTimeFormat(locale, { month: 'long', timeZone: timezone }),
-				id: `${locale}_${timezone}_MMMM`,
-			};
-			return cached_dateTimeFormat_with_locale.MMMM[`${locale}_${timezone}`];
-		}
-		if (template === format_types.MMM) {
-			if (cached_dateTimeFormat_with_locale.MMM[`${locale}_${timezone}`]) {
-				return cached_dateTimeFormat_with_locale.MMM[`${locale}_${timezone}`];
-			}
-			cached_dateTimeFormat_with_locale.MMM[`${locale}_${timezone}`] = {
-				value: new Intl.DateTimeFormat(locale, { month: 'short', timeZone: timezone }),
-				id: `${locale}_${timezone}_MMM`,
-			};
-			return cached_dateTimeFormat_with_locale.MMM[`${locale}_${timezone}`];
-		}
+		return entry;
 	}
 
 	if (tempLocale) {
-		return { value: cached_dateTimeFormat.temp[template][tempLocale], id: `${orj_this.temp_config.locale}_0` };
+		const temp = cached_dateTimeFormat.temp[template];
+		let value = temp.get(tempLocale);
+		if (value === undefined) {
+			value = new Intl.DateTimeFormat(tempLocale, options);
+			boundedSet(temp, tempLocale, value);
+		}
+		return { value, id: `${tempLocale}_0` };
 	}
-	if (template === format_types.dddd) {
-		return { value: cached_dateTimeFormat.dddd, id: '1' };
-	}
-	if (template === format_types.ddd) {
-		return { value: cached_dateTimeFormat.ddd, id: '2' };
-	}
-	if (template === format_types.MMMM) {
-		return { value: cached_dateTimeFormat.MMMM, id: '3' };
-	}
-	if (template === format_types.MMM) {
-		return { value: cached_dateTimeFormat.MMM, id: '4' };
-	}
-	if (template === 'dd') {
-		return { value: cached_dateTimeFormat.dd, id: '5' };
-	}
-
-	throw new Error('unkown template for dateTimeFormat !');
+	// The id carries the global locale so memoized names never outlive a locale change.
+	return { value: cached_dateTimeFormat[template], id: `${global_config.locale}_${global_name_token_ids[template]}` };
 }
 
 /**
@@ -895,12 +1937,10 @@ function converter(date, to, options = { pad: true }) {
 
 		// Use Intl.DateTimeFormat for timezone-aware formatting
 		const result = {};
-		let formatter = null;
 		const partsMap = {};
 
-		if (cached_converter_int[targetTimezone]) {
-			formatter = cached_converter_int[targetTimezone];
-		} else {
+		let formatter = cached_converter_int.get(targetTimezone);
+		if (formatter === undefined) {
 			formatter = new Intl.DateTimeFormat('en-CA', {
 				timeZone: targetTimezone,
 				year: 'numeric',
@@ -911,7 +1951,7 @@ function converter(date, to, options = { pad: true }) {
 				second: '2-digit',
 				hour12: false,
 			});
-			cached_converter_int[targetTimezone] = formatter;
+			boundedSet(cached_converter_int, targetTimezone, formatter);
 		}
 
 		const parts = formatter.formatToParts(date);
@@ -934,7 +1974,7 @@ function converter(date, to, options = { pad: true }) {
 					break;
 				case 'hours':
 					// Fix: Convert hour 24 to 00 (midnight)
-					result.hours = partsMap.hour === '24' ? '00' : shouldPad ? partsMap.hour : parseInt(partsMap.hour, 10);
+					result.hours = partsMap.hour === '24' ? (shouldPad ? '00' : 0) : shouldPad ? partsMap.hour : parseInt(partsMap.hour, 10);
 					break;
 				case 'minutes':
 					result.minutes = shouldPad ? partsMap.minute : parseInt(partsMap.minute, 10);
@@ -1015,10 +2055,8 @@ function converter(date, to, options = { pad: true }) {
 	const useTimezone = targetTimezone || global_config.timezone;
 
 	// Cache the DateTimeFormat instance for performance
-	let formatter_value;
-	if (timezone_formatter_cache.has(useTimezone)) {
-		formatter_value = timezone_formatter_cache.get(useTimezone);
-	} else {
+	let formatter_value = timezone_formatter_cache.get(useTimezone);
+	if (formatter_value === undefined) {
 		formatter_value = new Intl.DateTimeFormat('en-CA', {
 			timeZone: useTimezone,
 			year: 'numeric',
@@ -1029,7 +2067,7 @@ function converter(date, to, options = { pad: true }) {
 			second: '2-digit',
 			hour12: false,
 		});
-		timezone_formatter_cache.set(useTimezone, formatter_value);
+		boundedSet(timezone_formatter_cache, useTimezone, formatter_value);
 	}
 
 	// Format the specific date
@@ -1058,7 +2096,8 @@ function converter(date, to, options = { pad: true }) {
 				result.day = shouldPad ? in_result.day : parseInt(in_result.day, 10);
 				break;
 			case 'hours':
-				result.hours = shouldPad ? in_result.hour : parseInt(in_result.hour, 10);
+				// h24-cycle engines render midnight as "24" (same calendar day): hour 0, as above.
+				result.hours = in_result.hour === '24' ? (shouldPad ? '00' : 0) : shouldPad ? in_result.hour : parseInt(in_result.hour, 10);
 				break;
 			case 'minutes':
 				result.minutes = shouldPad ? in_result.minute : parseInt(in_result.minute, 10);
@@ -1765,7 +2804,8 @@ const format_validators = new Map();
 			return false;
 		}
 		const h = num2(s, 0);
-		return h >= 0 && h <= (is_strict ? 23 : 29);
+		// strict: wall-clock hours plus a bare 24 (= 24:00, every finer field absent) like moment
+		return h >= 0 && h <= (is_strict ? 24 : 29);
 	});
 	format_validators.set('mm:ss', (input) => {
 		const s = asString(input);
@@ -1822,63 +2862,70 @@ const format_validators = new Map();
  * ---------------------------------------------------------------------------
  */
 
-const ORDINAL_SUFFIX_SRC = '(?:st|nd|rd|th|\\.|er|ème|te|º|ª|-й|वां|日|일|z|день)?';
+const ORDINAL_SUFFIX_ALTS = 'st|nd|rd|th|\\.|er|ème|te|º|ª|-й|वां|日|일|z|день';
+const ORDINAL_SUFFIX_SRC = `(?:${ORDINAL_SUFFIX_ALTS})?`;
+// Captures the (possibly empty) suffix so strict mode can require it on Do, like moment.
+const ORDINAL_SUFFIX_CAPTURE = `(${ORDINAL_SUFFIX_ALTS})?`;
 const NAME_TOKEN_SRC = '([\\p{L}\\p{M}.]+)';
 
-// token -> { src: one-capture-group pattern, kind: semantic slot ('' = shape-only) }
+// token -> { src: pattern, kind: semantic slot ('' = shape-only), ordinal: src carries a second
+// group capturing the ordinal suffix, zeroless: strict mode rejects a zero-padded two-digit value
+// (moment 2.30 strict: match1to2NoLeadingZero / match1to2HasZero) }
 const validator_token_map = {
 	YYYY: { src: '(\\d{4})', kind: 'year' },
 	YY: { src: '(\\d{2})', kind: '' },
-	MMMM: { src: NAME_TOKEN_SRC, kind: '' },
-	MMM: { src: NAME_TOKEN_SRC, kind: '' },
+	MMMM: { src: NAME_TOKEN_SRC, kind: 'monthName' },
+	MMM: { src: NAME_TOKEN_SRC, kind: 'monthName' },
 	MM: { src: '(0[1-9]|1[0-2])', kind: 'month' },
 	Mo: { src: `(0?[1-9]|1[0-2])${ORDINAL_SUFFIX_SRC}`, kind: 'month' },
-	M: { src: '(0?[1-9]|1[0-2])', kind: 'month' },
+	M: { src: '(0?[1-9]|1[0-2])', kind: 'month', zeroless: true },
 	Qo: { src: `([1-4])${ORDINAL_SUFFIX_SRC}`, kind: '' },
 	Q: { src: '([1-4])', kind: '' },
 	DDDD: { src: '(\\d{3})', kind: 'doy' },
 	DDDo: { src: `([1-9]\\d{0,2})${ORDINAL_SUFFIX_SRC}`, kind: 'doy' },
 	DDD: { src: '([1-9]\\d{0,2})', kind: 'doy' },
-	Do: { src: `(0?[1-9]|[12]\\d|3[01])${ORDINAL_SUFFIX_SRC}`, kind: 'day' },
+	Do: { src: `(0?[1-9]|[12]\\d|3[01])${ORDINAL_SUFFIX_CAPTURE}`, kind: 'day', ordinal: true, zeroless: true },
 	DD: { src: '(0[1-9]|[12]\\d|3[01])', kind: 'day' },
-	D: { src: '(0?[1-9]|[12]\\d|3[01])', kind: 'day' },
-	dddd: { src: NAME_TOKEN_SRC, kind: '' },
-	ddd: { src: NAME_TOKEN_SRC, kind: '' },
-	dd: { src: NAME_TOKEN_SRC, kind: '' },
+	D: { src: '(0?[1-9]|[12]\\d|3[01])', kind: 'day', zeroless: true },
+	dddd: { src: NAME_TOKEN_SRC, kind: 'weekdayName' },
+	ddd: { src: NAME_TOKEN_SRC, kind: 'weekdayName' },
+	dd: { src: NAME_TOKEN_SRC, kind: 'weekdayName' },
 	do: { src: `([0-6])${ORDINAL_SUFFIX_SRC}`, kind: '' },
 	d: { src: '([0-6])', kind: '' },
 	E: { src: '([1-7])', kind: '' },
 	e: { src: '([0-6])', kind: '' },
-	wo: { src: `([1-9]|[1-4]\\d|5[0-3])${ORDINAL_SUFFIX_SRC}`, kind: '' },
-	ww: { src: '(0[1-9]|[1-4]\\d|5[0-3])', kind: '' },
-	w: { src: '([1-9]|[1-4]\\d|5[0-3])', kind: '' },
-	Wo: { src: `([1-9]|[1-4]\\d|5[0-3])${ORDINAL_SUFFIX_SRC}`, kind: '' },
-	WW: { src: '(0[1-9]|[1-4]\\d|5[0-3])', kind: '' },
-	W: { src: '([1-9]|[1-4]\\d|5[0-3])', kind: '' },
-	gggg: { src: '(\\d{4})', kind: '' },
+	wo: { src: `([1-9]|[1-4]\\d|5[0-3])${ORDINAL_SUFFIX_SRC}`, kind: 'week' },
+	ww: { src: '(0[1-9]|[1-4]\\d|5[0-3])', kind: 'week' },
+	w: { src: '([1-9]|[1-4]\\d|5[0-3])', kind: 'week' },
+	Wo: { src: `([1-9]|[1-4]\\d|5[0-3])${ORDINAL_SUFFIX_SRC}`, kind: 'isoWeek' },
+	WW: { src: '(0[1-9]|[1-4]\\d|5[0-3])', kind: 'isoWeek' },
+	W: { src: '([1-9]|[1-4]\\d|5[0-3])', kind: 'isoWeek' },
+	gggg: { src: '(\\d{4})', kind: 'weekYear' },
 	gg: { src: '(\\d{2})', kind: '' },
-	GGGG: { src: '(\\d{4})', kind: '' },
+	GGGG: { src: '(\\d{4})', kind: 'isoWeekYear' },
 	GG: { src: '(\\d{2})', kind: '' },
 	HH: { src: '(\\d{2})', kind: 'hour' },
-	H: { src: '(\\d{1,2})', kind: 'hour' },
+	H: { src: '(\\d{1,2})', kind: 'hour', zeroless: true },
 	hh: { src: '(0[1-9]|1[0-2])', kind: '' },
-	h: { src: '(0?[1-9]|1[0-2])', kind: '' },
+	h: { src: '(0?[1-9]|1[0-2])', kind: '', zeroless: true },
 	kk: { src: '(0[1-9]|1\\d|2[0-4])', kind: '' },
 	k: { src: '([1-9]|1\\d|2[0-4])', kind: '' },
 	mm: { src: '([0-5]\\d)', kind: 'minute' },
-	m: { src: '([0-5]?\\d)', kind: 'minute' },
+	m: { src: '([0-5]?\\d)', kind: 'minute', zeroless: true },
 	ss: { src: '([0-5]\\d)', kind: 'second' },
-	s: { src: '([0-5]?\\d)', kind: 'second' },
+	s: { src: '([0-5]?\\d)', kind: 'second', zeroless: true },
 	SSS: { src: '(\\d{3})', kind: 'ms' },
-	A: { src: '(AM|PM)', kind: '' },
-	a: { src: '(am|pm)', kind: '' },
+	// moment parses the meridiem case-insensitively for both tokens, with optional dots and an
+	// optional "m": "10:00 pm", "10:00 P", "10:00 p.m." all match "hh:mm A"
+	A: { src: '([AaPp]\\.?[Mm]?\\.?)', kind: '' },
+	a: { src: '([AaPp]\\.?[Mm]?\\.?)', kind: '' },
 	X: { src: '(\\d{1,12})', kind: '' },
 	x: { src: '(\\d{1,15})', kind: '' },
 	zzz: { src: '([\\p{L}\\p{M} ]+)', kind: '' },
 	zz: { src: '([\\p{L}\\p{M}+\\-:\\d]+)', kind: '' },
 	z: { src: '([\\p{L}\\p{M}+\\-:\\d]+)', kind: '' },
-	ZZ: { src: '([+-]\\d{4}|Z)', kind: '' },
-	Z: { src: '([+-]\\d{2}:\\d{2}|Z)', kind: '' },
+	ZZ: { src: '([+-]\\d{4}|Z)', kind: 'offset' },
+	Z: { src: '([+-]\\d{2}:\\d{2}|Z)', kind: 'offset' },
 };
 
 function escapeForRegex(text) {
@@ -1893,7 +2940,7 @@ function escapeForRegex(text) {
  * the legacy isValid contract for unknown templates.
  *
  * @param {string} template
- * @returns {{regex: RegExp, slots: Array<{g: number, kind: string}>}}
+ * @returns {{regex: RegExp, slots: Array<{g: number, kind: string, zeroless: boolean, ordinal: number}>}}
  */
 function compileValidator(template) {
 	if (typeof template !== 'string') {
@@ -1919,8 +2966,14 @@ function compileValidator(template) {
 			const spec = validator_token_map[token] || { src: `(\\d{${token.length}})`, kind: 'ms' };
 			src += spec.src;
 			groupIndex++;
-			if (spec.kind !== '') {
-				slots.push({ g: groupIndex, kind: spec.kind });
+			const group = groupIndex;
+			let ordinal = 0;
+			if (spec.ordinal === true) {
+				groupIndex++;
+				ordinal = groupIndex;
+			}
+			if (spec.kind !== '' || spec.zeroless === true) {
+				slots.push({ g: group, kind: spec.kind, zeroless: spec.zeroless === true, ordinal, token });
 			}
 		}
 		lastIndex = format_token_regex.lastIndex;
@@ -1937,12 +2990,44 @@ function compileValidator(template) {
 
 const compiled_validators = new Map();
 
+// No date string any template describes comes close to this length; longer inputs are rejected
+// before the regex runs, so templates with adjacent free-form tokens (e.g. two name tokens
+// without a separator) cannot be driven into super-linear backtracking by long inputs.
+const MAX_VALIDATION_INPUT_LENGTH = 256;
+
+/**
+ * ISO-8601 weeks in an ISO week-year (52 or 53): the year has 53 weeks when Dec 28 falls in week 53.
+ *
+ * @param {number} year
+ * @returns {number}
+ */
+function isoWeeksInYear(year) {
+	return getIsoWeekInfo(year, 12, 28).week;
+}
+
+/**
+ * Locale weeks (weekStartDay-based, week 1 contains Jan 1) in a week-year: the week of the last
+ * day of the week-year's final week.
+ *
+ * @param {number} year
+ * @param {number} weekStartDay
+ * @returns {number}
+ */
+function localeWeeksInYear(year, weekStartDay) {
+	// Dec 31 is either in the last week of `year` or in week 1 of the next week-year; in the latter
+	// case the last week of `year` is the one just before it.
+	const info = getLocaleWeekInfo(year, 12, 31, weekStartDay);
+	return info.year === year ? info.week : getLocaleWeekInfo(year, 12, 24, weekStartDay).week;
+}
+
 /**
  * Validates an input against an arbitrary display-token template (compiled and
  * memoized on first use). Default mode is shape-only, mirroring the predefined
  * templates' philosophy (hours up to 29 for day overflow); strict mode adds
- * wall-clock hours (24 only as exactly 24:00[:00]), 4-digit years 1700-2199
- * and real-calendar day checks when numeric year+month+day are all present.
+ * moment-strict semantics: wall-clock hours (24 only as exactly 24:00[:00]),
+ * 4-digit years 1700-2199, real-calendar day checks when numeric year+month+day
+ * are present, no zero-padded values on single-letter tokens (D M H h m s), a
+ * required ordinal suffix on Do, and week numbers that exist in their week-year.
  *
  * @param {string} template
  * @param {*} input
@@ -1958,7 +3043,11 @@ function validateDynamicTemplate(template, input, is_strict) {
 		}
 		compiled_validators.set(template, compiled);
 	}
-	const m = compiled.regex.exec(asString(input));
+	const s = asString(input);
+	if (s.length > MAX_VALIDATION_INPUT_LENGTH) {
+		return false;
+	}
+	const m = compiled.regex.exec(s);
 	if (m === null) {
 		return false;
 	}
@@ -1971,9 +3060,28 @@ function validateDynamicTemplate(template, input, is_strict) {
 	let second = -1;
 	let ms = -1;
 	let doy = -1;
+	let week = -1;
+	let isoWeek = -1;
+	let weekYear = -1;
+	let isoWeekYear = -1;
+	let monthName = null;
+	let monthToken = '';
+	let weekdayName = null;
+	let weekdayToken = '';
+	let offset = null;
 	for (let i = 0; i < slots.length; i++) {
-		const v = +m[slots[i].g];
-		switch (slots[i].kind) {
+		const slot = slots[i];
+		const raw = m[slot.g];
+		if (is_strict) {
+			if (slot.zeroless && raw.length === 2 && raw.charCodeAt(0) === 48) {
+				return false;
+			}
+			if (slot.ordinal !== 0 && m[slot.ordinal] === undefined) {
+				return false;
+			}
+		}
+		const v = +raw;
+		switch (slot.kind) {
 			case 'year':
 				year = v;
 				break;
@@ -2000,6 +3108,29 @@ function validateDynamicTemplate(template, input, is_strict) {
 			case 'doy':
 				doy = v;
 				break;
+			case 'week':
+				week = v;
+				break;
+			case 'isoWeek':
+				isoWeek = v;
+				break;
+			case 'weekYear':
+				weekYear = v;
+				break;
+			case 'isoWeekYear':
+				isoWeekYear = v;
+				break;
+			case 'monthName':
+				monthName = raw;
+				monthToken = slot.token;
+				break;
+			case 'weekdayName':
+				weekdayName = raw;
+				weekdayToken = slot.token;
+				break;
+			case 'offset':
+				offset = raw;
+				break;
 			default:
 				break;
 		}
@@ -2014,10 +3145,348 @@ function validateDynamicTemplate(template, input, is_strict) {
 		if (year !== -1 && (year < 1700 || year > 2199)) {
 			return false;
 		}
+		// Month names must be real names of the token's form (MMMM long, MMM short; any language).
+		if (monthName !== null) {
+			if (!isNameOfForm(monthName, monthToken)) {
+				return false;
+			}
+			month = getMonthNumber(monthName);
+		}
 		// Year-less templates use a leap year so "29 Feb" stays acceptable without a year context.
 		if (month !== -1 && day !== -1 && !isRealDate(year !== -1 ? year : 2000, month, day)) {
 			return false;
 		}
+		if (weekdayName !== null && !isWeekdayConsistent(weekdayName, weekdayToken, year, month, day)) {
+			return false;
+		}
+		if (doy === 366 && year !== -1 && !isRealDate(year, 2, 29)) {
+			return false;
+		}
+		// Without an explicit week-year the calendar year is the week-year (moment).
+		const isoYear = isoWeekYear !== -1 ? isoWeekYear : year;
+		if (isoWeek === 53 && isoYear !== -1 && isoWeeksInYear(isoYear) < 53) {
+			return false;
+		}
+		const localeYear = weekYear !== -1 ? weekYear : year;
+		if (week !== -1 && localeYear !== -1 && week > localeWeeksInYear(localeYear, global_config.weekStartDay)) {
+			return false;
+		}
+		if (offset !== null && !isValidUtcOffset(offset)) {
+			return false;
+		}
+	}
+	return true;
+}
+
+/**
+ * Strict weekday check: a real weekday name of the token's form (dddd long, ddd short, dd
+ * two letters; any language) that, when the full date is known, names that date's weekday
+ * (moment rejects "Thursday, 09 February 2024").
+ *
+ * @param {string} name
+ * @param {string} token
+ * @param {number} year - -1 when absent
+ * @param {number} month - 1-12, -1 when absent
+ * @param {number} day - -1 when absent
+ * @returns {boolean}
+ */
+function isWeekdayConsistent(name, token, year, month, day) {
+	if (!isNameOfForm(name, token)) {
+		return false;
+	}
+	if (year === -1 || month === -1 || day === -1) {
+		return true;
+	}
+	const index = token === 'dd' ? getMinWeekdayIndex(name) : getWeekdayIndex(name);
+	return index === -1 || index === getDayOfWeek(year, month, day);
+}
+
+/**
+ * Two-letter weekday form ("Fr") to its day number via the short names it abbreviates; the
+ * configured locale's language first (across languages "Th" is Thursday in English but the
+ * Vietnamese "Th 2".."Th 7" are Monday..Saturday).
+ *
+ * @param {string} name
+ * @returns {number} 0-6, or -1 when ambiguous/unknown
+ */
+function getMinWeekdayIndex(name) {
+	const lower = name.toLowerCase();
+	let own = -1;
+	for (const [short, index] of getLanguageWeekdayTable(configuredLanguage())) {
+		if (short.slice(0, 2) === lower) {
+			if (own !== -1 && own !== index) {
+				own = -1;
+				break;
+			}
+			own = index;
+		}
+	}
+	if (own !== -1) {
+		return own;
+	}
+	let found = -1;
+	for (const short of day_short_names) {
+		if (short.slice(0, 2) === lower) {
+			const index = getWeekdayIndex(short);
+			if (found !== -1 && found !== index) {
+				return -1;
+			}
+			found = index;
+		}
+	}
+	return found;
+}
+
+/**
+ * UTC offset designator range check (moment): Z, or ±hh:mm / ±hhmm with minutes 00-59 and at
+ * most 14:00 away from UTC.
+ *
+ * @param {string} offset
+ * @returns {boolean}
+ */
+function isValidUtcOffset(offset) {
+	if (offset === 'Z') {
+		return true;
+	}
+	const digits = offset.replace(':', '');
+	const hours = +digits.slice(1, 3);
+	const minutes = +digits.slice(3, 5);
+	return minutes <= 59 && hours * 60 + minutes <= 14 * 60;
+}
+
+/*
+ * ---------------------------------------------------------------------------
+ * Predefined-template field extraction: the constructor's forced-format parser
+ * and strict isValid for the predefined templates that have no charCode
+ * validator (name templates, 12-hour times, 'YYYY-MM-DD HH' family). Inputs
+ * reach it only after the template's legacy regex accepted them, so the
+ * patterns here only need to split already-validated shapes into fields.
+ * ---------------------------------------------------------------------------
+ */
+
+const forced_parse_tokens = {
+	YYYY: { src: '(\\d{4}|\\d{2})', kind: 'year' },
+	MMMM: { src: NAME_TOKEN_SRC, kind: 'monthName' },
+	MMM: { src: NAME_TOKEN_SRC, kind: 'monthName' },
+	MM: { src: '(\\d{2})', kind: 'month' },
+	Do: { src: `(\\d{1,2})${ORDINAL_SUFFIX_CAPTURE}`, kind: 'day', ordinal: true },
+	DD: { src: '(\\d{1,2})', kind: 'day' },
+	D: { src: '(\\d{1,2})', kind: 'day' },
+	dddd: { src: NAME_TOKEN_SRC, kind: 'weekday' },
+	ddd: { src: NAME_TOKEN_SRC, kind: 'weekday' },
+	HH: { src: '(\\d{2})', kind: 'hour' },
+	hh: { src: '(\\d{2})', kind: 'hour12' },
+	mm: { src: '(\\d{2})', kind: 'minute' },
+	ss: { src: '(\\d{2})', kind: 'second' },
+	SSS: { src: '(\\d{3})', kind: 'ms' },
+};
+
+/**
+ * Compiles a predefined template into a field-extraction RegExp. Spaces match any whitespace run
+ * (the ordinal templates' legacy regexes use \s+). Two legacy shape quirks are mirrored: 'HH:mm'
+ * accepts an optional ':ss' tail, and the 12-hour templates carry a trailing ' AM'/' PM'.
+ *
+ * @param {string} template
+ * @returns {{regex: RegExp, slots: Array<{g: number, kind: string, ordinal: number}>}|null} null when
+ * the template uses a token the forced parser does not support
+ */
+function compileFieldParser(template) {
+	let src = '';
+	let groupIndex = 0;
+	const slots = [];
+	let lastIndex = 0;
+	const literal = (text) => escapeForRegex(text).replace(/ /g, '\\s+');
+	format_token_regex.lastIndex = 0;
+	let match = format_token_regex.exec(template);
+	while (match !== null) {
+		if (match.index > lastIndex) {
+			src += literal(template.slice(lastIndex, match.index));
+		}
+		const token = match[0];
+		if (match[1] !== undefined) {
+			src += literal(token.slice(1, -1));
+		} else {
+			const spec = forced_parse_tokens[token];
+			if (spec === undefined) {
+				return null;
+			}
+			src += spec.src;
+			groupIndex++;
+			const group = groupIndex;
+			let ordinal = 0;
+			if (spec.ordinal === true) {
+				groupIndex++;
+				ordinal = groupIndex;
+			}
+			slots.push({ g: group, kind: spec.kind, ordinal, token });
+		}
+		lastIndex = format_token_regex.lastIndex;
+		match = format_token_regex.exec(template);
+	}
+	if (lastIndex < template.length) {
+		src += literal(template.slice(lastIndex));
+	}
+	if (template === 'HH:mm') {
+		src += '(?::(\\d{2}))?';
+		groupIndex++;
+		slots.push({ g: groupIndex, kind: 'second', ordinal: 0 });
+	} else if (template.startsWith('hh:')) {
+		src += '\\s+(AM|PM)';
+		groupIndex++;
+		slots.push({ g: groupIndex, kind: 'meridiem', ordinal: 0 });
+	}
+	return { regex: new RegExp(`^${src}$`, 'u'), slots };
+}
+
+const compiled_field_parsers = new Map();
+
+/**
+ * Splits an input that matches a predefined template into its fields.
+ *
+ * @param {string} template - a key of format_types
+ * @param {string} input
+ * @returns {{year: number, yearDigits: number, month: number, monthName: string|null, day: number,
+ * ordinal: boolean, weekday: string|null, hour: number, hour12: number, meridiem: string|null,
+ * minute: number, second: number, ms: number}|null} null when the input does not fit the template
+ */
+function parseTemplateFields(template, input) {
+	let parser = compiled_field_parsers.get(template);
+	if (parser === undefined) {
+		parser = compileFieldParser(template);
+		compiled_field_parsers.set(template, parser);
+	}
+	if (parser === null) {
+		return null;
+	}
+	const m = parser.regex.exec(input);
+	if (m === null) {
+		return null;
+	}
+	const fields = {
+		year: -1,
+		yearDigits: 0,
+		month: -1,
+		monthName: null,
+		monthToken: '',
+		day: -1,
+		dayRaw: '',
+		dayToken: '',
+		ordinal: false,
+		weekday: null,
+		weekdayToken: '',
+		hour: -1,
+		hour12: -1,
+		meridiem: null,
+		minute: -1,
+		second: -1,
+		ms: -1,
+	};
+	const slots = parser.slots;
+	for (let i = 0; i < slots.length; i++) {
+		const slot = slots[i];
+		const raw = m[slot.g];
+		if (raw === undefined) {
+			continue;
+		}
+		switch (slot.kind) {
+			case 'year':
+				fields.year = +raw;
+				fields.yearDigits = raw.length;
+				break;
+			case 'month':
+				fields.month = +raw;
+				break;
+			case 'monthName':
+				fields.monthName = raw;
+				fields.monthToken = slot.token;
+				break;
+			case 'day':
+				fields.day = +raw;
+				fields.dayRaw = raw;
+				fields.dayToken = slot.token;
+				fields.ordinal = slot.ordinal !== 0 && m[slot.ordinal] !== undefined;
+				break;
+			case 'weekday':
+				fields.weekday = raw;
+				fields.weekdayToken = slot.token;
+				break;
+			case 'hour':
+				fields.hour = +raw;
+				break;
+			case 'hour12':
+				fields.hour12 = +raw;
+				break;
+			case 'meridiem':
+				fields.meridiem = raw;
+				break;
+			case 'minute':
+				fields.minute = +raw;
+				break;
+			case 'second':
+				fields.second = +raw;
+				break;
+			case 'ms':
+				fields.ms = +raw;
+				break;
+			default:
+				break;
+		}
+	}
+	return fields;
+}
+
+/**
+ * Strict (moment-strict) semantics for a predefined template validated by its legacy regex:
+ * 4-digit years 1700-2199, known month and weekday names, real calendar days (leap years
+ * included; year-less templates assume a leap year), wall-clock hours with 24 allowed only as
+ * 24:00[:00], and the ordinal suffix that 'Do' requires.
+ *
+ * @param {string} template
+ * @param {string} input
+ * @returns {boolean}
+ */
+function strictTemplateCheck(template, input) {
+	const f = parseTemplateFields(template, input);
+	if (f === null) {
+		return false;
+	}
+	if (f.year !== -1 && (f.yearDigits !== 4 || f.year < 1700 || f.year > 2199)) {
+		return false;
+	}
+	let month = f.month;
+	if (f.monthName !== null) {
+		// a real month name of the token's form (MMMM long, MMM short), in any supported language
+		if (!isNameOfForm(f.monthName, f.monthToken)) {
+			return false;
+		}
+		month = getMonthNumber(f.monthName);
+	}
+	if (month !== -1 && (month < 1 || month > 12)) {
+		return false;
+	}
+	if (f.day !== -1) {
+		if (f.day < 1 || f.day > 31) {
+			return false;
+		}
+		// DD needs two digits; D and Do take none-padded values (moment 2.30 strict)
+		if (f.dayToken === 'DD' ? f.dayRaw.length !== 2 : f.dayRaw.length === 2 && f.dayRaw.charCodeAt(0) === 48) {
+			return false;
+		}
+		if (month !== -1 && !isRealDate(f.year !== -1 ? f.year : 2000, month, f.day)) {
+			return false;
+		}
+		if (f.dayToken === 'Do' && !f.ordinal) {
+			return false;
+		}
+	}
+	if (f.weekday !== null && !isWeekdayConsistent(f.weekday, f.weekdayToken, f.year, month, f.day)) {
+		return false;
+	}
+	if (f.hour12 !== -1 && (f.hour12 < 1 || f.hour12 > 12)) {
+		return false;
+	}
+	if (f.hour !== -1 && !checkHour(f.hour, f.minute, f.second, f.ms, true, 29)) {
+		return false;
 	}
 	return true;
 }
@@ -2053,3 +3522,34 @@ module.exports.format_validators = format_validators;
 module.exports.validateDynamicTemplate = validateDynamicTemplate;
 module.exports.compileValidator = compileValidator;
 module.exports.isRealDate = isRealDate;
+module.exports.offsetAt = offsetAt;
+module.exports.isUtcZone = isUtcZone;
+module.exports.toWallClock = toWallClock;
+module.exports.wallClockToInstant = wallClockToInstant;
+module.exports.keepSystemOffset = keepSystemOffset;
+module.exports.systemOffsetAt = systemOffsetAt;
+module.exports.daysInMonth = daysInMonth;
+module.exports.ensureToday = ensureToday;
+module.exports.parseToday = parseToday;
+module.exports.hasExplicitZone = hasExplicitZone;
+module.exports.nativeZoneKind = nativeZoneKind;
+module.exports.closedEngineText = closedEngineText;
+module.exports.ZONE_NONE = ZONE_NONE;
+module.exports.ZONE_EXPLICIT = ZONE_EXPLICIT;
+module.exports.ZONE_UTC_DATE = ZONE_UTC_DATE;
+module.exports.localFromFields = localFromFields;
+module.exports.takeParsedWall = takeParsedWall;
+module.exports.takeLocaleNamesUsed = takeLocaleNamesUsed;
+module.exports.takeParsedToday = takeParsedToday;
+module.exports.resetParseCapture = resetParseCapture;
+module.exports.configuredLanguage = configuredLanguage;
+module.exports.setWallCapture = setWallCapture;
+module.exports.captureWallForParse = captureWallForParse;
+module.exports.isWallCaptureEnabled = isWallCaptureEnabled;
+module.exports.recordParsedWall = recordParsedWall;
+module.exports.parseTemplateFields = parseTemplateFields;
+module.exports.strictTemplateCheck = strictTemplateCheck;
+module.exports.boundedSet = boundedSet;
+module.exports.isNameOfForm = isNameOfForm;
+module.exports.getWeekdayIndex = getWeekdayIndex;
+module.exports.ABSOLUTE_FORMATS = ABSOLUTE_FORMATS;
