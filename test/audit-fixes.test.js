@@ -207,9 +207,16 @@ describe('calendar-aware diff for months and years', () => {
 	});
 
 	test('is_decimal interpolates between anchors', () => {
-		expect(new kk_date('2024-01-01').diff('2024-07-01', 'years', true)).toBeCloseTo(0.5, 2);
-		expect(new kk_date('2024-01-31').diff('2024-03-30', 'months', true)).toBeCloseTo(1.9677, 3);
-		expect(new kk_date('2024-01-15').diff('2024-02-14', 'months', true)).toBeCloseTo(0.9677, 3);
+		// moment.utc values: the fraction is elapsed time between anchors, so a DST change in the
+		// system timezone (America/Nuuk springs forward on 2024-03-30) would move it
+		kk_date.config({ timezone: 'UTC' });
+		try {
+			expect(new kk_date('2024-01-01').diff('2024-07-01', 'years', true)).toBeCloseTo(0.5, 2);
+			expect(new kk_date('2024-01-31').diff('2024-03-30', 'months', true)).toBeCloseTo(1.9677, 3);
+			expect(new kk_date('2024-01-15').diff('2024-02-14', 'months', true)).toBeCloseTo(0.9677, 3);
+		} finally {
+			kk_date.config({ timezone: Intl.DateTimeFormat().resolvedOptions().timeZone });
+		}
 	});
 
 	test('sub-month units keep the exact arithmetic (regression)', () => {

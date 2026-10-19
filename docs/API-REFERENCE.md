@@ -510,9 +510,14 @@ The difference is measured as `(date - this)`, i.e. the argument minus the recei
 
 **Unit semantics** (same as moment):
 - `milliseconds` / `seconds` / `minutes` / `hours` are exact elapsed time.
-- `days` / `weeks` count calendar days in this instance's timezone (a week is 7 days): a 23- or
-  25-hour DST day counts as one day, so `2024-03-09 12:00 → 2024-03-11 12:00` in New York is `2`
-  days but `47` hours.
+- `days` / `weeks` count whole days between the two wall-clock times in this instance's timezone
+  (a week is 7 days), like moment: a 23- or 25-hour DST day counts as one day, so
+  `2024-03-09 12:00 → 2024-03-11 12:00` in New York is `2` days but `47` hours. The time of day
+  counts too (`2024-01-01 10:00 → 2024-01-03 09:00` is `1` day). On a day whose midnight is skipped
+  by DST (America/Santiago `2024-09-08`, Asia/Beirut `2024-03-31`) the day starts at `01:00`, so
+  `'2024-09-08' → '2024-09-10'` there is `1` day (47 hours; Luxon and Temporal say the same).
+  For date-only values, `Math.round(a.diff(b, 'days', true))` is the number of calendar days
+  between them in every timezone; `diff_range(end, 'days')` lists the dates.
 - `months` / `years` are **calendar-aware** (moment-compatible anchor arithmetic): a full calendar year is `1` year,
   `Jan 1 → Mar 1` is `2` months, and month-end edges clamp (`Jan 31 → Feb 29` is `1` month). With `is_decimal` the
   fraction interpolates between month anchors.
@@ -683,14 +688,29 @@ Lists the dates from this date up to `end`, one per `unit`, as formatted strings
 - `unit` (string) - Step: 'seconds', 'minutes', 'hours', 'days', 'weeks', 'months' or 'years'
 - `template` (string, optional, default `'YYYY-MM-DD'`) - Format of the returned strings
 
-**Returns:** (string[]) - This date first, then this date + 1 unit, + 2 units, … for as many whole
-units as `diff(end, unit)` counts. Every entry is computed from this date with `add()`, so month
-ends clamp without drifting (`Jan 31 → Feb 29 → Mar 31`).
+**Returns:** (string[]) - This date first, then this date + 1 unit, + 2 units, … Every entry is
+computed from this date with `add()`, so month ends clamp without drifting (`Jan 31 → Feb 29 → Mar 31`)
+and every entry keeps this date's time of day.
+
+- `days`, `weeks`, `months`, `years`: every step whose **date** is on or before `end`'s date in this
+  instance's timezone. The time of day does not matter (`2024-01-01 10:00 → 2024-01-03 09:00` lists
+  three dates); a step that would land after `end`'s date is left out (monthly from `Jan 31` up to
+  `Mar 15` stops at `Feb 29`).
+- Each step stays on its own date: when this date's time of day falls in a DST gap on it and `add()`
+  would move it into the next date (America/Nuuk skips `23:00–24:00` on `2024-03-30`), the entry is
+  moved back by the gap instead (`22:30`). A date the timezone skipped entirely is not listed by
+  `days` (Pacific/Apia has no `2011-12-30`); a `weeks`/`months`/`years` step on it keeps `add()`'s
+  next date (`2011-12-31`), so that period is still listed.
+- `hours`, `minutes`, `seconds`: every step up to the `end` instant.
+- An `end` before this date returns only this date.
 
 **Examples:**
 ```javascript
 new kk_date('2024-08-20').diff_range('2024-08-23', 'days');
 // ['2024-08-20', '2024-08-21', '2024-08-22', '2024-08-23']
+
+new kk_date('2024-01-01 10:00').diff_range('2024-01-03 09:00', 'days');
+// ['2024-01-01', '2024-01-02', '2024-01-03']
 
 new kk_date('2024-01-31').diff_range('2024-04-30', 'months');
 // ['2024-01-31', '2024-02-29', '2024-03-31', '2024-04-30']

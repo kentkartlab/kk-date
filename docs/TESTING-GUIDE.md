@@ -60,7 +60,7 @@ TZ=Asia/Kolkata npm test
 
 ## Test Structure
 
-### Test File Organization (33 files, 1,426 tests)
+### Test File Organization (33 files, 1,454 tests)
 
 ```
 test/
@@ -701,12 +701,12 @@ tables in `README.md` and `docs/PERFORMANCE.md`.
 (`npm run test:coverage` / `npm test -- --coverage`); Jest fails the run if any metric falls
 below it:
 
-| Metric | Enforced minimum | Measured (33 files, 1,426 tests) |
+| Metric | Enforced minimum | Measured (33 files, 1,454 tests) |
 |--------|------------------|----------------------------------|
-| Statements | 88% | 91.83% |
-| Branches | 85% | 88.81% |
+| Statements | 88% | 92.13% |
+| Branches | 85% | 89.05% |
 | Functions | 95% | 97.30% |
-| Lines | 88% | 91.76% |
+| Lines | 88% | 92.07% |
 
 Coverage is collected from the four runtime files (`index.js`, `functions.js`, `constants.js`,
 `nope-redis.js`). New code should come with tests that keep the measured numbers from dropping:

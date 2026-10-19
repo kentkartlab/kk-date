@@ -248,19 +248,24 @@ describe('configuration changes are atomic', () => {
 describe('caches stay bounded', () => {
 	test('timezone offsets of many distinct days are answered from the cache on repeat passes', () => {
 		// each day is looked up once per pass: after the first pass no Intl call is needed (the cache
-		// used to thrash here, clearing itself every pass)
+		// used to thrash here, clearing itself every pass: 15,000 Intl calls). Counted rather than
+		// timed, since a time budget fails at random on a busy machine.
 		const { getTimezoneOffset } = require('../functions');
 		const dates = Array.from({ length: 5000 }, (_, i) => new Date(Date.UTC(2000, 0, 1, 10, 30) + i * 86400000));
 		for (const date of dates) {
 			getTimezoneOffset('America/New_York', date);
 		}
-		const start = Date.now();
-		for (let pass = 0; pass < 3; pass++) {
-			for (const date of dates) {
-				getTimezoneOffset('America/New_York', date);
+		const formatToParts = jest.spyOn(Intl.DateTimeFormat.prototype, 'formatToParts');
+		try {
+			for (let pass = 0; pass < 3; pass++) {
+				for (const date of dates) {
+					getTimezoneOffset('America/New_York', date);
+				}
 			}
+			expect(formatToParts).not.toHaveBeenCalled();
+		} finally {
+			formatToParts.mockRestore();
 		}
-		expect(Date.now() - start).toBeLessThan(60);
 	});
 
 	test('templates that fail to format leave nothing behind', () => {
