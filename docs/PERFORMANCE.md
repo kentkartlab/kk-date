@@ -12,53 +12,52 @@ kk-date is designed for speed and efficiency, featuring intelligent caching, mem
 
 > Net memory delta is a **GC-timing artifact**, not a guarantee — from run to run it can be **positive or negative**, and **several other libraries (e.g. Luxon) also show negative values**. It depends on workload, Node version, and GC behavior. Measure with `node benchmark.js`.
 
-In our benchmarks kk-date can report **negative net memory usage**, i.e. it frees more than it allocates during the measured run:
+In our benchmarks kk-date can report **negative net memory usage**. That only means a garbage collection happened to run during the measured window — it is not a property you can rely on.
 
-**How it works:**
-- **Object Pooling**: Reuses existing objects instead of creating new ones
-- **Aggressive Garbage Collection**: Efficient patterns trigger V8's garbage collector
-- **Memory Cleanup**: During operations, more memory is freed than consumed
-- **Smart LRU Caching**: Automatic eviction prevents memory bloat
+**What actually keeps memory stable:**
+- **Bounded caches**: every internal cache has a fixed size limit and cannot grow without bound in a long-running process (details below)
+- **Few intermediate objects**: auto-detection dispatches on the input's shape (length and separator characters) to char-code parsers for the numeric formats, and derived format fields (week, day of year, offsets) are computed with integer math
+- **No object pooling**: kk-date does not pool or recycle objects; every `new kk_date()` is an ordinary allocation, and `add()`/`set()`/`startOf()`/`endOf()`/`tz()` mutate the instance in place instead of returning a copy
 
 **Benefits for your application:**
-- ✅ **Zero memory leaks** - Memory usage decreases over time
-- ✅ **Perfect for long-running apps** - No memory accumulation
-- ✅ **Lower infrastructure costs** - Less RAM needed
-- ✅ **Better performance** - Reduced GC pressure
+- ✅ **No unbounded cache growth** — cache memory is capped no matter how long the process runs
+- ✅ **Suited to long-running apps** — no manual cache maintenance required
+- ✅ **Low GC pressure** on repeated operations
 
 ### Intelligent Multi-Level Caching System
 
-kk-date uses a sophisticated multi-level caching system to optimize performance:
+kk-date uses several caches. All of them are bounded; only the opt-in nope-redis layer evicts least-recently-used entries — the others are **cleared wholesale** when they reach their limit:
 
-- **Converter Results Cache**: Caches date component extraction results (10K limit with LRU eviction)
-- **Formatter Cache**: Caches formatted output strings (10K limit with LRU eviction)
-- **Timezone Offset Caching**: Caches timezone calculations with TTL to avoid repeated computations
-- **Format Pattern Caching**: Caches compiled format patterns for faster formatting
-- **Locale Data Caching**: Pre-computes and caches month/day names for different locales
-- **DateTimeFormat Cache**: Reuses Intl.DateTimeFormat instances for locale operations
-- **Automatic Cleanup**: Removes expired cache entries and implements LRU eviction to prevent memory leaks
+- **Formatter Results Cache** (always on): finished `format()` strings per template, keyed by timestamp + display configuration; cleared when it exceeds 10,000 entries
+- **Compiled Templates** (always on): each format template is compiled once into flat parts; cleared when it exceeds 1,000 entries
+- **Converter Results Cache** (always on): date-component extraction results; cleared when it exceeds 10,000 entries
+- **Timezone Offset Cache** (always on, no TTL): offsets keyed by exact instant, plus a per-zone map of UTC days verified to have a constant offset; cleared when it exceeds 10,000 entries
+- **Intl.DateTimeFormat caches** (always on): formatter instances keyed by timezone/locale, 500 entries per cache (cleared when full)
+- **Name tables** (always on): month/weekday name tables for parsing are built lazily on first use
+- **nope-redis layer** (opt-in via `kk_date.caching({ status: true })`): memoizes constructor parse results for repeated input strings and locale name tokens (`dddd`, `MMMM`, …); entries expire after `defaultTtl` seconds (default 1300), and once it holds more than 10,000 entries the least recently used 20% are evicted
 
 ```javascript
 const kk_date = require('kk-date');
 
-// Enable caching for better performance
+// Enable the opt-in nope-redis layer
 kk_date.caching({ status: true, defaultTtl: 3600 });
 
-// Check cache statistics
+// Check cache statistics (nope-redis layer)
 const stats = kk_date.caching_status();
-const hitRate = stats.totalHits > 0 ? (stats.totalHits / (stats.totalHits + stats.total) * 100).toFixed(1) : 0;
+const lookups = stats.totalHits + stats.totalMisses;
+const hitRate = lookups > 0 ? ((stats.totalHits / lookups) * 100).toFixed(1) : '0.0';
 console.log('Cache hit rate:', hitRate + '%');
-console.log('Cache size:', stats.cacheSize || 0);
+console.log('Cache size:', stats.cacheSize, '/', stats.maxCacheSize);
 ```
 
 ### Timezone Conversion Performance
 
 **Key Optimization Features:**
 
-- **Lazy Loading**: Timezone data is loaded only when needed
-- **Efficient Algorithms**: Optimized date calculation algorithms
-- **Memory Management**: Automatic cleanup of cached data
-- **DST Handling**: Built-in DST calculations without external lookups
+- **Engine timezone data**: offsets and DST rules come from the JavaScript engine's `Intl` (ICU) data — no timezone database is bundled or downloaded
+- **System-zone fast path**: offsets of the system timezone (and UTC) come from the native `Date` offset, without an `Intl` call
+- **Offset caching**: other zones' offsets are cached per instant, and once a UTC day is verified to have a constant offset, the rest of that day is served from a per-zone day map without asking `Intl` again
+- **DST-correct arithmetic**: `add`/`set`/`startOf`/`endOf` results are resolved at their own instant — a time skipped by a DST gap moves forward by the gap, a repeated time keeps the side of the change the original instant was on (or, when parsed, is the earlier instant)
 
 **Benchmark Example:**
 ```javascript
@@ -85,10 +84,10 @@ benchmarkTimezoneConversions();
 
 **Optimization Features:**
 
-- **Template Caching**: Common format patterns are pre-compiled and cached
-- **Efficient String Building**: Optimized string concatenation methods
-- **Locale Caching**: Month and day names are pre-computed for supported locales
-- **Pattern Reuse**: Regex patterns are cached and reused across operations
+- **Compiled Templates**: every template string is compiled once into flat token/literal parts and cached (up to 1,000 templates), so custom token combinations cost the same as predefined ones
+- **Result Cache**: repeating `format()` with the same template, instant and display configuration is a single `Map` lookup (up to 10,000 results)
+- **Integer Math**: week numbers, day of year, weekday numbers and UTC offsets are computed without `Intl`
+- **Cached Intl Formatters**: month/weekday names (`MMMM`, `dddd`, …) and zone names (`z`, `zzz`) come from `Intl.DateTimeFormat` instances cached per locale/timezone; with `caching({ status: true })` the name strings are memoized as well
 
 **Benchmark Example:**
 ```javascript
@@ -117,10 +116,10 @@ benchmarkFormatting();
 
 **Optimization Features:**
 
-- **Format Detection**: Automatic format detection with result caching
-- **Input Validation**: Efficient validation using pre-compiled regex patterns
-- **Object Reuse**: Internal object pooling where applicable
-- **Type Optimization**: Fast-path handling for different input types
+- **Shape-Based Detection**: auto-detection dispatches on the input's length and separator characters straight to the matching parser instead of trying formats one by one
+- **Char-Code Validation**: numeric predefined templates are checked by hand-written char-code validators; text templates (month/weekday names) use anchored, linear-time patterns
+- **Type Fast Paths**: numbers (Unix seconds/milliseconds), `Date` objects and kk-date instances skip string parsing entirely (cloning an instance is cheaper than parsing its string again)
+- **Optional Parse Cache**: with `caching({ status: true })`, repeated input strings are served from the nope-redis layer (bare times such as `'14:30'` and bare weekday names are never cached; a parse that depends on today's date, such as `'15 March'`, is reused only on the same day, and one that resolved month/weekday names only under the same global locale language)
 
 **Benchmark Example:**
 ```javascript
@@ -147,10 +146,9 @@ benchmarkConstructor();
 
 **Optimization Features:**
 
-- **Millisecond-Based Operations**: Direct manipulation of underlying timestamp
-- **Efficient Month Calculations**: Optimized algorithms for month/year arithmetic
-- **In-Place Modifications**: Modifies existing objects rather than creating new ones
-- **Batch Operations**: Optimized handling of multiple operations
+- **In-Place Modifications**: `add()`, `set()`, `startOf()` and `endOf()` mutate the instance and return it (chainable, no copies)
+- **Absolute Units**: seconds, minutes and hours are exact durations added to the timestamp
+- **Calendar Units**: days, weeks, months and years are applied to the wall clock in the instance/global timezone and resolved at the result's own instant, so DST transitions and month ends are handled (Jan 31 + 1 month → Feb 29)
 
 **Benchmark Example:**
 ```javascript
@@ -179,10 +177,9 @@ benchmarkManipulation();
 
 **Optimization Features:**
 
-- **Direct Timestamp Comparison**: Uses underlying timestamp values for faster comparisons
-- **Type Coercion**: Efficient type conversion for different input types
-- **Early Returns**: Optimization shortcuts for obvious cases
-- **Batch Comparison**: Optimized handling when comparing multiple dates
+- **Direct Timestamp Comparison**: `isBefore`/`isAfter`/`isSame`/… compare millisecond timestamps
+- **No Parsing for Instances**: kk-date instances, `Date` objects and numbers are compared without string parsing; strings are parsed with the constructor's rules
+- **Calendar Units Only Where Needed**: `diff()` in days/weeks/months/years and `isBetween(a, b, unit)` read the calendar in the instance's timezone; seconds/minutes/hours use elapsed time
 
 **Benchmark Example:**
 ```javascript
@@ -212,10 +209,10 @@ benchmarkComparisons();
 
 **Optimization Features:**
 
-- **Regex Caching**: Validation patterns are pre-compiled and cached
-- **Early Validation**: Quick rejection of obviously invalid inputs
-- **Type Checking**: Efficient type detection and validation
-- **Format-Specific Validation**: Tailored validation for different input formats
+- **Char-Code Validators**: predefined templates are validated by hand-written char-code validators (bit-for-bit equal to the legacy regexes in the default, non-strict mode)
+- **Compiled Dynamic Templates**: any other display-token template is compiled into a validator once and memoized (up to 1,000 templates)
+- **Linear Time**: text templates were audited against adversarial (ReDoS) inputs, and inputs longer than 256 characters are rejected up front for dynamic templates
+- **No Exceptions for Bad Input**: the static `kk_date.isValid()` returns `false` for non-string input (e.g. `null`, a `Date`) instead of throwing
 
 **Benchmark Example:**
 ```javascript
@@ -255,6 +252,11 @@ benchmarkValidation();
 
 ### 1. Enable Caching
 
+`kk_date.caching({ status: true })` turns on the opt-in nope-redis layer: it memoizes constructor parse
+results for repeated input strings and locale name tokens. The formatter, template, converter and
+timezone-offset caches are always on. The measured effect is in the auto-generated
+[Key Performance Metrics](#key-performance-metrics) below — measure your own workload too.
+
 ```javascript
 const kk_date = require('kk-date');
 
@@ -264,11 +266,13 @@ kk_date.caching({ status: true, defaultTtl: 3600 }); // 1 hour TTL
 // Monitor cache performance
 setInterval(() => {
     const stats = kk_date.caching_status();
-    const hitRate = stats.totalHits > 0 ? (stats.totalHits / (stats.totalHits + stats.total) * 100).toFixed(1) : 0;
+    const lookups = stats.totalHits + stats.totalMisses;
+    const hitRate = lookups > 0 ? ((stats.totalHits / lookups) * 100).toFixed(1) : '0.0';
     console.log('Cache stats:', {
         hitRate: hitRate + '%',
-        size: stats.cacheSize || 0,
-        totalHits: stats.totalHits || 0
+        size: stats.cacheSize,
+        totalHits: stats.totalHits,
+        totalMisses: stats.totalMisses
     });
 }, 60000); // Log every minute
 ```
@@ -294,7 +298,8 @@ function formatDatesFast(timestamps) {
 ### 3. Pre-compile Format Strings
 
 ```javascript
-// Define format constants to enable caching
+// Every distinct template string is compiled once and cached (whether or not it is a constant);
+// constants just keep the templates consistent across the code base
 const DATE_FORMAT = 'YYYY-MM-DD';
 const TIME_FORMAT = 'HH:mm:ss';
 const DATETIME_FORMAT = 'YYYY-MM-DD HH:mm:ss';
@@ -312,29 +317,33 @@ function formatDate(date) {
 ### 4. Optimize Timezone Operations
 
 ```javascript
-// ❌ Inefficient: Multiple timezone conversions mutating the same instance
-function getTimesInMultipleZones(dateStr) {
-    // This approach mutates the same date instance multiple times
+// ❌ Wrong: .tz() mutates the instance and returns it, so all three variables are the SAME
+// object and every format() shows the last zone that was set (Tokyo)
+function getTimesInMultipleZonesWrong(dateStr) {
     const date = new kk_date(dateStr);
-    return {
-        ny: new kk_date(dateStr).tz('America/New_York').format('HH:mm'),
-        london: new kk_date(dateStr).tz('Europe/London').format('HH:mm'),
-        tokyo: new kk_date(dateStr).tz('Asia/Tokyo').format('HH:mm')
-    };
+    const ny = date.tz('America/New_York');
+    const london = date.tz('Europe/London');
+    const tokyo = date.tz('Asia/Tokyo');
+    return { ny: ny.format('HH:mm'), london: london.format('HH:mm'), tokyo: tokyo.format('HH:mm') };
 }
 
-// ✅ Efficient: Batch timezone operations with separate instances
-function getTimesInMultipleZonesFast(dateStr) {
+// ✅ Correct and fast: parse once, then give every zone its own clone
+// (cloning an instance is cheaper than parsing the string again)
+function getTimesInMultipleZones(dateStr) {
+    const base = new kk_date(dateStr);
     const timezones = ['America/New_York', 'Europe/London', 'Asia/Tokyo'];
     const results = {};
-    
-    timezones.forEach(tz => {
-        const converted = new kk_date(dateStr).tz(tz);
-        results[tz.split('/')[1].toLowerCase()] = converted.format('HH:mm');
+
+    timezones.forEach((tz) => {
+        results[tz.split('/')[1].toLowerCase()] = new kk_date(base).tz(tz).format('HH:mm');
     });
-    
+
     return results;
 }
+
+// With kk_date.setTimezone('UTC'):
+getTimesInMultipleZonesWrong('2024-08-23 10:00:00'); // { ny: '19:00', london: '19:00', tokyo: '19:00' }
+getTimesInMultipleZones('2024-08-23 10:00:00');      // { new_york: '06:00', london: '11:00', tokyo: '19:00' }
 ```
 
 ### 5. Memory Management
@@ -351,11 +360,12 @@ function monitorMemoryUsage() {
     });
 }
 
-// Clear cache periodically if needed
+// The caches are bounded (nope-redis: 10,000 entries with LRU eviction), so flushing is never
+// needed to prevent a leak — only to release memory earlier than the limits would
 function manageCacheMemory() {
     const stats = kk_date.caching_status();
-    if (stats.cacheSize > 1000) { // Arbitrary threshold
-        kk_date.caching_flush();
+    if (stats.cacheSize > 1000) { // your own, lower threshold
+        kk_date.caching_flush(); // empties the nope-redis store (hit/miss counters are kept)
         console.log('Cache cleared due to size:', stats.cacheSize);
     }
 }
@@ -377,30 +387,30 @@ node benchmark.js   # Comprehensive benchmark
 node benchmark2.js  # Sequential operations benchmark
 ```
 
-### Benchmark Results (representative run — reproduced by CI on every PR)
+### Benchmark Results (representative run — refreshed by CI when JavaScript changes on `dev`)
 
 #### Sequential Operations (1000 days, 100 ops/day — 100,000 ops per scenario)
 
 <!-- BENCH:perf-seq -->
 | Operation | kk-date | Moment.js | Day.js | Luxon | vs Fastest Competitor |
 |-----------|---------|-----------|--------|-------|-----------------------|
-| **Date Creation & Formatting** | **130ms** | 1177ms | 759ms | 1008ms | **~83% less time (5.8x faster)** than Day.js |
-| **Time Operations** | **196ms** | 1280ms | 566ms | 2840ms | **~65% less time (2.9x faster)** than Day.js |
-| **Timezone Conversions** | **443ms** | 3320ms | 19494ms | 4515ms | **~87% less time (7.5x faster)** than Moment |
-| **Complex Operations** | **260ms** | 2599ms | 1280ms | 3051ms | **~80% less time (4.9x faster)** than Day.js |
-| **Overall** | **1.03s** | 8.38s | 22.10s | 11.41s | **~21.5x faster** than Day.js |
+| **Date Creation & Formatting** | **202ms** | 1596ms | 902ms | 1240ms | **~78% less time (4.5x faster)** than Day.js |
+| **Time Operations** | **263ms** | 1700ms | 740ms | 3242ms | **~64% less time (2.8x faster)** than Day.js |
+| **Timezone Conversions** | **473ms** | 3495ms | 24004ms | 4968ms | **~86% less time (7.4x faster)** than Moment |
+| **Complex Operations** | **408ms** | 3406ms | 1736ms | 3765ms | **~77% less time (4.3x faster)** than Day.js |
+| **Overall** | **1.35s** | 10.20s | 27.38s | 13.22s | **~20.3x faster** than Day.js |
 <!-- /BENCH:perf-seq -->
 
 #### Key Performance Metrics
 
-*Measured in our benchmark suite on Node.js 26 and reproduced by CI on every PR (the "Performance Benchmarks" job). These are not guarantees — results vary by workload, hardware, and Node version. Reproduce them with `node benchmark.js` / `node benchmark2.js`.*
+*Measured in our benchmark suite on Node.js 26. The tables and bullets between the `BENCH` markers are regenerated by the "Update Benchmark Docs" workflow (`scripts/update-benchmark-docs.js`) on pushes to `dev` that change JavaScript — they are not part of the PR checks. These are not guarantees — results vary by workload, hardware, and Node version. Reproduce them with `node benchmark.js` / `node benchmark2.js`.*
 
 <!-- BENCH:perf-metrics -->
 - **~95% less time** on average vs competing libraries (comprehensive benchmark)
 - **up to ~98% less time** in timezone operations
-- **~28% less time** with caching enabled
+- **~33% less time** with caching enabled
 - **kk-date wins every scenario** in the current benchmark run
-- **Net memory delta is GC-dependent** (often negative for several libraries); stability comes from object pooling + LRU eviction
+- **Net memory delta is GC-dependent** (often negative for several libraries); bounded caches with automatic eviction keep long-running processes stable
 - **Near-100% cache hit rate** for repeated operations
 <!-- /BENCH:perf-metrics -->
 
@@ -575,20 +585,21 @@ setInterval(() => {
    })
    ```
 
-2. **Uncached Timezone Operations**
+2. **Re-parsing the Same Strings**
    ```javascript
-   // Enable caching for timezone-heavy operations
+   // Timezone offsets, compiled templates and format results are cached automatically.
+   // The opt-in layer additionally memoizes constructor parses of repeated input strings
+   // and locale name tokens — measure whether your workload benefits:
    kk_date.caching({ status: true, defaultTtl: 3600 });
    ```
 
-3. **Memory Leaks in Long-Running Processes**
+3. **Memory in Long-Running Processes**
    ```javascript
-   // Clear cache periodically in long-running processes
-   setInterval(() => {
-       if (kk_date.caching_status().cacheSize > 10000) {
-           kk_date.caching_flush();
-       }
-   }, 3600000); // Every hour
+   // Nothing to do: every cache is bounded (nope-redis: TTL expiry, and the least recently
+   // used 20% are evicted once it holds more than 10,000 entries; the internal caches are
+   // cleared wholesale at their limits), so caching_status().cacheSize stays around
+   // caching_status().maxCacheSize at most. Flush only to release memory early:
+   kk_date.caching_flush();
    ```
 
 ### Performance Debugging
@@ -603,7 +614,10 @@ function debugPerformance() {
             status: stats.status,
             cacheSize: stats.cacheSize || 0,
             totalHits: stats.totalHits || 0,
-            hitRate: stats.totalHits > 0 ? (stats.totalHits / (stats.totalHits + stats.total) * 100).toFixed(1) + '%' : '0%'
+            totalMisses: stats.totalMisses || 0,
+            hitRate: stats.totalHits + stats.totalMisses > 0
+                ? ((stats.totalHits / (stats.totalHits + stats.totalMisses)) * 100).toFixed(1) + '%'
+                : '0%'
         },
         memory: {
             heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024) + ' MB',

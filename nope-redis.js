@@ -22,7 +22,8 @@ const memory = {
 		memoryStats: {},
 		totalKeys: 0,
 	},
-	store: {},
+	// Prototype-less: inherited keys ("constructor", "toString") must never look like entries.
+	store: Object.create(null),
 	// LRU tracking
 	lru: new Map(), // key -> timestamp
 };
@@ -35,10 +36,9 @@ const memory = {
  */
 module.exports.config = (options = { defaultTtl }) => {
 	try {
-		if (memory.config.status === false) {
-			return false;
-		}
-		if (typeof options === 'object') {
+		// The TTL is applied even while the service is stopped, so caching({ defaultTtl }) before
+		// caching({ status: true }) is not silently lost.
+		if (typeof options === 'object' && options !== null) {
 			if (typeof options.defaultTtl === 'number' && options.defaultTtl > 0) {
 				const now_ttl = Number.parseInt(options.defaultTtl, 10);
 				if (typeof now_ttl === 'number') {
@@ -165,14 +165,25 @@ module.exports.getItem = (key) => {
 		if (!memory.config.status) {
 			return false;
 		}
-		if (memory.store[keyStr]) {
-			memory.store[keyStr].hit++;
+		const item = memory.store[keyStr];
+		if (item) {
+			const now = Date.now();
+			// Expired entries are a miss even before the periodic cleaner (every 5 s, and never
+			// during synchronous work) has removed them.
+			if (item.expires_at < Math.floor(now / 1000)) {
+				delete memory.store[keyStr];
+				memory.lru.delete(keyStr);
+				memory.config.totalKeys--;
+				memory.config.totalMisses++;
+				return null;
+			}
+			item.hit++;
 			memory.config.totalHits++;
 
 			// Update LRU tracking on access
-			memory.lru.set(keyStr, Date.now());
+			memory.lru.set(keyStr, now);
 
-			return memory.store[keyStr].value;
+			return item.value;
 		}
 		memory.config.totalMisses++;
 		return null;
@@ -282,8 +293,11 @@ function defaultMemory(withConfig = false) {
 				totalKeys: 0,
 			},
 		};
-		memory.store = {};
+		memory.store = Object.create(null);
 		memory.lru.clear();
+		// The key counter drives eviction: it must restart with the emptied store, or every flush
+		// would permanently shrink the usable capacity.
+		memory.config.totalKeys = 0;
 		if (withConfig) {
 			memory.config = JSON.parse(JSON.stringify(defaultMemory.config));
 		}
@@ -415,6 +429,11 @@ function runner() {
 				runner();
 			}
 		}, intervalSecond * 1000);
+		// The cleaner must not keep the process alive: scripts, CLIs, serverless handlers and test
+		// runners that enable caching still exit when their work is done.
+		if (typeof runnerInterval?.unref === 'function') {
+			runnerInterval.unref();
+		}
 	} catch (error) {
 		console.error('nope-redis -> Critical Error flushed all data! > ', error.message);
 		if (typeof runnerInterval !== 'undefined') {

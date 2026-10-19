@@ -22,7 +22,9 @@ npm test
 # Run tests in watch mode
 npm test -- --watch
 
-# Run tests with coverage
+# Run tests with coverage (enforces the coverageThreshold in package.json)
+npm run test:coverage
+# or
 npm test -- --coverage
 
 # Run specific test file
@@ -30,8 +32,12 @@ npm test test/timezone.test.js
 # or
 npx jest test/timezone.test.js
 
-# Run tests matching pattern
-npm test -- --testPathPattern="timezone"
+# Run test files whose path matches a pattern
+# (Jest 30 renamed --testPathPattern to --testPathPatterns)
+npm test -- --testPathPatterns="timezone"
+
+# Run tests whose name matches a pattern
+npx jest test/timezone.test.js -t "should convert"
 
 # Run tests with verbose output
 npm test -- --verbose
@@ -40,48 +46,83 @@ npm test -- --verbose
 ### Test Environment Setup
 
 ```bash
-# Install dependencies
-npm install
+# Install dependencies — Jest 30 and Biome are devDependencies (exact versions locked in
+# package-lock.json), nothing else to install
+npm ci        # or: npm install
 
-# Install test dependencies
-npm install --save-dev jest
+# Node.js 22 or newer is required (package.json "engines")
+node --version
 
-# Run tests in different environments
-NODE_ENV=test npm test
+# Run the suite with a different SYSTEM timezone, as CI does
+TZ=America/New_York npm test
+TZ=Asia/Kolkata npm test
 ```
 
 ## Test Structure
 
-### Test File Organization (523 Total Tests)
+### Test File Organization (33 files, 1,426 tests)
 
 ```
 test/
-├── add.test.js                    # Addition operations
-├── beforeAfter.test.js            # Before/after comparisons
+├── add.test.js                        # Addition operations
+├── audit-fixes.test.js                # Audit locks: add(duration), weekStartDay 0 override, add(0) unit check, invalid-instance comparisons, numeric seconds/ms arguments, month-end clamping, instance timezone validation, calendar-aware diff
+├── audit-timezone-info.test.js        # getTimezoneOffset cache (bounded, cached == fresh) and getTimezoneInfo/isDST hemisphere correctness
+├── beforeAfter.test.js                # Before/after comparisons
+├── cache-state-fixes.test.js          # Parse-cache keys and validity (forced templates, colliding texts, today-relative inputs, locale language), caching() does not keep the process alive, atomic config(), bounded caches
+├── calendar-semantics.test.js         # Calendar semantics: diff/diff_range, isBetween(unit), add() amounts, set() day clamping, fromNow() rounding, valueOfLocal(), hour periods across offset changes, historical local mean time
 ├── comprehensive-timezone-formats.test.js # All format templates (24 combinations)
-├── cross-platform-timezone.test.js # Cross-platform compatibility
-├── dynamic-format.test.js         # Dynamic template compiler (token combos, [bracket] literals, cache invalidation)
-├── format-parity.test.js          # Byte-parity contract replayed from test/fixtures/format-parity.json
-├── format.test.js                 # Formatting functionality (including overflow time)
-├── fromNow.test.js                # Relative time calculations
-├── functions-coverage.test.js     # Coverage tests for functions.js utilities
-├── hermes-fallback.test.js        # Hermes/React Native timezone fallback
-├── index-coverage.test.js         # Coverage tests for index.js
-├── other.test.js                  # Miscellaneous functionality
-├── startEndOf.test.js             # Start/end of period operations
-├── time-formatting.test.js        # Time-specific formatting tests
-├── time-operations.test.js        # Date manipulation tests
-├── time-parsing.test.js           # Various date/time parsing scenarios
-├── timezone.test.js               # Basic timezone functionality
-├── user-timezone-scenarios.test.js # Real-world timezone scenarios
-├── real-world-timezone.test.js    # Real-world timezone examples
-├── validInvalid.test.js           # Date validation
-└── weekStartDay.test.js           # Week start day functionality
+├── coverage-gaps.test.js              # Previously untested public API: isSameOrBefore/After, caching_flush, user timezone, diff is_decimal, duration units, valueOfLocal, isBetween units, convertToTimezone default source
+├── cross-platform-timezone.test.js    # Cross-platform compatibility
+├── dst-arithmetic.test.js             # DST-safe add/startOf/endOf/set via .tz() and the global timezone; add/set onto a repeated hour keep the original side (moment-timezone + Luxon rows, also on the system-zone fast path); every local midnight 2024-2026; global-timezone parsing of every wall-clock time around transitions
+├── dynamic-format.test.js             # Dynamic template compiler (token combos, [bracket] literals, cache invalidation)
+├── format-parity.test.js              # Byte-parity contract replayed from test/fixtures/format-parity.json
+├── format-tokens.test.js              # Full moment/dayjs token vocabulary (YY, M, Q, DDD, weekday numbers, week-of-year, week-years, k/kk, fractional seconds, Z/z)
+├── format.test.js                     # Formatting functionality (including overflow time)
+├── fromNow.test.js                    # Relative time calculations
+├── functions-coverage.test.js         # Coverage tests for functions.js utilities
+├── hermes-fallback.test.js            # Hermes/React Native timezone fallback
+├── index-coverage.test.js             # Coverage tests for index.js
+├── nope-redis.test.js                 # Black-box tests of the vendored nope-redis cache (fake timers: TTL expiry, cleanup interval, LRU bookkeeping, hit/miss stats)
+├── other.test.js                      # Miscellaneous functionality
+├── parse-behavior-lock.test.js        # Constructor auto-detection lock: input → detected_format → instant
+├── parsing-fixes.test.js              # Constructor format argument for every predefined template (incl. 2-digit years), ReDoS inputs, explicit zones checked against the engine itself, anchored text templates, other-language text + time, years 0-99, numeric inputs, locale month names, today-relative inputs, system-zone DST gaps
+├── real-world-timezone.test.js        # Real-world timezone examples
+├── report-fixes.test.js               # isValid legacy-regex parity corpus, strict-mode moment parity, mm:ss template, dynamic-template validation
+├── startEndOf.test.js                 # Start/end of period operations
+├── time-formatting.test.js            # Time-specific formatting tests
+├── time-operations.test.js            # Date manipulation tests
+├── time-parsing.test.js               # Various date/time parsing scenarios
+├── timezone.test.js                   # Basic timezone functionality
+├── user-timezone-scenarios.test.js    # Real-world timezone scenarios
+├── validation-display-fixes.test.js   # Strict isValid vs moment strict, toLocale*() locale/timezone, getAvailableTimezones(), isDST() (moment definition), Hermes "24" midnight
+├── validInvalid.test.js               # Date validation
+├── weekStartDay.test.js               # Week start day functionality
+└── helpers/run-in-zone.js             # runInZone(): runs a snippet in a child Node process with a fixed TZ
 ```
+
+Run `npx jest --listTests` for the current list; the counts above were taken with `npx jest --silent`.
 
 The `format-parity.json` fixture was generated from the pre-refactor (switch-case) formatter via
 `scripts/generate-format-fixtures.js`. It is the byte-parity contract for formatter refactors —
 do NOT regenerate it in the same change that intentionally alters formatter output.
+
+### Independent oracles and pinned timezones
+
+The bug-fix suites (`dst-arithmetic`, `parsing-fixes`, `cache-state-fixes`, `calendar-semantics`,
+`validation-display-fixes`) do not take their expected values from kk-date itself:
+
+- **Independent oracles.** Expected values come from moment / moment-timezone (constructor
+  templates, strict `isValid`, `diff` fractions, `isDST`), Luxon (DST arithmetic — with two
+  America/Havana rows hand-verified where Luxon is wrong) and `Intl.DateTimeFormat` (the local
+  date/wall clock of every scanned midnight and transition).
+- **Pinned system timezones.** Scenarios that depend on the *system* timezone (a UTC container
+  configured for another zone, a DST gap of the system zone, "today" at a pinned `Date.now()`) run
+  in a child Node process started with a fixed `TZ` (`runInZone()` in `test/helpers/run-in-zone.js`), so
+  they give the same result on every machine. Everything else must pass under any system timezone —
+  CI runs the whole suite under a matrix of system timezones.
+
+When you add a test for a bug, follow the same rules: take the expected value from an independent
+source, and never let it depend on the timezone of the machine running the suite.
 
 ### Test File Template
 
@@ -147,6 +188,12 @@ test('should throw error for invalid timezone', () => {
 
 ```javascript
 describe('Timezone Conversion', () => {
+    // Naive strings such as '2024-08-23 10:00:00' are parsed in the GLOBAL timezone (by default the
+    // machine's). Pin it, or the expected wall-clock values change with the TZ of the test machine.
+    beforeEach(() => {
+        kk_date.setTimezone('UTC');
+    });
+
     // Define test data
     const testCases = [
         {
@@ -176,6 +223,9 @@ describe('Timezone Conversion', () => {
 ### Assertion Examples
 
 ```javascript
+// Inside a test, with kk_date.setTimezone('UTC') in beforeEach (see the template above)
+const date = new kk_date('2024-08-23 10:00:00'); // 10:00 UTC
+
 // Basic assertions
 expect(date.format('YYYY-MM-DD')).toBe('2024-08-23');
 expect(date.isValid()).toBe(true);
@@ -263,11 +313,17 @@ describe('Unit Tests', () => {
 
 ```javascript
 describe('Integration Tests', () => {
+    // Naive strings are parsed in the global timezone: pin it so the expected values below
+    // do not depend on the timezone of the machine running the tests.
+    beforeEach(() => {
+        kk_date.setTimezone('UTC');
+    });
+
     describe('Timezone Workflow', () => {
         test('should handle complete timezone workflow', () => {
-            // Create date in UTC
+            // Parsed as 10:00 UTC (the global timezone). An instance .config({ timezone }) or .tz()
+            // would only change the DISPLAY zone — it never reinterprets the input string.
             const utcDate = new kk_date('2024-08-23 10:00:00');
-            utcDate.config({timezone: 'UTC'});
 
             // Convert to multiple timezones.
             // Use a fresh instance per conversion — .tz() mutates the instance it is called on.
@@ -488,30 +544,47 @@ describe('Benchmarks', () => {
 
 ### Memory Leak Tests
 
+A heap delta is only meaningful with a forced garbage collection. Without it the number is
+GC-timing noise (in our runs, the 100,000-iteration loop below reported anything from about
+−35 MB to +8 MB). Run memory tests with `global.gc` exposed, e.g. for a `test/memory.test.js`
+containing the test below:
+
+```bash
+node --expose-gc node_modules/.bin/jest test/memory.test.js
+```
+
 ```javascript
 describe('Memory Leak Tests', () => {
-    test('should not leak memory with repeated operations', () => {
+    test('should not grow the heap with repeated operations', () => {
+        const run = (iterations) => {
+            for (let i = 0; i < iterations; i++) {
+                const date = new kk_date('2024-08-23 10:00:00');
+                date.tz('America/New_York');
+                date.format('YYYY-MM-DD HH:mm:ss');
+                date.add(1, 'days');
+                date.add(-1, 'hours');
+            }
+        };
+
+        // Warm up first: lazily built name tables, Intl formatters and cache entries are
+        // one-time costs, not leaks.
+        run(1000);
+        global.gc?.();
         const initialMemory = process.memoryUsage().heapUsed;
-        
-        // Perform many operations
-        for (let i = 0; i < 1000; i++) {
-            const date = new kk_date('2024-08-23 10:00:00');
-            date.tz('America/New_York');
-            date.format('YYYY-MM-DD HH:mm:ss');
-            date.add(1, 'days');
-            date.add(-1, 'hours');
+
+        run(100000);
+        global.gc?.();
+        const memoryIncrease = process.memoryUsage().heapUsed - initialMemory;
+
+        if (!global.gc) {
+            // Without a forced GC the delta is indicative only — report it, don't assert on it.
+            console.log(`Heap delta (no forced GC): ${(memoryIncrease / 1024 / 1024).toFixed(2)} MB`);
+            return;
         }
-        
-        // Force garbage collection if available
-        if (global.gc) {
-            global.gc();
-        }
-        
-        const finalMemory = process.memoryUsage().heapUsed;
-        const memoryIncrease = finalMemory - initialMemory;
-        
-        // Memory increase should be minimal (less than 1MB)
-        expect(memoryIncrease).toBeLessThan(1024 * 1024);
+
+        // With a forced GC, 100,000 iterations after the warm-up grow the heap by well under
+        // 1 MB (≈0.06 MB measured); a leak would grow with the iteration count.
+        expect(memoryIncrease).toBeLessThan(2 * 1024 * 1024);
     });
 });
 ```
@@ -579,52 +652,66 @@ describe('New Feature Name', () => {
 # Run all tests
 npm test
 
-# Run tests with coverage
-npm test -- --coverage
+# Run tests with coverage (fails if the coverageThreshold in package.json is not met)
+npm run test:coverage
 
-# Run specific test categories
-npm test -- --testPathPattern="timezone"
-npm test -- --testPathPattern="format"
+# Run specific test categories (file path patterns)
+npm test -- --testPathPatterns="timezone"
+npm test -- --testPathPatterns="format"
 
-# Check test coverage
+# Check test coverage (text report only)
 npm test -- --coverage --coverageReporters=text
+
+# Lint (CI runs this too); auto-fix lint and formatting issues
+npm run lint
+npm run lint:fix
+
+# Run the suite under another system timezone, as CI does
+TZ=Pacific/Auckland npm test
 ```
 
 ### Continuous Integration
 
-The project uses GitHub Actions for continuous integration:
+Pull requests to `main` and `dev` run `.github/workflows/pr-checks.yml` (GitHub Actions). Its jobs:
 
-```yaml
-# .github/workflows/test.yml
-name: Tests
+| Job | What it runs |
+|-----|--------------|
+| **Lint** | `npm run lint` (Biome) on Node.js 26 |
+| **Unit tests** | `npm run test` on Node.js 22 and 24, `npm run test:coverage` on Node.js 26 (enforces the coverage thresholds); the supported range is Node.js 22+ |
+| **Multi-Timezone Tests** | `npm run test` on Node.js 26, once per entry of a matrix of system timezones (`TZ=<zone>`) |
+| **Hermes/React Native Fallback Tests** | `npx jest hermes-fallback`, then the same file under several system timezones |
+| **Hermes/React Native Simulation Test** | `node -e` scripts that simulate an engine without `timeZoneName: 'longOffset'` support (part missing, constructor throwing, empty result) and check `getTimezoneOffset`, `startOf`/`endOf` and global-timezone configs |
+| **All checks passed** | A single gate that fails if any job above failed, was cancelled or was skipped (the job to require in branch protection) |
 
-on: [push, pull_request]
+The Node.js 26 unit-test job runs `npm run test:coverage`, so a pull request that drops coverage
+below the thresholds fails; run `npm run test:coverage` locally before opening one. A newer push to
+the same pull request cancels the checks still running for the previous push.
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    
-    strategy:
-      matrix:
-        node-version: [16, 18, 20]
-    
-    steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-node@v3
-      with:
-        node-version: ${{ matrix.node-version }}
-    
-    - run: npm ci
-    - run: npm test
-    - run: npm test -- --coverage
-```
+Releases (`.github/workflows/publish.yml`, on every push to `main`) install, run the test suite
+again on the exact commit, and only then publish to npm (see [VERSIONING.md](VERSIONING.md)).
+
+Benchmarks are not part of the PR checks: the separate **Update Benchmark Docs** workflow
+(`.github/workflows/update-benchmarks.yml`) runs the tests and both benchmarks on pushes to `dev`
+that change JavaScript (or on manual dispatch) and refreshes the auto-generated performance
+tables in `README.md` and `docs/PERFORMANCE.md`.
 
 ### Test Coverage Requirements
 
-- **Minimum coverage**: 90% for all code
-- **Critical paths**: 100% coverage for timezone and formatting functions
-- **Error handling**: 100% coverage for error conditions
-- **Edge cases**: Comprehensive coverage for boundary conditions
+`package.json` sets a global Jest `coverageThreshold`, enforced whenever coverage is collected
+(`npm run test:coverage` / `npm test -- --coverage`); Jest fails the run if any metric falls
+below it:
+
+| Metric | Enforced minimum | Measured (33 files, 1,426 tests) |
+|--------|------------------|----------------------------------|
+| Statements | 88% | 91.83% |
+| Branches | 85% | 88.81% |
+| Functions | 95% | 97.30% |
+| Lines | 88% | 91.76% |
+
+Coverage is collected from the four runtime files (`index.js`, `functions.js`, `constants.js`,
+`nope-redis.js`). New code should come with tests that keep the measured numbers from dropping:
+cover the happy path, the error conditions (kk-date throws instead of returning invalid values)
+and the boundary cases (DST transitions, month ends, leap years, year boundaries).
 
 ### Reporting Issues
 

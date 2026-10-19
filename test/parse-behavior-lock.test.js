@@ -11,6 +11,14 @@ kk_date.config({ timezone: 'UTC' });
  * native-fallback results ('12:30:60' parsing as year 1960, '05-12-31' as 2031-05-12, ...).
  * These are the exact behaviors the fast paths must not change; anything not claimed by a
  * fast path must keep falling through to the same legacy code.
+ *
+ * Deliberate changes (bug fixes, each also covered by its own test file):
+ * - zero-padded days satisfy the DD text templates: '09 January 2024' is 'DD MMMM YYYY' (was 'D MMMM YYYY');
+ * - text templates are anchored, so they no longer claim the date prefix of a longer input and drop
+ *   the rest: 'Monday, 15 January 2024 extra' / '1st Jan 2024 foo' now throw (fail-fast), and
+ *   '15th May 2024 08:00:00' keeps its time instead of silently becoming midnight;
+ * - strings carrying their own offset/zone (ISO '+03:00', RFC 2822 / HTTP dates, Date#toString) are
+ *   absolute instants ('ISO8601' / 'RFC2822') and are never reinterpreted in the global timezone.
  */
 
 // [input, detected_format ('THROW' when construction must throw), format('YYYY-MM-DD HH:mm:ss.SSS')]
@@ -32,22 +40,26 @@ const DATE_CASES = [
 	['2024-15-01', 'YYYY-DD-MM', '2024-01-15 00:00:00.000'],
 	['15 January 2024', 'DD MMMM YYYY', '2024-01-15 00:00:00.000'],
 	['1 January 2024', 'DD MMMM YYYY', '2024-01-01 00:00:00.000'],
-	['09 January 2024', 'D MMMM YYYY', '2024-01-09 00:00:00.000'],
+	['09 January 2024', 'DD MMMM YYYY', '2024-01-09 00:00:00.000'],
 	['31 January 2024', 'DD MMMM YYYY', '2024-01-31 00:00:00.000'],
 	['15 Jan 2024', 'DD MMMM YYYY', '2024-01-15 00:00:00.000'],
 	['2024 Jan 15', 'YYYY MMM DD', '2024-01-15 00:00:00.000'],
 	['Monday, 15 January 2024', 'dddd, DD MMMM YYYY', '2024-01-15 00:00:00.000'],
-	['Monday, 15 January 2024 extra', 'dddd, DD MMMM YYYY', '2024-01-15 00:00:00.000'],
+	['Monday, 15 January 2024 14:30', null, '2024-01-15 14:30:00.000'],
 	['2024-01-15T14:30:45.123Z', 'ISO8601', '2024-01-15 14:30:45.123'],
 	['2024-01-15T14:30:45Z', 'ISO8601', '2024-01-15 14:30:45.000'],
 	['2024-01-15T14:30:45', null, '2024-01-15 14:30:45.000'],
 	['2024-01-15T24:00:00Z', 'ISO8601', '2024-01-16 00:00:00.000'],
+	['2024-01-15T14:30:45+03:00', 'ISO8601', '2024-01-15 11:30:45.000'],
+	['2024-01-15 10:30:45Z', 'ISO8601', '2024-01-15 10:30:45.000'],
+	['Mon, 15 Jan 2024 07:30:45 GMT', 'RFC2822', '2024-01-15 07:30:45.000'],
+	['Mon, 15 Jan 2024 10:30:45 +0300', 'RFC2822', '2024-01-15 07:30:45.000'],
 	['1st Jan 2024', 'Do MMM YYYY', '2024-01-01 00:00:00.000'],
 	['15th January 2024', 'Do MMM YYYY', '2024-01-15 00:00:00.000'],
 	['3. Oktober 2024', 'Do MMM YYYY', '2024-10-03 00:00:00.000'],
-	['1st Jan 2024 foo', 'Do MMM YYYY', '2024-01-01 00:00:00.000'],
+
 	['21st Dec 1999', 'Do MMM YYYY', '1999-12-21 00:00:00.000'],
-	['15th May 2024 08:00:00', 'Do MMM YYYY', '2024-05-15 00:00:00.000'],
+	['15th May 2024 08:00:00', null, '2024-05-15 08:00:00.000'],
 	// native-fallback oddities (V8 legacy string parser) that must keep falling through
 	['12:30:60', null, '1960-01-01 12:30:00.000'],
 	['12:30:90', null, '1990-01-01 12:30:00.000'],
@@ -70,6 +82,8 @@ const DATE_CASES = [
 	['32 Aug 2024', 'THROW', null],
 	['asfasf', 'THROW', null],
 	['2024-01-15 asdasd', 'THROW', null],
+	['Monday, 15 January 2024 extra', 'THROW', null],
+	['1st Jan 2024 foo', 'THROW', null],
 ];
 
 // Rows whose detected_format changes on purpose with the fast-path work (new YYYY.MM.DD /
@@ -82,9 +96,9 @@ const VALUE_ONLY_CASES = [
 	['15 January Monday, 2024', '2024-01-15 00:00:00.000'],
 ];
 
-// Offset-carrying ISO strings are reinterpreted relative to the SYSTEM timezone (legacy
-// behavior), so their instant varies with TZ — only detected_format and validity are locked.
-const DETECTED_ONLY_CASES = [['2024-01-15T14:30:45+03:00', null]];
+// Offset-carrying strings used to be reinterpreted relative to the SYSTEM timezone, so their
+// instant varied with TZ; they are absolute now and locked in DATE_CASES above.
+const DETECTED_ONLY_CASES = [];
 
 // Today-anchored inputs: the calendar date is "today", so only detected_format and the
 // time-of-day are locked. [input, detected_format, format('HH:mm:ss.SSS')]
@@ -145,7 +159,15 @@ describe('parser behavior lock (auto-detection)', () => {
 	});
 
 	test('caching on/off produces identical results across format families', () => {
-		const samples = ['2024-01-15', '2024-01-15 14:30:45', '15.01.2024 14:30:45', '14:30:45', '15 January 2024', '2024-01-15T14:30:45.123Z', '2024-01'];
+		const samples = [
+			'2024-01-15',
+			'2024-01-15 14:30:45',
+			'15.01.2024 14:30:45',
+			'14:30:45',
+			'15 January 2024',
+			'2024-01-15T14:30:45.123Z',
+			'2024-01',
+		];
 		const withoutCache = samples.map((s) => new kk_date(s).format('YYYY-MM-DD HH:mm:ss.SSS'));
 		kk_date.caching({ status: true });
 		try {

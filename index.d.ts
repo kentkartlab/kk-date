@@ -11,7 +11,11 @@ declare class KkDate {
 	date: Date;
 
 	/**
-	 * Detected format of the input
+	 * Detected format of the input: a predefined template name (e.g. 'YYYY-MM-DD', or the forced
+	 * template), 'ISO8601' / 'RFC2822' for strings carrying their own UTC offset or zone (absolute
+	 * instants, never reinterpreted in the global timezone), 'Xx' for numeric timestamps, 'now' for
+	 * Date objects and the no-argument constructor, 'kkDate' for clones, or null for other
+	 * native-parsed strings.
 	 */
 	detected_format: string | null;
 
@@ -22,11 +26,15 @@ declare class KkDate {
 
 	/**
 	 * Creates a new KkDate instance
-	 * @param date - Date input (string, Date, KkDate, or timestamp)
-	 * @param format - Optional format string for parsing
-	 * @throws Error if date is invalid
+	 * @param date - Date input (string, Date, KkDate, or timestamp). Numbers with up to 10 digits
+	 * (sign included) are Unix seconds, longer ones milliseconds; fractional values follow the same
+	 * rule on their integer part.
+	 * @param format - Optional predefined template the input must match; its fields then define the
+	 * date (missing date fields: today / the current year or month; a bare weekday name: that day of
+	 * the current week; missing time fields: 0).
+	 * @throws Error if date is invalid, the template is unsupported or the input does not match it
 	 */
-	constructor(date?: string | Date | KkDate | number, format?: KkDate.FormatType);
+	constructor(date?: string | Date | KkDate | number, format?: KkDate.ParseFormatType | (string & {}));
 
 	/**
 	 * Returns the timestamp in milliseconds
@@ -65,10 +73,13 @@ declare class KkDate {
 	isSame(date: string | Date | KkDate | number): boolean;
 
 	/**
-	 * Checks if this date is between two dates
+	 * Checks if this date is between two dates, inclusive. With a unit other than 'milliseconds',
+	 * calendar periods in this instance's timezone are compared (moment's isBetween with '[]'): the
+	 * period containing this date must lie between the periods containing start and end.
 	 * @param start - Start date
 	 * @param end - End date
 	 * @param unit - Unit for comparison (default: 'milliseconds')
+	 * @throws Error('Invalid Date') on an invalid instance
 	 */
 	isBetween(start: string | Date | KkDate | number, end: string | Date | KkDate | number, unit?: KkDate.TimeUnit | 'weeks' | 'milliseconds'): boolean;
 
@@ -98,20 +109,19 @@ declare class KkDate {
 	toUTCString(): string;
 
 	/**
-	 * Returns locale-specific date string.
-	 * Locale is controlled via `.config({ locale: 'tr' })` or globally via `KkDate.config({ locale: 'tr' })`.
+	 * Returns locale-specific date string. Locale: the instance's `.config({ locale })`, else the
+	 * global `KkDate.config({ locale })` once set, else the runtime default. Time zone: the
+	 * instance's `.tz()`/`.config({ timezone })`, else the global timezone, unless `options.timeZone` is given.
 	 */
 	toLocaleDateString(options?: Intl.DateTimeFormatOptions): string;
 
 	/**
-	 * Returns locale-specific date and time string.
-	 * Locale is controlled via `.config({ locale: 'tr' })` or globally via `KkDate.config({ locale: 'tr' })`.
+	 * Returns locale-specific date and time string (locale and time zone as for toLocaleDateString).
 	 */
 	toLocaleString(options?: Intl.DateTimeFormatOptions): string;
 
 	/**
-	 * Returns locale-specific time string.
-	 * Locale is controlled via `.config({ locale: 'tr' })` or globally via `KkDate.config({ locale: 'tr' })`.
+	 * Returns locale-specific time string (locale and time zone as for toLocaleDateString).
 	 */
 	toLocaleTimeString(options?: Intl.DateTimeFormatOptions): string;
 
@@ -126,39 +136,52 @@ declare class KkDate {
 	valueOf(): number;
 
 	/**
-	 * Returns the local timezone-adjusted timestamp in milliseconds.
-	 * Unlike `valueOf()` (UTC ms), this applies the global timezone offset
-	 * so the value aligns with local wall-clock time.
+	 * Returns `valueOf()` shifted by (system offset − global timezone offset), both taken at this
+	 * instant: the instant whose global-timezone wall clock reads what the system clock reads at this
+	 * instant. Equals `valueOf()` while the global timezone is the system timezone.
 	 * @param check_error - If `false`, skips the invalid-date check (default: `true`)
 	 */
 	valueOfLocal(check_error?: boolean): number;
 
 	/**
-	 * Adds time to the date
+	 * Adds time to the date (mutates and returns this instance). Seconds/minutes/hours are absolute
+	 * durations (fractions exact, DST-independent); days/weeks/months/years move the wall clock in this
+	 * instance's timezone (fractions rounded half away from zero, month ends clamped). A wall-clock
+	 * result skipped by a DST gap moves forward; a repeated one resolves to the earlier instant.
 	 * @param amount - Amount to add (can be negative to subtract)
-	 * @param type - Unit of time ('weeks' is supported here in addition to TimeUnit)
+	 * @param type - Unit of time
 	 * @returns This instance for chaining
 	 */
-	add(amount: number | KkDate.DurationObject, type?: KkDate.TimeUnit | 'weeks'): this;
+	add(amount: number, type: KkDate.TimeUnit | 'weeks'): this;
+	/**
+	 * Adds a duration created with `KkDate.duration()` (its exact length in milliseconds).
+	 */
+	add(duration: KkDate.DurationObject): this;
 
 	/**
-	 * Calculates difference between this date and another
+	 * Calculates the difference from this date to `end` (positive when `end` is later — the
+	 * opposite sign of moment). Seconds/minutes/hours are elapsed time; days/weeks are calendar days in
+	 * this instance's timezone (a 23- or 25-hour DST day counts as one); months/years are calendar-aware
+	 * (moment's anchor arithmetic: `a.diff(b, unit, true) === -moment(a).diff(b, unit, true)`).
 	 * @param end - End date
 	 * @param type - Unit for the result
-	 * @param is_decimal - Whether to return decimal value
+	 * @param is_decimal - Whether to return the fractional value (default: truncated toward zero)
 	 */
-	diff(end: string | Date | KkDate | number, type: KkDate.TimeUnit, is_decimal?: boolean): number;
+	diff(end: string | Date | KkDate | number, type: KkDate.TimeUnit | 'weeks', is_decimal?: boolean): number;
 
 	/**
-	 * Returns array of formatted dates between this date and end date
+	 * Returns this date and every date `n` units after it (anchored on this date, so month ends clamp
+	 * like add()), up to the whole number of units to `end`, formatted with `template`.
 	 * @param end - End date
 	 * @param type - Unit for stepping
-	 * @param template - Format template for output
+	 * @param template - Format template for output (default 'YYYY-MM-DD')
 	 */
-	diff_range(end: string | Date | KkDate | number, type: KkDate.TimeUnit, template?: KkDate.FormatType): string[];
+	diff_range(end: string | Date | KkDate | number, type: KkDate.TimeUnit | 'weeks', template?: KkDate.FormatType): string[];
 
 	/**
-	 * Sets a specific unit of the date
+	 * Sets a unit of the date on the wall clock of this instance's timezone (mutates and returns this
+	 * instance). Months are 0-based; setting months or years clamps the day to the target month like
+	 * moment (Jan 31 → set February → Feb 28/29); other units overflow like Date.
 	 * @param type - Unit to set
 	 * @param value - Value to set
 	 * @returns This instance for chaining
@@ -191,9 +214,9 @@ declare class KkDate {
 	 * date.format('[Week] w [of] gggg') // → "Week 3 of 2024"
 	 * date.format('GGGG-[W]WW-E')     // → "2024-W03-1"
 	 * date.format('DD.MM.YYYY HH:mm Z') // → "15.01.2024 10:30 +03:00"
-	 * date.format('X')                // → 1705276800  (Unix seconds, number)
-	 * date.format('x')                // → 1705276800000  (Unix ms, number)
-	 * date.format('[ts] X')           // → "ts 1705276800"  (in-template: string)
+	 * date.format('X')                // → 1705303800  (Unix seconds, number)
+	 * date.format('x')                // → 1705303800000  (Unix ms, number)
+	 * date.format('[ts] X')           // → "ts 1705303800"  (in-template: string)
 	 * date.format()                   // → "2024-01-15T10:30:00+03:00"
 	 */
 	format(template: 'X'): number;
@@ -231,8 +254,8 @@ declare class KkDate {
 	tz(timezone: string): this;
 
 	/**
-	 * Gets timezone information
-	 * @param timezone - IANA timezone identifier (optional)
+	 * Gets timezone information for this instant
+	 * @param timezone - IANA timezone identifier (optional; defaults to the instance/global timezone)
 	 */
 	getTimezoneInfo(timezone?: string | null): KkDate.TimezoneInfo;
 
@@ -249,14 +272,16 @@ declare class KkDate {
 	getTimezoneAbbreviation(timezone?: string | null): string;
 
 	/**
-	 * Sets date to start of the given unit
+	 * Sets the date to the start of the given unit in this instance's timezone. A day starts at its
+	 * first instant (a midnight skipped by DST resolves forward); seconds/minutes/hours periods never
+	 * straddle an offset change.
 	 * @param unit - Time unit
 	 * @returns This instance for chaining
 	 */
 	startOf(unit: KkDate.PeriodUnit): this;
 
 	/**
-	 * Sets date to end of the given unit
+	 * Sets the date to the end of the given unit: the last millisecond before the next period starts.
 	 * @param unit - Time unit
 	 * @returns This instance for chaining
 	 */
@@ -283,6 +308,67 @@ declare namespace KkDate {
 	 * Period units for startOf/endOf
 	 */
 	type PeriodUnit = 'seconds' | 'minutes' | 'hours' | 'days' | 'weeks' | 'months' | 'years';
+
+	/**
+	 * Predefined templates the constructor's format argument and the legacy isValid patterns accept
+	 */
+	type ParseFormatType =
+		| 'dddd'
+		| 'ddd'
+		| 'YYYY'
+		| 'MM'
+		| 'DD'
+		| 'MMM'
+		| 'MMMM'
+		| 'HH'
+		| 'mm'
+		| 'ss'
+		| 'YYYY-MM'
+		| 'YYYY-MM-DD'
+		| 'YYYY-DD-MM'
+		| 'YYYY-MM-DD HH'
+		| 'YYYY-MM-DD HH:mm'
+		| 'YYYY-MM-DD HH:mm:ss'
+		| 'YYYY-MM-DDTHH:mm:ss'
+		| 'YYYYMMDD'
+		| 'YYYYMMDDHHmmss'
+		| 'YYYY.MM.DD'
+		| 'YYYY.MM.DD HH'
+		| 'YYYY.MM.DD HH:mm'
+		| 'YYYY.MM.DD HH:mm:ss'
+		| 'DD.MM.YYYY'
+		| 'DD.MM.YYYY HH:mm'
+		| 'DD.MM.YYYY HH:mm:ss'
+		| 'DD-MM-YYYY'
+		| 'DD-MM-YYYY HH'
+		| 'DD-MM-YYYY HH:mm'
+		| 'DD-MM-YYYY HH:mm:ss'
+		| 'DD/MM/YYYY'
+		| 'MM/DD/YYYY'
+		| 'HH:mm'
+		| 'HH:mm:ss'
+		| 'HH:mm:ss.SSS'
+		| 'mm:ss'
+		| 'hh:mm'
+		| 'hh:mm:ss'
+		| 'hh:mm:ss.SSS'
+		| 'MMMM YYYY'
+		| 'MMM YYYY'
+		| 'DD MMMM'
+		| 'DD MMM'
+		| 'DD MMMM YYYY'
+		| 'DD MMM YYYY'
+		| 'DD MMM YYYY HH:mm'
+		| 'D MMMM YYYY'
+		| 'Do MMMM YYYY'
+		| 'Do MMM YYYY'
+		| 'DD MMMM dddd'
+		| 'DD MMMM YYYY dddd'
+		| 'DD MMMM dddd YYYY'
+		| 'DD MMMM dddd, YYYY'
+		| 'dddd, DD MMMM YYYY'
+		| 'YYYY MMM DD'
+		| 'YYYY MMMM DD';
 
 	/**
 	 * Supported format types
@@ -481,6 +567,8 @@ declare namespace KkDate {
 		criticalError: number;
 		defaultTtl: number;
 		totalHits: number;
+		/** lookups that found no (unexpired) entry; hit rate = totalHits / (totalHits + totalMisses) */
+		totalMisses: number;
 		cacheSize: number;
 		maxCacheSize: number;
 		total: number;
@@ -566,9 +654,11 @@ declare namespace KkDate {
 	 *
 	 * @param date_string - Date string to validate
 	 * @param template - Format template
-	 * @param is_strict - Adds wall-clock semantics on top of the shape check (moment strict
-	 * parity): 4-digit years 1700-2199, real calendar days incl. leap years, hours 00-23
-	 * plus exactly 24:00[:00], and no :ss tail on HH:mm. Defaults to false.
+	 * @param is_strict - Adds moment-strict semantics on top of the shape check: 4-digit years
+	 * 1700-2199, real calendar days incl. leap years, hours 00-23 plus exactly 24:00[:00], no :ss tail
+	 * on HH:mm, month/weekday names of the token's form (any supported language) and a weekday that
+	 * matches the date, two-digit DD, no leading zero on D/M/H/h/m/s, the ordinal suffix on Do, week
+	 * numbers that exist in their week-year and UTC offsets within ±14:00. Defaults to false.
 	 */
 	function isValid(date_string: string, template: FormatType | (string & {}), is_strict?: boolean): boolean;
 
@@ -588,12 +678,14 @@ declare namespace KkDate {
 	function convertToTimezone(date: Date, targetTimezone: string, sourceTimezone?: string): Date;
 
 	/**
-	 * Get list of available timezones
+	 * Every IANA timezone the engine supports (Intl.supportedValuesOf('timeZone'), plus 'UTC'); a list
+	 * of common zones on engines without Intl.supportedValuesOf. Returns a new array on each call.
 	 */
 	function getAvailableTimezones(): string[];
 
 	/**
-	 * Check if date is in DST for timezone
+	 * Check if date is in DST for timezone (moment's definition: the offset exceeds the one in force at
+	 * the same wall-clock day and time in January or June of the same year)
 	 * @param timezone - IANA timezone identifier
 	 * @param date - Date to check
 	 */
@@ -626,8 +718,9 @@ declare namespace KkDate {
 	function getTimezone(): string;
 
 	/**
-	 * Set global timezone
+	 * Set global timezone: the zone naive input strings are read in and dates are displayed in
 	 * @param timezone - IANA timezone identifier
+	 * @throws Error('Invalid timezone: …') for anything but a valid IANA zone name
 	 */
 	function setTimezone(timezone: string): void;
 
@@ -637,7 +730,7 @@ declare namespace KkDate {
 	function getUserTimezone(): string;
 
 	/**
-	 * Set user timezone
+	 * Set the user timezone: the default source zone of convertToTimezone() (nothing else uses it)
 	 * @param timezone - IANA timezone identifier
 	 */
 	function setUserTimezone(timezone: string): void;

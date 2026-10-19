@@ -12,18 +12,53 @@
  *   node scripts/update-benchmark-docs.js
  *     - with no args, runs both benchmarks itself (slow).
  *
- * Run by the "Update Benchmark Docs" workflow on PRs to `dev`.
+ * Run by the "Update Benchmark Docs" workflow (.github/workflows/update-benchmarks.yml) on pushes
+ * to `dev` that change JavaScript, and on manual dispatch.
  */
 const fs = require('node:fs');
 const path = require('node:path');
+const zlib = require('node:zlib');
 const { execFileSync } = require('node:child_process');
 
 const ROOT = path.resolve(__dirname, '..');
 const README = path.join(ROOT, 'README.md');
 const PERF = path.join(ROOT, 'docs', 'PERFORMANCE.md');
 
-// Static (non-benchmark) columns for the memory table.
-const BUNDLE = { 'kk-date': '15 KB', 'Moment.js': '297 KB', 'Day.js': '18.5 KB', Luxon: '71 KB' };
+// Each library loaded the way benchmark.js loads it (Day.js with the plugins it extends Day.js with).
+const LOADERS = {
+	'kk-date': () => require(path.join(ROOT, 'index.js')),
+	'Moment.js': () => require('moment-timezone'),
+	'Day.js': () => {
+		require('dayjs');
+		require('dayjs/plugin/utc');
+		require('dayjs/plugin/timezone');
+		require('dayjs/plugin/customParseFormat');
+	},
+	Luxon: () => require('luxon'),
+};
+
+/**
+ * Size of a library measured the same way for all of them when the docs are generated: the sum of
+ * the gzipped (zlib) sizes of every file Node.js loads for it through require() — code and bundled
+ * data, minified or not, exactly as published.
+ *
+ * @param {string} lib - key of LOADERS
+ * @returns {string} e.g. '58 KB', or 'n/a' when the library is not installed
+ */
+function loadedSize(lib) {
+	const before = new Set(Object.keys(require.cache));
+	try {
+		LOADERS[lib]();
+	} catch {
+		return 'n/a';
+	}
+	const bytes = Object.keys(require.cache)
+		.filter((file) => !before.has(file))
+		.reduce((sum, file) => sum + zlib.gzipSync(fs.readFileSync(file)).length, 0);
+	return `${Math.round(bytes / 1024)} KB`;
+}
+
+// Static (non-benchmark) column for the memory table.
 const DST = { 'kk-date': 'Built-in', 'Moment.js': 'Plugin required', 'Day.js': 'Plugin required', Luxon: 'Built-in' };
 
 const SEQ_ORDER = ['Date Creation & Formatting', 'Time Operations', 'Timezone Conversions', 'Complex Operations'];
@@ -113,14 +148,14 @@ function memoryTable(comp) {
 		return `~${sign}${Math.abs(r)} MB${r < 0 ? '*' : ''}`;
 	};
 	const rows = [
-		`| **kk-date** | ${fmt(mem['kk-date'])} | **${BUNDLE['kk-date']}** | **${DST['kk-date']}** |`,
-		`| Moment.js | ${fmt(mem['Moment'])} | ${BUNDLE['Moment.js']} | ${DST['Moment.js']} |`,
-		`| Day.js | ${fmt(mem['Day.js'])} | ${BUNDLE['Day.js']} | ${DST['Day.js']} |`,
-		`| Luxon | ${fmt(mem['Luxon'])} | ${BUNDLE['Luxon']} | ${DST['Luxon']} |`,
+		`| **kk-date** | ${fmt(mem['kk-date'])} | **${loadedSize('kk-date')}** | **${DST['kk-date']}** |`,
+		`| Moment.js | ${fmt(mem['Moment'])} | ${loadedSize('Moment.js')} | ${DST['Moment.js']} |`,
+		`| Day.js | ${fmt(mem['Day.js'])} | ${loadedSize('Day.js')} | ${DST['Day.js']} |`,
+		`| Luxon | ${fmt(mem['Luxon'])} | ${loadedSize('Luxon')} | ${DST['Luxon']} |`,
 	];
 	return [
-		'| Library | Heap Δ / 100k instances* | Bundle Size | DST Support |',
-		'|---------|--------------------------|-------------|-------------|',
+		'| Library | Heap Δ / 100k instances* | Size (gzipped, as loaded) | DST Support |',
+		'|---------|--------------------------|---------------------------|-------------|',
 		...rows,
 	].join('\n');
 }
@@ -159,7 +194,7 @@ function whyBullets(seq, comp) {
 		d.lostScenarios.length
 			? `- **🚀 ~${d.avgFaster}% Less Time Overall** - Wins most scenarios vs Moment.js, Day.js, and Luxon (slower in isolated "${d.lostScenarios.join('", "')}")`
 			: `- **🚀 ~${d.avgFaster}% Less Time Overall** - Fastest in every scenario vs Moment.js, Day.js, and Luxon`,
-		'- **💾 Memory Efficient** - Object pooling + LRU cache eviction keep long-running processes stable',
+		'- **💾 Memory Efficient** - Bounded caches with automatic eviction keep long-running processes stable',
 		`- **⚙️ Smart Caching** - ~${d.cachePct}% less time on repeated operations with built-in caching`,
 	].join('\n');
 }
@@ -170,7 +205,7 @@ function advantagesBullets(seq, comp) {
 		`- **⚡ ~${d.avgFaster}% less time** on average vs competing libraries (comprehensive benchmark)`,
 		`- **🚀 up to ~${d.tzMaxFaster}% less time** in timezone operations (critical for global apps)`,
 		'- **📊 Big-data ready** - efficient for bulk/1M-operation workloads',
-		'- **💾 Stable memory** - object pooling + LRU eviction; net heap delta is GC-dependent (often negative)',
+		'- **💾 Stable memory** - bounded caches with automatic eviction; net heap delta is GC-dependent (often negative)',
 		`- **⚙️ ~${d.cachePct}% less time** with smart caching enabled`,
 		`- **🌍 Over ${d.tzXfloor}x faster** than Day.js in timezone conversions (Day.js takes ≈${d.tzXpct}% more time)`,
 	].join('\n');
@@ -185,7 +220,7 @@ function perfMetricsBullets(seq, comp) {
 		d.lostScenarios.length
 			? `- **kk-date does not win every scenario** — slower in isolated "${d.lostScenarios.join('", "')}"`
 			: '- **kk-date wins every scenario** in the current benchmark run',
-		'- **Net memory delta is GC-dependent** (often negative for several libraries); stability comes from object pooling + LRU eviction',
+		'- **Net memory delta is GC-dependent** (often negative for several libraries); bounded caches with automatic eviction keep long-running processes stable',
 		'- **Near-100% cache hit rate** for repeated operations',
 	].join('\n');
 }

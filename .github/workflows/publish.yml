@@ -10,6 +10,11 @@ permissions:
   contents: write # create the git tag + GitHub Release
   id-token: write # required for npm provenance
 
+# Releases run one at a time (two quick merges must not race on the same version).
+concurrency:
+  group: npm-publish
+  cancel-in-progress: false
+
 jobs:
   publish:
     name: Publish to npm
@@ -24,8 +29,15 @@ jobs:
         with:
           node-version: 26
           registry-url: 'https://registry.npmjs.org'
+      # The exact commit that is about to be published must pass the test suite.
+      - name: Install packages
+        run: npm ci
+      - name: Run tests
+        run: npm test
+      # Trusted publishing (OIDC) needs npm >= 11.5.1; pinned to the major so a new npm major
+      # cannot change the release step unnoticed.
       - name: Ensure npm supports trusted publishing
-        run: npm install -g npm@latest
+        run: npm install -g npm@11
       - name: Publish and release if the version is new
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

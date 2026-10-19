@@ -1,16 +1,25 @@
 {
 	"name": "kk-date",
-	"version": "5.0.1",
+	"version": "5.1.0",
 	"description": "kk-date is a fastest JavaScript library that parses, validations, manipulates, and displays dates and times. If you use Moment.js or Day.js already you can easily use kk-date.",
 	"main": "index.js",
 	"types": "index.d.ts",
+	"files": [
+		"index.js",
+		"functions.js",
+		"constants.js",
+		"nope-redis.js",
+		"index.d.ts",
+		"CHANGELOG.md"
+	],
 	"engines": {
 		"node": ">=22"
 	},
 	"scripts": {
-		"test": "npx jest",
-		"test:coverage": "npx jest --coverage",
+		"test": "jest",
+		"test:coverage": "jest --coverage",
 		"lint": "npx biome lint",
+		"lint:fix": "npx biome check --write",
 		"format": "npx biome format",
 		"benchmark2": "node benchmark2.js",
 		"benchmark": "node benchmark.js"
@@ -32,10 +41,10 @@
 		],
 		"coverageThreshold": {
 			"global": {
-				"branches": 65,
-				"functions": 65,
-				"lines": 70,
-				"statements": 70
+				"branches": 85,
+				"functions": 95,
+				"lines": 88,
+				"statements": 88
 			}
 		}
 	},
@@ -66,7 +75,6 @@
 		"kk-date",
 		"date",
 		"time",
-		"immutable",
 		"parse",
 		"format",
 		"validate",
@@ -86,6 +94,7 @@
 	"devDependencies": {
 		"@biomejs/biome": "2.4.6",
 		"dayjs": "^1.11.19",
+		"jest": "^30.5.2",
 		"luxon": "^3.7.2",
 		"moment-timezone": "^0.6.0"
 	}

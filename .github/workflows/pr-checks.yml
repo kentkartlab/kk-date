@@ -8,7 +8,17 @@ on:
     types:
       - opened
       - synchronize
+      - reopened
   workflow_dispatch:
+
+# The checks only read the repository.
+permissions:
+  contents: read
+
+# A newer push to the same PR supersedes the checks still running for the previous one.
+concurrency:
+  group: pr-checks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   lint:
@@ -50,7 +60,12 @@ jobs:
       - name: Install packages
         run: npm ci
       - name: Run tests
+        if: matrix.node-version != 26
         run: npm run test
+      # One leg also enforces the coverage thresholds in package.json ("jest.coverageThreshold").
+      - name: Run tests with coverage thresholds
+        if: matrix.node-version == 26
+        run: npm run test:coverage
 
   timezone-tests:
     name: Multi-Timezone Tests
@@ -65,11 +80,15 @@ jobs:
           # Europe
           - Europe/Istanbul
           - Europe/London
+          - Europe/Berlin
           - Europe/Moscow
           # Americas
           - America/New_York
           - America/Los_Angeles
           - America/Sao_Paulo
+          # DST changes at midnight (the start of the day does not exist / exists twice)
+          - America/Santiago
+          - Asia/Beirut
           # Asia
           - Asia/Tokyo
           - Asia/Shanghai
@@ -77,6 +96,8 @@ jobs:
           - Asia/Kolkata
           # Oceania
           - Australia/Sydney
+          # 30-minute DST shift
+          - Australia/Lord_Howe
           - Pacific/Auckland
           - Pacific/Honolulu
     steps:

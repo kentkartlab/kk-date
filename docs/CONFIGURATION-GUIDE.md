@@ -48,13 +48,26 @@ console.log(currentTimezone); // 'Europe/London' (the last value set)
 
 ### Setting User Timezone
 
+`setUserTimezone()` stores one value: the default **source** zone of
+`kk_date.convertToTimezone(date, targetTimezone, sourceTimezone)` when its third argument is
+omitted (it defaults to the system timezone). Nothing else reads it — parsing, `format()`, `.tz()`
+and `toLocale*()` are not affected. To display dates in a user's zone, pass the zone to `.tz()` (or
+an instance `.config({ timezone })`); to parse naive strings in a zone, use `setTimezone()`.
+
 ```javascript
-// Set user's preferred timezone
+// Set the default source zone of convertToTimezone() (validated: an invalid zone throws)
 kk_date.setUserTimezone('America/New_York');
 
-// Get user timezone
+// Get it back
 const userTimezone = kk_date.getUserTimezone();
 console.log(userTimezone); // 'America/New_York'
+
+// convertToTimezone() shifts a Date by (target offset − source offset) — here Tokyo minus New York, +13 h
+const shifted = kk_date.convertToTimezone(new Date('2024-08-23T15:00:00Z'), 'Asia/Tokyo');
+console.log(shifted.toISOString()); // '2024-08-24T04:00:00.000Z'
+
+// format() is unaffected by the user timezone (global timezone UTC here)
+console.log(new kk_date('2024-08-23 15:00:00').format('HH:mm')); // '15:00'
 ```
 
 ### Setting Global Locale
@@ -72,9 +85,13 @@ kk_date.config({ locale: 'de' });
 ### Setting Week Start Day
 
 ```javascript
-// Set week start day (0 = Sunday, 1 = Monday)
+// Set week start day: any integer 0-6 (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
 kk_date.config({ weekStartDay: 0 }); // Sunday (default)
 kk_date.config({ weekStartDay: 1 }); // Monday
+kk_date.config({ weekStartDay: 6 }); // Saturday
+
+// Out-of-range or non-integer numbers throw ('weekStartDay must be between 0 and 6',
+// 'weekStartDay must be an integer'); non-number values are ignored.
 
 // Note: Direct access to global_config is not available
 // Use configuration methods to check current settings
@@ -87,7 +104,6 @@ const kk_date = require('kk-date');
 
 // Configure global settings
 kk_date.setTimezone('UTC');
-kk_date.setUserTimezone('America/New_York');
 kk_date.config({ locale: 'en', weekStartDay: 1 }); // Monday
 
 // All new instances will use these settings
@@ -96,6 +112,25 @@ const date2 = new kk_date('2024-08-23 15:00:00');
 
 console.log(date1.format('HH:mm')); // '10:00' (UTC)
 console.log(date2.format('HH:mm')); // '15:00' (UTC)
+```
+
+### Validation and Atomic Updates
+
+`kk_date.config()` validates every option (`locale`, `timezone`, `weekStartDay`) before applying
+any of them. If one is invalid the call throws, and the global configuration — and every cached
+format — stays exactly as it was. Instance `.config()` works the same way.
+
+```javascript
+kk_date.config({ locale: 'en', timezone: 'UTC' });
+
+try {
+    kk_date.config({ locale: 'de', timezone: 'Invalid/Zone' }); // valid locale, invalid timezone
+} catch (error) {
+    console.log(error.message); // 'Invalid timezone: Invalid/Zone'
+}
+
+console.log(kk_date.getTimezone());                              // 'UTC'
+console.log(new kk_date('2024-08-23 10:00:00').format('MMMM')); // 'August' (the locale was not applied either)
 ```
 
 ## Instance Configuration
@@ -119,7 +154,7 @@ date.config({
 |--------|------|-------------|---------|
 | `timezone` | string | IANA timezone identifier | Global timezone |
 | `locale` | string | Locale for formatting | Global locale |
-| `weekStartDay` | number | Week start day (0 or 1) | Global week start day |
+| `weekStartDay` | number | Week start day: integer 0-6 (0 = Sunday, 1 = Monday, …, 6 = Saturday) | Global week start day |
 
 ### Instance Configuration Examples
 
@@ -193,7 +228,7 @@ You can check the current configuration at any time:
 ```javascript
 // Check global configuration
 console.log('Global timezone:', kk_date.getTimezone());
-console.log('User timezone:', kk_date.getUserTimezone());
+console.log('User timezone:', kk_date.getUserTimezone()); // convertToTimezone()'s default source zone only
 // Note: Direct access to locale and weekStartDay is not available
 
 // Check instance configuration
@@ -221,13 +256,18 @@ console.log(date2.format('HH:mm')); // '15:00' (UTC)
 
 ### User Timezone Preferences
 
+Keep each user's timezone in your own user/session state and pass it to `.tz()` — the global
+setters are process-wide, and `setUserTimezone()` does not affect display (see
+[Setting User Timezone](#setting-user-timezone)).
+
 ```javascript
-// Store user's timezone preference
-kk_date.setUserTimezone('America/New_York');
 kk_date.setTimezone('UTC'); // server works in UTC
 
+// The user's preference, e.g. loaded from their profile
+const userTimezone = 'America/New_York';
+
 // Convert a fresh instance to the user's timezone for display
-const userTime = new kk_date('2024-08-23 15:00:00').tz(kk_date.getUserTimezone());
+const userTime = new kk_date('2024-08-23 15:00:00').tz(userTimezone);
 console.log('Time for user:', userTime.format('HH:mm')); // '11:00'
 ```
 
@@ -266,13 +306,14 @@ console.log('User time:', userTime.format('HH:mm'));     // '11:00'
 #### 2. Client-Side Application
 
 ```javascript
-// Detect user's timezone
-const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-kk_date.setUserTimezone(userTimezone);
-
-// Use user timezone for all operations
+// In the browser the system timezone already is the user's timezone, and it is the default
+// global timezone: with no configuration, naive strings are parsed and displayed in it.
 const localTime = new kk_date('2024-08-23 10:00:00');
-console.log(localTime.format('HH:mm')); // '10:00' (user's timezone)
+console.log(localTime.format('HH:mm')); // '10:00' (user's local time)
+
+// To make the choice explicit (or to use a zone from the user's settings instead):
+const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+kk_date.setTimezone(userTimezone); // drives parsing AND display — setUserTimezone() would not
 ```
 
 #### 3. Multi-Tenant Application
@@ -346,7 +387,10 @@ locales.forEach(locale => {
 
 ### Supported Locales
 
-The library supports various locales:
+`locale` accepts any BCP 47 language tag the runtime's `Intl` supports (`'en'`, `'tr'`, `'de'`,
+`'pt-BR'`, `'zh-Hans'`, …): month and weekday names (`MMMM`, `MMM`, `dddd`, `ddd`, `dd`) come from
+`Intl.DateTimeFormat`. A tag that `Intl` rejects throws (and, `config()` being atomic, changes
+nothing). Commonly used:
 
 - `en` - English (default)
 - `tr` - Turkish
@@ -362,6 +406,36 @@ The library supports various locales:
 - `ar` - Arabic
 - `hi` - Hindi
 
+When parsing text dates (`'15 Ocak 2024'`), month and weekday names are recognized in many
+languages; if the same word names different months in different languages, the configured
+locale's language wins — `'15 listopad 2024'` is November 15 by default (Polish/Czech) and
+October 15 after `kk_date.config({ locale: 'hr' })` (Croatian).
+
+### Locale and Timezone of `toLocaleDateString()` / `toLocaleString()` / `toLocaleTimeString()`
+
+These methods call the native `Date` methods with a locale and a `timeZone` chosen by kk-date:
+
+- **Locale**: the instance locale (`.config({ locale })`), else the global locale **once**
+  `kk_date.config({ locale })` has been called (from then on, for the rest of the process), else
+  the runtime's default locale.
+- **Timezone**: the instance timezone (`.tz()` / `.config({ timezone })`), else the global
+  timezone — unless you pass `options.timeZone`, which always wins.
+
+```javascript
+kk_date.setTimezone('UTC');
+
+// Before any config({ locale }) call: the runtime's default locale
+new kk_date('2024-08-23 10:00:00').toLocaleDateString(); // '8/23/2024' with an en-US runtime
+
+kk_date.config({ locale: 'tr' });
+new kk_date('2024-08-23 10:00:00').toLocaleDateString();                          // '23.08.2024' (global locale)
+new kk_date('2024-08-23 10:00:00').config({ locale: 'de' }).toLocaleDateString(); // '23.8.2024' (instance locale wins)
+
+// Timezone: the instance/global zone, unless options.timeZone is given
+new kk_date('2024-08-23 10:00:00').tz('America/New_York').toLocaleTimeString();                          // '06:00:00'
+new kk_date('2024-08-23 10:00:00').tz('America/New_York').toLocaleTimeString({ timeZone: 'Asia/Tokyo' }); // '19:00:00'
+```
+
 ## Week Start Day Configuration
 
 ### Setting Week Start Day
@@ -372,6 +446,9 @@ kk_date.config({ weekStartDay: 1 });
 
 // Set week to start on Sunday (0)
 kk_date.config({ weekStartDay: 0 });
+
+// Any integer 0-6 is valid, e.g. Saturday (6)
+kk_date.config({ weekStartDay: 6 });
 ```
 
 ### Week Start Day Examples
@@ -402,28 +479,36 @@ console.log(mondayWeek.startOf('weeks').format('YYYY-MM-DD')); // '2024-08-19' (
 
 ### Caching Configuration
 
-The library automatically caches timezone calculations for better performance:
+Timezone offsets, compiled format templates and format results are cached automatically — there is
+nothing to configure. `kk_date.caching()` controls an additional, opt-in layer that memoizes
+constructor parses of repeated input strings and locale name tokens:
 
 ```javascript
-// Timezone calculations are cached automatically
-const date = new kk_date('2024-08-23 10:00:00');
+// Enable the opt-in layer; defaultTtl is in seconds (default 1300)
+kk_date.caching({ status: true, defaultTtl: 3600 });
 
-// First conversion may be slower
-const first = date.tz('America/New_York');
+// Statistics of the opt-in layer: hit rate = totalHits / (totalHits + totalMisses)
+const stats = kk_date.caching_status();
+console.log(stats.status, stats.totalHits, stats.totalMisses, stats.cacheSize, stats.maxCacheSize);
 
-// Subsequent conversions are faster
-const second = date.tz('America/New_York');
-const third = date.tz('America/New_York');
+// Empty the opt-in layer (hit/miss counters are kept)
+kk_date.caching_flush();
+
+// Disable it again (this also resets the counters)
+kk_date.caching({ status: false });
 ```
+
+Each new conversion should use a fresh instance — `.tz()` mutates the instance it is called on
+and returns it, so `const a = date.tz('America/New_York'); const b = date.tz('Asia/Tokyo');`
+leaves `a` and `b` pointing to the same object (displayed in Tokyo).
 
 ### Memory Management
 
-The library automatically manages memory and cleans up cached data:
-
-```javascript
-// No manual cleanup required
-// The library handles memory management automatically
-```
+No manual cleanup is required: every cache is bounded. The internal caches (format results,
+date components and timezone offsets: 10,000 entries; compiled templates: 1,000; `Intl` formatter
+caches keyed by timezone/locale: 500 each) are cleared wholesale when they reach their limit, and
+the opt-in layer expires entries after `defaultTtl` and evicts the least recently used 20% once it
+holds more than 10,000 entries.
 
 ## Best Practices
 
@@ -499,47 +584,43 @@ const userPreferences = {
     weekStartDay: 1
 };
 
-// Apply user preferences
-kk_date.setUserTimezone(userPreferences.timezone);
-
-// Create dates with user preferences
+// Apply user preferences per instance (instance config is display-only: the input string is
+// still parsed in the global timezone)
 const userDate = new kk_date('2024-08-23 10:00:00');
-userDate.config({ 
+userDate.config({
+    timezone: userPreferences.timezone,
     locale: userPreferences.locale,
     weekStartDay: userPreferences.weekStartDay
 });
+
+console.log(userDate.format('dddd HH:mm'));                           // 'Cuma 06:00' (global timezone UTC)
+console.log(userDate.startOf('weeks').format('YYYY-MM-DD dddd'));     // '2024-08-19 Pazartesi' (Monday)
 ```
 
 ### 6. Configuration Validation
 
 ```javascript
-// Validate all configuration
-function validateConfiguration() {
-    const errors = [];
-    
+// config() validates every option before applying any of them, so a rejected
+// configuration leaves the previous one untouched — no partial state to clean up
+function applyConfiguration(options) {
     try {
-        kk_date.getTimezone();
+        kk_date.config(options);
+        return [];
     } catch (error) {
-        errors.push('Invalid timezone configuration');
+        return [error.message];
     }
-    
-    // Note: Direct locale validation is not available
-    // Locale validation would need to be done during actual formatting operations
-    
-    // Note: Direct weekStartDay validation is not available
-    // Week start day validation would need to be done during actual operations
-    
-    return errors;
 }
 
 // Usage
-const errors = validateConfiguration();
+const errors = applyConfiguration({ timezone: 'Europe/Berlin', locale: 'de', weekStartDay: 9 });
 if (errors.length > 0) {
-    console.log('Configuration errors:', errors);
-    // Apply default configuration
-    kk_date.setTimezone('UTC');
-    kk_date.config({ locale: 'en', weekStartDay: 0 });
+    console.log('Configuration errors:', errors); // [ 'weekStartDay must be between 0 and 6' ]
+    // Nothing was applied (not even the valid locale and timezone); fall back explicitly
+    kk_date.config({ timezone: 'UTC', locale: 'en', weekStartDay: 0 });
 }
+
+// A timezone alone can be checked without applying it:
+kk_date.checkTimezone('Europe/Berlin'); // true (throws 'Invalid timezone: ...' for an invalid zone)
 ```
 
 ### 7. Configuration Documentation
@@ -549,8 +630,7 @@ if (errors.length > 0) {
 const configuration = {
     timezone: {
         global: 'UTC',
-        user: 'America/New_York',
-        description: 'Server uses UTC, users see their local timezone'
+        description: 'Server parses and stores in UTC; each response is displayed with .tz(<user timezone>)'
     },
     locale: {
         global: 'en',
@@ -577,12 +657,12 @@ console.log('Current configuration:', configuration);
 
 ```javascript
 // Check current configuration
-console.log('Global timezone:', kk_date.getTimezone());
-console.log('User timezone:', kk_date.getUserTimezone());
+console.log('Global timezone:', kk_date.getTimezone()); // parsing of naive strings + default display zone
+// (getUserTimezone() is only the default source zone of convertToTimezone() — it never affects display)
 
-// Verify instance configuration
+// Verify instance configuration (set by .tz() / .config({ timezone }); display only)
 const date = new kk_date('2024-08-23 10:00:00');
-console.log('Instance timezone:', date.temp_config.timezone);
+console.log('Instance timezone:', date.temp_config.timezone); // undefined until set on the instance
 ```
 
 #### 2. Locale Not Working
@@ -618,14 +698,16 @@ console.log('Start of week:', date.startOf('weeks').format('YYYY-MM-DD'));
 ### Configuration Reset
 
 ```javascript
-// Reset to default configuration
+// Reset to the library defaults: system timezone, locale 'en', weekStartDay 0
 function resetConfiguration() {
-    kk_date.setTimezone('UTC');
-    kk_date.setUserTimezone('UTC');
-    kk_date.config({ locale: 'en', weekStartDay: 0 });
+    const systemTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    kk_date.config({ timezone: systemTimezone, locale: 'en', weekStartDay: 0 });
+    kk_date.setUserTimezone(systemTimezone);
 }
 
 // Usage
 resetConfiguration();
 console.log('Configuration reset to defaults');
+// Note: once config({ locale }) has been called, toLocale*() keep using the global locale
+// ('en' here) instead of the runtime default for the rest of the process.
 ```

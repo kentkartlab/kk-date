@@ -29,13 +29,19 @@ const formatted = date.format('YYYY-MM-DD HH:mm:ss');
 console.log(formatted); // '2024-08-23 10:30:45'
 ```
 
+> **Timezone note:** a naive string such as `'2024-08-23 10:30:45'` is parsed — and by default
+> displayed — in the global timezone (the system timezone unless you call `kk_date.setTimezone()`),
+> so most outputs in this guide are the same everywhere. The outputs that identify an absolute
+> instant or an offset (`X`/`x`, `getTime()`, `Z`/`ZZ`/`z`) assume `kk_date.setTimezone('UTC')`
+> unless an example sets another zone.
+
 ## Basic Format Templates
 
 ### Year Templates
 
 | Template | Description | Example |
 |----------|-------------|---------|
-| `YYYY` | 4-digit year | `2024` |
+| `YYYY` | 4-digit year (years below 1000 zero-padded: `0050`) | `2024` |
 | `YY` | 2-digit year | `24` |
 
 ```javascript
@@ -105,8 +111,8 @@ date.format('DDD');  // '236'
 |----------|-------------|---------|
 | `HH` | 2-digit hour (00-23) | `22` |
 | `H` | Hour, no padding (0-23) | `22` |
-| `hh` | 2-digit hour, 12-hour clock (01-12) | `10` |
-| `h` | Hour, 12-hour clock, no padding (1-12) | `10` |
+| `hh` | 2-digit hour, 12-hour clock (01-12); without an `A`/`a` token, ` AM`/` PM` is appended to the end of the output | `10 PM` |
+| `h` | Hour, 12-hour clock, no padding (1-12); same trailing ` AM`/` PM` rule | `10 PM` |
 | `kk` | 2-digit hour, 1-24 clock (01-24) | `22` |
 | `k` | Hour, 1-24 clock, no padding (1-24) | `22` |
 
@@ -115,7 +121,9 @@ const date = new kk_date('2024-08-23 22:30:45');
 
 date.format('HH');    // '22'
 date.format('H');     // '22'
-// 12-hour tokens without an explicit A/a append an AM/PM suffix:
+// 12-hour tokens without an explicit A/a append an AM/PM suffix to the END of the output:
+date.format('hh');    // '10 PM'
+date.format('h');     // '10 PM'
 date.format('hh:mm'); // '10:30 PM'
 date.format('h:mm A'); // '10:30 PM'
 // 1-24 clock renders midnight as 24:
@@ -229,10 +237,18 @@ new kk_date('2024-12-31').format('w gggg');             // '1 2025'   (week 1 of
 environment (`GMT+3`-style output is possible for zones without a conventional
 abbreviation).
 
+`Z` and `ZZ` show whole minutes. Historical local mean time offsets that include seconds
+(Istanbul before 1880 was `+01:55:52`) are shown truncated to the minute, as moment does —
+the wall-clock time and arithmetic still use the exact offset.
+
 ```javascript
 kk_date.config({ timezone: 'Europe/Istanbul' });
 new kk_date('2024-08-23 10:30:45').format('YYYY-MM-DDTHH:mm:ssZ'); // '2024-08-23T10:30:45+03:00'
 new kk_date('2024-08-23 10:30:45').format('ZZ');                   // '+0300'
+
+// Local mean time: the offset has seconds, Z/ZZ show whole minutes
+new kk_date('1870-06-01T10:00:00Z').format('HH:mm:ss Z');          // '11:55:52 +01:55'
+new kk_date('1870-06-01T10:00:00Z').format('ZZ');                  // '+0155'
 ```
 
 ### Unix Timestamp Templates
@@ -369,7 +385,7 @@ date.format('hh:mm:ss.SSS'); // '10:30:45.123 AM'
 | `mm` | Minute only | `30` |
 | `ss` | Second only | `45` |
 
-**Note:** Individual time components are available as standalone templates except for `SSS` which requires combined formats.
+**Note:** Every token works as a standalone template, including the fractional-second tokens.
 
 ```javascript
 const date = new kk_date('2024-08-23 10:30:45.123');
@@ -377,7 +393,7 @@ const date = new kk_date('2024-08-23 10:30:45.123');
 date.format('HH');  // '10'
 date.format('mm');  // '30'
 date.format('ss');  // '45'
-// For milliseconds, use combined format:
+date.format('SSS'); // '123'
 date.format('HH:mm:ss.SSS'); // '10:30:45.123'
 ```
 
@@ -462,7 +478,7 @@ localized `LT`/`L`/`LL` macros are not).
 
 | Group | Token | Output | Example |
 |-------|-------|--------|---------|
-| Year | `YYYY` | 4-digit year | `2024` |
+| Year | `YYYY` | 4-digit year (below 1000 zero-padded) | `2024` |
 | | `YY` | 2-digit year | `24` |
 | Month | `MMMM` / `MMM` | Full / short month name (locale-aware) | `August` / `Aug` |
 | | `MM` | Month, zero-padded | `08` |
@@ -484,7 +500,7 @@ localized `LT`/`L`/`LL` macros are not).
 | ISO week | `WW` / `Wo` / `W` | ISO week, padded / ordinal / plain | `03` / `3rd` / `3` |
 | | `GGGG` / `GG` | ISO week-year, 4/2-digit | `2024` / `24` |
 | Hour | `HH` / `H` | Hour (24h), padded / plain | `09` / `9` |
-| | `hh` / `h` | Hour (12h), padded / plain | `09` / `9` |
+| | `hh` / `h` | Hour (12h), padded / plain (a template without `A`/`a` gets a trailing ` AM`/` PM`) | `09` / `9` |
 | | `kk` / `k` | Hour (1-24 clock), padded / plain | `09` / `9` |
 | Minute | `mm` / `m` | Minute, padded / plain | `07` / `7` |
 | Second | `ss` / `s` | Second, padded / plain | `03` / `3` |
@@ -617,7 +633,9 @@ date.format('dddd, DD MMMM YYYY'); // 'Cuma, 23 Ağustos 2024'
 
 ### Available Locales
 
-The library supports various locales including:
+Any BCP 47 language tag supported by the runtime's `Intl` works (`'pt-BR'`, `'zh-Hans'`, …):
+month and weekday names come from `Intl.DateTimeFormat`. A tag that `Intl` rejects makes
+`config()` throw. Commonly used:
 
 - `en` - English (default)
 - `tr` - Turkish

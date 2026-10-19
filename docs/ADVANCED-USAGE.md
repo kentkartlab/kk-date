@@ -16,49 +16,58 @@ Advanced features, performance tips, and best practices for kk-date.
 
 ### Caching Strategies
 
-kk-date provides a caching system that, in our benchmarks on Node.js 26, delivered up to **~70% less time** on repeated operations (results vary by workload):
+kk-date always caches compiled format templates, format results, date-component extraction and
+timezone offsets. `kk_date.caching({ status: true })` adds an opt-in layer (nope-redis) that
+memoizes constructor parses of repeated input strings and locale name tokens (`dddd`, `MMMM`, …).
+For the measured effect, see the auto-generated numbers in the README's
+[Cache Performance Impact](../README.md#cache-performance-impact) section and the
+[Key Performance Metrics](PERFORMANCE.md#key-performance-metrics) in the Performance Guide —
+they are refreshed from real benchmark runs; results vary by workload.
 
 ```javascript
 const kk_date = require('kk-date');
 
-// Enable caching for maximum performance (~70% less time in our benchmarks)
+// Enable the opt-in cache layer
 kk_date.caching({ status: true, defaultTtl: 3600 });
 
-// Monitor cache performance
+new kk_date('2024-08-23 10:00:00'); // parsed, result stored (miss)
+new kk_date('2024-08-23 10:00:00'); // served from the cache (hit)
+
+// Monitor cache performance: hit rate = hits / (hits + misses)
 const stats = kk_date.caching_status();
-const hitRate = stats.totalHits > 0 ? (stats.totalHits / (stats.totalHits + stats.total) * 100).toFixed(1) : 0;
-console.log('Cache hit rate:', hitRate + '%'); // Typically 99%+
-
-// First conversion - initial computation
-const date = new kk_date('2024-08-23 10:00:00');
-const first = date.tz('America/New_York'); // first call: computed
-
-// Subsequent conversions - cached results
-const second = date.tz('America/New_York'); // much faster: served from cache
-const third = date.tz('America/New_York');  // cached
+const lookups = stats.totalHits + stats.totalMisses;
+const hitRate = lookups > 0 ? ((stats.totalHits / lookups) * 100).toFixed(1) : '0.0';
+console.log('Cache hit rate:', hitRate + '%'); // '50.0%' here: 1 hit, 1 miss
 ```
 
 **Performance Gains with Caching:**
 
-Caching mainly helps **repeated** operations (the same input parsed/formatted/converted again) — in our benchmarks roughly a **~70% aggregate speedup** with a **~100% cache hit ratio**. Distinct-input / first-time operations are already fast without caching. See the auto-updated tables in the [README](../README.md#-performance-benchmarks) / [Performance Guide](PERFORMANCE.md) for current per-scenario numbers.
+Caching mainly helps **repeated** operations (the same input string parsed again, the same name
+tokens formatted again). Distinct-input / first-time operations are already fast without it, and
+`.tz()` conversions rely on the always-on timezone-offset cache either way. See the auto-updated
+tables in the [README](../README.md#-performance-benchmarks) / [Performance Guide](PERFORMANCE.md)
+for current per-scenario numbers.
 
-### Object Pooling
+### Clone Instead of Re-Parsing
 
-The library uses object pooling to reduce garbage collection:
+kk-date does **not** pool or recycle objects: every `new kk_date()` is an ordinary allocation, and
+`add()`, `set()`, `startOf()`, `endOf()` and `tz()` mutate the instance they are called on. To derive
+many dates from one value, parse it once and clone the instance — cloning skips string parsing:
 
 ```javascript
-// Reuse date instances when possible
 const baseDate = new kk_date('2024-08-23 10:00:00');
 
-// Instead of creating new instances
 const dates = [];
 for (let i = 0; i < 1000; i++) {
-    // ❌ Bad: Creates new instances
-    // dates.push(new kk_date('2024-08-23 10:00:00'));
-    
-    // ✅ Good: Create new instance from existing date
-dates.push(new kk_date(baseDate.getDate()).add(i, 'hours'));
+    // ❌ Slower: parses the same string 1000 times
+    // dates.push(new kk_date('2024-08-23 10:00:00').add(i, 'hours'));
+
+    // ✅ Faster: clone the parsed instance (baseDate itself is not modified)
+    dates.push(new kk_date(baseDate).add(i, 'hours'));
 }
+
+console.log(baseDate.format('HH:mm'));  // '10:00'
+console.log(dates[5].format('HH:mm'));  // '15:00'
 ```
 
 ### Batch Operations
@@ -74,8 +83,9 @@ const dates = [
 ];
 
 // Batch timezone conversion.
-// (Naive inputs are parsed in the process timezone; the outputs below assume UTC, i.e. TZ=UTC
-// or kk_date.setTimezone('UTC'). Use '...Z' instants for results independent of the machine.)
+// (Naive inputs are parsed in the global timezone, which defaults to the system timezone; the
+// outputs below assume kk_date.setTimezone('UTC') or TZ=UTC. Use '...Z' instants for results
+// independent of the configuration.)
 const convertedDates = dates.map(dateStr => {
     const date = new kk_date(dateStr);
     return date.tz('America/New_York').format('HH:mm');
@@ -86,7 +96,8 @@ console.log(convertedDates); // ['06:00', '07:00', '08:00']
 
 ### Format String Optimization
 
-Reuse format strings to avoid repeated string creation:
+Every distinct template string is compiled once and cached, whether it is written inline or kept in
+a constant — constants simply keep the templates consistent across a code base:
 
 ```javascript
 // Define format strings as constants
@@ -111,10 +122,10 @@ console.log(date.format(FORMATS.DATETIME)); // '2024-08-23 10:30:45'
 
 > The net memory delta is a **GC-timing artifact**, not a guarantee — from run to run it can be **positive or negative**, and **several other libraries (e.g. Luxon) also show negative values**. It depends on workload, Node version, and GC behavior; reproduce it with `node benchmark.js` before relying on it.
 
-In our benchmarks kk-date can report **negative net memory usage** because it frees more than it allocates during the measured run:
+In our benchmarks kk-date can report **negative net memory usage** — which only means that a garbage collection ran during the measured window:
 
 ```javascript
-// Measurement shows negative memory usage!
+// Measurement methodology (the result depends on when the GC runs)
 const before = process.memoryUsage().heapUsed;
 
 // Create 100,000 date instances
@@ -128,25 +139,24 @@ const memoryUsed = (after - before) / 1024 / 1024;
 console.log('Memory used:', memoryUsed); // GC-dependent; can be positive or negative from run to run
 ```
 
-**How it works:**
-- **Object Pooling**: Reuses objects instead of creating new ones
-- **Aggressive GC**: Triggers V8's garbage collector efficiently
-- **Smart Cleanup**: Cleans more memory than consumed during operations
-- **LRU Caching**: Automatic eviction prevents memory bloat
+**What keeps memory stable:**
+- **Bounded caches**: the formatter-result, converter and timezone-offset caches are cleared wholesale above 10,000 entries, compiled templates above 1,000, and the Intl formatter caches (keyed by timezone/locale) at 500 each
+- **Opt-in nope-redis layer**: TTL expiry, and the least recently used 20% are evicted once it holds more than 10,000 entries
+- **Few intermediate objects** on the parsing and formatting hot paths
+- **No object pooling**: kk-date does not pool or recycle objects — instances are ordinary allocations that the garbage collector reclaims
 
 ### Automatic Cleanup
 
 The library automatically manages memory and cleans up cached data:
 
 ```javascript
-// No manual cleanup required - memory is optimized automatically
+// No manual cleanup required
 const date = new kk_date('2024-08-23 10:00:00');
-
-// Use the date - memory is managed internally
 const formatted = date.format('YYYY-MM-DD HH:mm:ss');
 
-// Object pooling and GC optimization happens automatically
-// Result: Lower memory usage over time!
+// Every cache has a size limit, so cache memory stays bounded however long the process runs.
+// To release the opt-in cache layer's memory early:
+kk_date.caching_flush();
 ```
 
 ### Large-Scale Usage
@@ -221,24 +231,14 @@ function validateDateInput(input) {
     return true;
 }
 
-// Validate timezone
+// Validate timezone: kk_date.checkTimezone() returns true for any zone the runtime's Intl
+// accepts and throws 'Invalid timezone: <value>' otherwise (including undefined, '' and non-strings)
 function validateTimezone(timezone) {
-    if (!timezone) {
-        throw new Error('Timezone is required');
-    }
-    
-    if (typeof timezone !== 'string') {
-        throw new Error('Timezone must be a string');
-    }
-    
-    // Check if timezone is supported
-    const supportedTimezones = kk_date.getAvailableTimezones();
-    if (!supportedTimezones.includes(timezone)) {
-        throw new Error(`Unsupported timezone: ${timezone}`);
-    }
-    
-    return true;
+    return kk_date.checkTimezone(timezone);
 }
+
+// To list the zones instead (e.g. for a dropdown), kk_date.getAvailableTimezones() returns every
+// zone the engine supports (Intl.supportedValuesOf('timeZone'), plus 'UTC')
 
 // Usage
 try {
@@ -391,34 +391,38 @@ const kk_date = require('kk-date');
 
 const app = express();
 
-// Middleware to set user timezone
+// Middleware: read the user's timezone per request. Keep it on the request — global setters
+// (setTimezone/setUserTimezone) are process-wide and would leak between concurrent requests.
 app.use((req, res, next) => {
-    // Get timezone from request headers or user preferences
     const userTimezone = req.headers['x-timezone'] || 'UTC';
-    kk_date.setUserTimezone(userTimezone);
+    try {
+        kk_date.checkTimezone(userTimezone); // throws 'Invalid timezone: ...'
+    } catch (error) {
+        return res.status(400).json({ error: error.message });
+    }
+    req.userTimezone = userTimezone;
     next();
 });
 
 // API endpoint with timezone support
 app.get('/api/events', (req, res) => {
+    // Store and exchange absolute instants (ISO-8601 with Z): they never depend on the server's timezone
     const events = [
-        { id: 1, title: 'Meeting', time: '2024-08-23 14:00:00' },
-        { id: 2, title: 'Lunch', time: '2024-08-23 12:00:00' }
+        { id: 1, title: 'Meeting', time: '2024-08-23T14:00:00Z' },
+        { id: 2, title: 'Lunch', time: '2024-08-23T12:00:00Z' }
     ];
-    
-    // Convert times to user timezone
-    const eventsWithUserTime = events.map(event => {
-        const eventDate = new kk_date(event.time);
-        eventDate.config({timezone: 'UTC'});
-        const userTime = eventDate.tz(kk_date.getUserTimezone());
-        
+
+    // Display each instant in the user's timezone (.tz() changes only the display zone)
+    const eventsWithUserTime = events.map((event) => {
+        const userTime = new kk_date(event.time).tz(req.userTimezone);
+
         return {
             ...event,
-            userTime: userTime.format('HH:mm'),
-            userDate: userTime.format('YYYY-MM-DD')
+            userTime: userTime.format('HH:mm'),      // '10:00' / '08:00' for x-timezone: America/New_York
+            userDate: userTime.format('YYYY-MM-DD')  // '2024-08-23'
         };
     });
-    
+
     res.json(eventsWithUserTime);
 });
 ```
@@ -467,62 +471,46 @@ function EventCard({ event, userTimezone }) {
 const mongoose = require('mongoose');
 const kk_date = require('kk-date');
 
-// Schema with date handling
 const eventSchema = new mongoose.Schema({
     title: String,
-    startTime: Date,
+    startTime: Date, // an absolute instant: MongoDB stores Dates in UTC
     endTime: Date,
-    timezone: { type: String, default: 'UTC' }
+    timezone: { type: String, default: 'UTC' } // the zone the event is shown in
 });
 
-// Pre-save middleware to normalize dates
-eventSchema.pre('save', function(next) {
-    if (this.startTime && this.timezone !== 'UTC') {
-        // Convert to UTC for storage
-        const startDate = new kk_date(this.startTime);
-        startDate.config({timezone: this.timezone});
-        this.startTime = startDate.tz('UTC').date;
-    }
-    
-    if (this.endTime && this.timezone !== 'UTC') {
-        const endDate = new kk_date(this.endTime);
-        endDate.config({timezone: this.timezone});
-        this.endTime = endDate.tz('UTC').date;
-    }
-    
-    next();
-});
+// There is nothing to "convert to UTC" in a save hook: a Date already is an absolute instant, and
+// kk-date's .tz() / .config({ timezone }) only change the DISPLAY zone — they never move the
+// instant. Get the instant right before the value reaches Mongoose instead (see the usage below).
 
-// Instance method to get user time
-eventSchema.methods.getUserTime = function(userTimezone) {
-    const startDate = new kk_date(this.startTime);
-    startDate.config({timezone: 'UTC'});
-    const endDate = new kk_date(this.endTime);
-    endDate.config({timezone: 'UTC'});
-    
+// Instance method to display the stored instants in any timezone
+eventSchema.methods.getUserTime = function (userTimezone) {
     return {
-        startTime: startDate.tz(userTimezone).format('YYYY-MM-DD HH:mm'),
-        endTime: endDate.tz(userTimezone).format('YYYY-MM-DD HH:mm')
+        startTime: new kk_date(this.startTime).tz(userTimezone).format('YYYY-MM-DD HH:mm'),
+        endTime: new kk_date(this.endTime).tz(userTimezone).format('YYYY-MM-DD HH:mm')
     };
 };
 
 const Event = mongoose.model('Event', eventSchema);
 
-// Usage
+// Usage: 2–3 PM New York time. A string with an explicit offset (or Z) is an absolute instant;
+// toISOString() hands Mongoose an unambiguous UTC value.
 const event = new Event({
     title: 'Team Meeting',
-    startTime: '2024-08-23 14:00:00',
-    endTime: '2024-08-23 15:00:00',
+    startTime: new kk_date('2024-08-23T14:00:00-04:00').toISOString(), // '2024-08-23T18:00:00.000Z'
+    endTime: new kk_date('2024-08-23T15:00:00-04:00').toISOString(),   // '2024-08-23T19:00:00.000Z'
     timezone: 'America/New_York'
 });
 
 await event.save();
 
-// Get user time (illustrative — requires the event times to already be stored as UTC instants;
-// the numbers below assume startTime was saved as 18:00 UTC, i.e. 2 PM New York):
-const userTime = event.getUserTime('Europe/London');
-console.log(userTime); // { startTime: '2024-08-23 19:00', endTime: '2024-08-23 20:00' }
+console.log(event.getUserTime('Europe/London'));  // { startTime: '2024-08-23 19:00', endTime: '2024-08-23 20:00' }
+console.log(event.getUserTime(event.timezone));   // { startTime: '2024-08-23 14:00', endTime: '2024-08-23 15:00' }
 ```
+
+A naive wall-clock string (`'2024-08-23 14:00:00'` meant as New York time) can only be read in a
+given zone through the **global** timezone — `kk_date.setTimezone('America/New_York')` before
+parsing — because instance configuration is display-only. Passing such a string straight to
+Mongoose lets it parse the string with `new Date()` in the server's timezone.
 
 ## Testing Strategies
 
@@ -536,7 +524,7 @@ describe('kk-date Advanced Features', () => {
     beforeEach(() => {
         // Reset global configuration before each test
         kk_date.setTimezone('UTC');
-kk_date.config({ locale: 'en' });
+        kk_date.config({ locale: 'en' });
     });
     
     test('timezone conversion with DST', () => {
@@ -569,20 +557,23 @@ kk_date.config({ locale: 'en' });
         }).toThrow('Invalid Date');
     });
     
-    test('performance with caching', () => {
-        const date = new kk_date('2024-08-23 10:00:00');
-        
-        // First conversion
-        const start1 = Date.now();
-        date.tz('America/New_York');
-        const time1 = Date.now() - start1;
-        
-        // Second conversion (should be faster)
-        const start2 = Date.now();
-        date.tz('America/New_York');
-        const time2 = Date.now() - start2;
-        
-        expect(time2).toBeLessThan(time1);
+    test('repeated parses are served from the cache', () => {
+        // Don't compare the wall time of single calls: they take microseconds, below
+        // Date.now() resolution (both measure 0 ms), and timing assertions are flaky.
+        // Assert on the cache counters instead.
+        kk_date.caching({ status: true });
+        try {
+            const before = kk_date.caching_status();
+
+            new kk_date('2024-08-23 10:00:00'); // miss: parsed and stored
+            new kk_date('2024-08-23 10:00:00'); // hit: served from the cache
+
+            const after = kk_date.caching_status();
+            expect(after.totalMisses - before.totalMisses).toBe(1);
+            expect(after.totalHits - before.totalHits).toBe(1);
+        } finally {
+            kk_date.caching({ status: false }); // also resets the counters
+        }
     });
 });
 ```
@@ -612,13 +603,15 @@ describe('API Integration', () => {
 ### From Moment.js
 
 ```javascript
-// Moment.js code
-const moment = require('moment');
+// Moment.js code — .tz() needs moment-timezone (plain 'moment' has no .tz())
+const moment = require('moment-timezone');
 const date = moment('2024-08-23 10:00:00');
 const formatted = date.format('YYYY-MM-DD HH:mm:ss');
 const converted = date.tz('America/New_York');
+```
 
-// kk-date equivalent
+```javascript
+// kk-date equivalent (like moment, .tz() changes the display zone of the same instance and returns it)
 const kk_date = require('kk-date');
 const date = new kk_date('2024-08-23 10:00:00');
 const formatted = date.format('YYYY-MM-DD HH:mm:ss');
@@ -637,9 +630,12 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 const date = dayjs('2024-08-23 10:00:00');
-const converted = date.tz('America/New_York');
+const converted = date.tz('America/New_York'); // a new Day.js object; `date` is unchanged
+```
 
-// kk-date equivalent
+```javascript
+// kk-date equivalent — unlike Day.js, .tz() mutates the instance and returns it,
+// so `date` and `converted` are the same object
 const kk_date = require('kk-date');
 const date = new kk_date('2024-08-23 10:00:00');
 const converted = date.tz('America/New_York');
@@ -650,12 +646,14 @@ const converted = date.tz('America/New_York');
 ```javascript
 // Native Date code
 const date = new Date('2024-08-23T10:00:00Z');
-const formatted = date.toISOString();
+const formatted = date.toISOString(); // '2024-08-23T10:00:00.000Z'
+```
 
+```javascript
 // kk-date equivalent
 const kk_date = require('kk-date');
 const date = new kk_date('2024-08-23T10:00:00Z');
-const formatted = date.toISOString();
+const formatted = date.toISOString(); // '2024-08-23T10:00:00.000Z'
 ```
 
 ### Migration Checklist

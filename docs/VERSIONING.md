@@ -26,3 +26,20 @@ git commit -am "chore: bump version" && git push
 ## Custom release notes
 
 Add a `## Release Notes` section to the **PR description**; everything under it becomes the GitHub Release body. Omit it to auto-generate notes from PR titles.
+
+## Release checklist (`dev` → `main`)
+
+1. If you pushed JavaScript changes to `dev`, wait for its **Update Benchmark Docs** run to finish:
+   it commits refreshed numbers back to `dev`. Don't open the release PR before that.
+2. Bring `dev` up to date with `main` (`git merge origin/main`; `main` only accepts an up-to-date
+   branch), bump the version, turn the CHANGELOG heading into the new version, commit and push.
+   The PR's head must be a commit pushed by a person: commits pushed by the benchmark bot never
+   trigger the PR checks, so a PR whose head is the bot's commit waits forever for
+   `All checks passed`.
+3. Open the PR `dev` → `main` and add a `## Release Notes` section to its description.
+4. When `All checks passed` is green, a code owner other than the last pusher approves (an approval
+   given before your last push is dismissed); then merge.
+5. `publish.yml` runs the tests again, publishes to npm (trusted publishing with provenance — the
+   npm configuration is bound to the file name `publish.yml`, don't rename it), tags `vX.Y.Z` and
+   creates the GitHub Release. Check with `npm view kk-date version`.
+6. Merge `main` back into `dev`.

@@ -2,7 +2,7 @@
 
 [![npm version](https://badge.fury.io/js/kk-date.svg)](https://badge.fury.io/js/kk-date)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests](https://img.shields.io/badge/Tests-585%20passed-brightgreen)](https://github.com/kentkartlab/kk-date)
+[![Tests](https://img.shields.io/badge/Tests-1426%20passed-brightgreen)](https://github.com/kentkartlab/kk-date)
 
 A blazing-fast JavaScript date library with intelligent caching, automatic DST detection, and zero-config timezone handling. Perfect for high-performance applications, real-time systems, and data-intensive operations where speed and accuracy matter most.
 
@@ -10,20 +10,20 @@ A blazing-fast JavaScript date library with intelligent caching, automatic DST d
 
 ### Performance & Efficiency *(measured on Node.js 26; reproduced by CI, results vary)*
 <!-- BENCH:readme-why -->
-- **⚡ Lightning Fast** - Over 40x faster timezone operations than Day.js
+- **⚡ Lightning Fast** - Over 50x faster timezone operations than Day.js
 - **🚀 ~95% Less Time Overall** - Fastest in every scenario vs Moment.js, Day.js, and Luxon
-- **💾 Memory Efficient** - Object pooling + LRU cache eviction keep long-running processes stable
-- **⚙️ Smart Caching** - ~28% less time on repeated operations with built-in caching
+- **💾 Memory Efficient** - Bounded caches with automatic eviction keep long-running processes stable
+- **⚙️ Smart Caching** - ~33% less time on repeated operations with built-in caching
 <!-- /BENCH:readme-why -->
 
 ### Reliability & Safety
 - **🛡️ Fail-Fast Design** - Invalid dates immediately throw errors, preventing silent bugs in production
 - **🎯 Type Safety** - Rejects malformed dates instead of returning unexpected results
 - **✅ Predictable Behavior** - Never continues with invalid dates, unlike libraries that return "Invalid Date"
-- **🔒 Production Tested** - 585 comprehensive tests covering edge cases and DST transitions
+- **🔒 Production Tested** - 1,426 tests covering edge cases and DST transitions, with expected values checked against moment, Luxon and `Intl`
 
 ### Features & Compatibility
-- **🌍 Accurate Timezone Handling** - Fast, DST-aware timezone conversions with perfect accuracy
+- **🌍 Accurate Timezone Handling** - Fast, DST-aware timezone conversions and calendar arithmetic (a day stays a day across DST changes)
 - **🧠 Zero-Config DST** - Automatic Daylight Saving Time detection without manual intervention
 - **📊 Big Data Ready** - Handles 1M-operation workloads efficiently
 - **🌍 Production Proven** - Cross-platform compatibility with zero dependencies
@@ -213,6 +213,16 @@ console.log(new kk_date('2024-03-10 02:30:00').tz('America/New_York').format('YY
 
 console.log(new kk_date('2024-11-03 02:30:00').tz('America/New_York').format('YYYY-MM-DD HH:mm:ss'));
 // Result: 2024-11-02 22:30:00 (EDT, correctly adjusted)
+
+// Calendar arithmetic keeps the wall-clock time across DST changes (like moment and Luxon), also
+// where the change happens at midnight (America/Santiago, Asia/Beirut, America/Havana, ...):
+kk_date.setTimezone('America/Santiago');
+new kk_date('2024-04-06 00:00:00').add(1, 'days').format('YYYY-MM-DD HH:mm'); // '2024-04-07 00:00' (a 25-hour day)
+
+kk_date.setTimezone('America/New_York');
+new kk_date('2024-11-03 00:00:00').add(1, 'days').format('YYYY-MM-DD HH:mm');   // '2024-11-04 00:00'
+new kk_date('2024-11-03 00:00:00').add(24, 'hours').format('YYYY-MM-DD HH:mm'); // '2024-11-03 23:00'
+new kk_date('2024-03-10 02:30:00').format('HH:mm'); // '03:30' (02:30 does not exist that day)
 ```
 
 ### Safety Comparison: kk-date vs Others
@@ -250,22 +260,24 @@ try {
 
 ## 🎯 Performance & Reliability
 
-### 🚀 Intelligent Caching System (~70% Performance Boost)
+### 🚀 Intelligent Caching System
 
 ```javascript
-// Enable high-performance caching for massive speed improvements
+// Enable caching for repeated work
 kk_date.caching({ status: true, defaultTtl: 3600 });
 
-// Caching speeds up REPEATED operations (the same input parsed/formatted/converted again).
-// Measured aggregate: ~70% less time on repeated operations, ~100% cache hit ratio for repeated inputs.
+// Caching speeds up REPEATED operations (the same input parsed/formatted/converted again);
+// see "Cache Performance Impact" below for the measured effect.
 // (Distinct-input / first-time operations are already fast without caching.)
+// Cached parses stay correct: a parse that depends on today's date ('15 March', '14:30') or on the
+// global locale's month names is only reused on the same date / under the same language.
 
 // Monitor cache performance
 const stats = kk_date.caching_status();
-const hitRate = stats.totalHits > 0 ? (stats.totalHits / (stats.totalHits + stats.total) * 100).toFixed(1) : 0;
-console.log('Cache hit rate:', hitRate + '%'); // Typically 99%+
+const lookups = stats.totalHits + stats.totalMisses;
+const hitRate = lookups > 0 ? ((stats.totalHits / lookups) * 100).toFixed(1) : 0;
+console.log('Cache hit rate:', hitRate + '%'); // close to 100% for repeated inputs
 console.log('Cache size:', stats.cacheSize + '/' + stats.maxCacheSize); // Current/Max
-console.log('Performance gain:', '~70%'); // Representative measured improvement (varies)
 
 // Handle millions of operations efficiently
 for (let i = 0; i < 1000000; i++) {
@@ -293,16 +305,16 @@ console.log(winterTime.format('HH:mm')); // Winter time (EST)
 
 ### Memory-Efficient Operations
 ```javascript
-// Object pooling for high-frequency operations
+// Every internal cache is bounded (format results, compiled templates, timezone offsets,
+// Intl formatters, the optional parse cache), so long-running processes do not grow
 const dates = [];
 for (let i = 0; i < 10000; i++) {
     dates.push(new kk_date('2024-08-23 10:00:00'));
-    // Memory usage remains constant due to object pooling
 }
 
-// Lazy loading - timezone data loaded only when needed
+// Lazy loading - Intl formatters for a timezone are created on its first use
 const date = new kk_date('2024-08-23 10:00:00');
-// Timezone data not loaded until .tz() is called
+date.tz('America/New_York'); // creates (and caches) the New York formatters
 ```
 
 ### Date Manipulation
@@ -362,10 +374,10 @@ kk-date is compatible with **React Native** using the **Hermes** JavaScript engi
 All core features work without any additional configuration:
 
 - Date creation, formatting, and parsing
-- `add`, `subtract`, `diff`, `startOf`, `endOf`
+- `add` (negative amounts subtract), `set`, `get`, `diff`, `diff_range`, `startOf`, `endOf`
 - `isBefore`, `isAfter`, `isSame`, `isBetween`
 - Timezone conversions (`.tz()`)
-- `fromNow`, `toNow` relative time
+- `fromNow` relative time
 - Caching system
 
 ### Hermes Intl Compatibility
@@ -401,21 +413,18 @@ console.log(date.format('DD/MM/YYYY')); // 23/08/2024
 
 ## 🌍 Browser Support
 
-- Chrome 60+ (basic functionality)
-- Firefox 55+ (basic functionality)
-- Safari 12+ (basic functionality)
-- Edge 79+ (basic functionality)
-- Internet Explorer 11+ (with polyfills)
+- Chrome / Edge 80+
+- Firefox 78+
+- Safari 14+
+- Node.js 22+
+- Internet Explorer is not supported (the package ships untranspiled ES2020)
 
-**Advanced Features:**
-- **Locale Configuration:** Chrome 74+, Firefox 75+, Safari 14.1+, Edge 79+
-- **Relative Time Formatting:** Chrome 71+, Firefox 65+, Safari 14.1+, Edge 79+ (with fallback)
-
-**Note:** Basic date operations work in older browsers, but locale configuration requires newer Intl APIs.
+`fromNow()` needs `Intl.RelativeTimeFormat`; everything else needs `Intl.DateTimeFormat` with
+timezone support. See the [API Reference](docs/API-REFERENCE.md#browser-compatibility) for details.
 
 ## 📊 Performance Benchmarks
 
-> **Note:** All performance figures in this README come from our own benchmark suite on Node.js 26 and are **reproduced by CI on every PR** (the "Performance Benchmarks" job runs `benchmark.js` + `benchmark2.js` and uploads the results). They are **not guarantees** — results vary by workload, hardware, Node version, and caching. Reproduce locally with `node benchmark.js` / `node benchmark2.js`.
+> **Note:** All performance figures in this README come from our own benchmark suite on Node.js 26 and are **refreshed by CI** (the "Update Benchmark Docs" workflow runs `benchmark.js` + `benchmark2.js` after the tests pass on every push to `dev` that changes JavaScript, uploads the JSON results and updates these tables). They are **not guarantees** — results vary by workload, hardware, Node version, and caching. Reproduce locally with `node benchmark.js` / `node benchmark2.js`.
 
 ### Real-World Sequential Operations (1000 days, 100 operations/day)
 
@@ -426,15 +435,15 @@ Our benchmark simulates real-world usage by processing 1000 sequential days with
 node benchmark2.js
 ```
 
-**Representative run (Node.js 26) — reproduced by CI on every PR (see the "Performance Benchmarks" job artifacts). Numbers vary run-to-run.** Totals are for 100,000 operations per scenario:
+**Representative run (Node.js 26) — refreshed by CI (see the "Update Benchmark Docs" workflow artifacts). Numbers vary run-to-run.** Totals are for 100,000 operations per scenario:
 
 <!-- BENCH:readme-seq -->
 | Operation | kk-date | Moment.js | Day.js | Luxon | vs Fastest Competitor |
 |-----------|---------|-----------|--------|-------|-----------------------|
-| **Date Creation & Formatting** | **130ms** | 1177ms | 759ms | 1008ms | **~83% less time (5.8x faster)** than Day.js |
-| **Time Operations** | **196ms** | 1280ms | 566ms | 2840ms | **~65% less time (2.9x faster)** than Day.js |
-| **Timezone Conversions** | **443ms** | 3320ms | 19494ms | 4515ms | **~87% less time (7.5x faster)** than Moment |
-| **Complex Operations** | **260ms** | 2599ms | 1280ms | 3051ms | **~80% less time (4.9x faster)** than Day.js |
+| **Date Creation & Formatting** | **202ms** | 1596ms | 902ms | 1240ms | **~78% less time (4.5x faster)** than Day.js |
+| **Time Operations** | **263ms** | 1700ms | 740ms | 3242ms | **~64% less time (2.8x faster)** than Day.js |
+| **Timezone Conversions** | **473ms** | 3495ms | 24004ms | 4968ms | **~86% less time (7.4x faster)** than Moment |
+| **Complex Operations** | **408ms** | 3406ms | 1736ms | 3765ms | **~77% less time (4.3x faster)** than Day.js |
 <!-- /BENCH:readme-seq -->
 
 ### Overall Performance Summary
@@ -444,28 +453,28 @@ kk-date wins the overall sequential run and every individual scenario above.
 <!-- BENCH:readme-overall -->
 | Library | Total Time | Operations/sec | Performance |
 |---------|------------|---------------|-------------|
-| **kk-date** | **1.03s** | **388,729 ops/sec** | 🏆 **Winner** |
-| Moment.js | 8.38s | 47,755 ops/sec | ~714% more time (8.1x slower) |
-| Luxon | 11.41s | 35,048 ops/sec | ~1009% more time (11.1x slower) |
-| Day.js | 22.10s | 18,101 ops/sec | **~2048% more time (21.5x slower)** |
+| **kk-date** | **1.35s** | **297,198 ops/sec** | 🏆 **Winner** |
+| Moment.js | 10.20s | 39,224 ops/sec | ~658% more time (7.6x slower) |
+| Luxon | 13.22s | 30,268 ops/sec | ~882% more time (9.8x slower) |
+| Day.js | 27.38s | 14,608 ops/sec | **~1934% more time (20.3x slower)** |
 <!-- /BENCH:readme-overall -->
 
 ### Memory & Bundle Size
 
-Net heap delta after creating 100,000 date instances (from `node benchmark.js`). This metric is **dominated by GC timing**, so it is noisy and several libraries can show a *negative* net delta — it is not a unique kk-date property. Bundle sizes are the published package sizes.
+Net heap delta after creating 100,000 date instances (from `node benchmark.js`). This metric is **dominated by GC timing**, so it is noisy and several libraries can show a *negative* net delta — it is not a unique kk-date property. Sizes are measured the same way for every library by the docs generator: the gzipped total of the files Node.js loads for it (`require()` of kk-date; `moment-timezone` with its bundled zone data; Day.js with the `utc`, `timezone` and `customParseFormat` plugins the benchmark uses; Luxon). kk-date ships unminified source.
 
 <!-- BENCH:readme-memory -->
-| Library | Heap Δ / 100k instances* | Bundle Size | DST Support |
-|---------|--------------------------|-------------|-------------|
-| **kk-date** | ~-17 MB* | **15 KB** | **Built-in** |
-| Moment.js | ~+16 MB | 297 KB | Plugin required |
-| Day.js | ~-4 MB* | 18.5 KB | Plugin required |
-| Luxon | ~-27 MB* | 71 KB | Built-in |
+| Library | Heap Δ / 100k instances* | Size (gzipped, as loaded) | DST Support |
+|---------|--------------------------|---------------------------|-------------|
+| **kk-date** | ~-17 MB* | **66 KB** | **Built-in** |
+| Moment.js | ~-1 MB* | 78 KB | Plugin required |
+| Day.js | ~-4 MB* | 7 KB | Plugin required |
+| Luxon | ~+5 MB | 58 KB | Built-in |
 <!-- /BENCH:readme-memory -->
 
 <sub>* GC-timing artifact — varies run-to-run and can be negative for multiple libraries; reproduce with `node benchmark.js`.</sub>
 
-kk-date's real memory advantages come from **object pooling**, **LRU cache eviction**, and creating few intermediate objects — which keep long-running processes stable. The exact heap-delta number is not a guarantee.
+kk-date's real memory advantages come from **bounded caches** (LRU eviction or clearing when full) and creating few intermediate objects — which keep long-running processes stable. The exact heap-delta number is not a guarantee.
 
 ```javascript
 // Measurement methodology:
@@ -479,11 +488,11 @@ console.log((after - before) / 1024 / 1024, 'MB'); // GC-dependent; can be negat
 
 **Without Cache vs With Cache (representative run):**
 <!-- BENCH:readme-cache -->
-- **~28% less time** on repeated operations when cache is enabled
-- Average operation time: ~34ms → ~25ms with cache
+- **~33% less time** on repeated operations when cache is enabled
+- Average operation time: ~42ms → ~28ms with cache
 - Cache hit ratio: **100%** for repeated operations
 <!-- /BENCH:readme-cache -->
-- Memory overhead: minimal (caches are LRU-capped at 10,000 entries)
+- Memory overhead: minimal (every cache is bounded: the parse cache evicts least-recently-used entries above 10,000, the internal caches are cleared when they reach their limit)
 
 **Why Enable Caching:**
 ```javascript
@@ -503,11 +512,11 @@ kk_date.caching({ status: true, defaultTtl: 3600 });
 - **⚡ ~95% less time** on average vs competing libraries (comprehensive benchmark)
 - **🚀 up to ~98% less time** in timezone operations (critical for global apps)
 - **📊 Big-data ready** - efficient for bulk/1M-operation workloads
-- **💾 Stable memory** - object pooling + LRU eviction; net heap delta is GC-dependent (often negative)
-- **⚙️ ~28% less time** with smart caching enabled
-- **🌍 Over 40x faster** than Day.js in timezone conversions (Day.js takes ≈4303% more time)
+- **💾 Stable memory** - bounded caches with automatic eviction; net heap delta is GC-dependent (often negative)
+- **⚙️ ~33% less time** with smart caching enabled
+- **🌍 Over 50x faster** than Day.js in timezone conversions (Day.js takes ≈4972% more time)
 <!-- /BENCH:readme-advantages -->
-- **✅ Production tested** with 585 comprehensive tests
+- **✅ Production tested** with 1,426 tests
 
 ## 🤝 Contributing
 

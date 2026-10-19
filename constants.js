@@ -87,12 +87,16 @@ const format_types_regex = {
 	'DD-MM-YYYY': /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-(|17|18|19|20|21)\d\d$/,
 	'DD-MM-YYYY HH:mm:ss': /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-(|17|18|19|20|21)\d\d ([01]\d|2[0-9]):([0-5]\d):([0-5]\d)$/,
 	'DD-MM-YYYY HH:mm': /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-(|17|18|19|20|21)\d\d ([01]\d|2[0-9]):([0-5]\d)$/,
-	'DD MMMM YYYY': /^([1-9]|[12][0-9]|3[01]) \p{L}+ (17|18|19|20|21)\d\d$/u,
-	'Do MMM YYYY': /\b(\d{1,2})(st|nd|rd|th|\.|er|ème|te|º|ª|-й|वां|日|일|z|день)\s+[\p{L}\p{M}]+\s+\d{4}\b/u,
-	'Do MMMM YYYY': /\b(\d{1,2})(st|nd|rd|th|\.|er|ème|te|º|ª|-й|वां|日|일|z|день)?\s+[\p{L}\p{M}]+\s+\d{4}\b/u,
-	'DD MMMM YYYY dddd': /^([1-9]|[12][0-9]|3[01]) \p{L}+ (17|18|19|20|21)\d\d \p{L}+$/u,
-	'dddd, DD MMMM YYYY': /^[\p{L}\p{M}]+, ([1-9]|[12][0-9]|3[01])+ [\p{L}\p{M}]+ (17|18|19|20|21)\d\d/u,
-	'DD MMMM dddd, YYYY': /^([1-9]|[12][0-9]|3[01])+ [\p{L}\p{M}]+ [\p{L}\p{M}]+, (17|18|19|20|21)\d\d/u,
+	'DD MMMM YYYY': /^(0?[1-9]|[12][0-9]|3[01]) \p{L}+ (17|18|19|20|21)\d\d$/u,
+	// The text templates below are anchored at both ends: an unanchored pattern silently claimed the
+	// date prefix of longer inputs and dropped the rest (the time of an RFC 2822 / HTTP date, …).
+	'Do MMM YYYY': /^(\d{1,2})(st|nd|rd|th|\.|er|ème|te|º|ª|-й|वां|日|일|z|день)\s+[\p{L}\p{M}]+\s+\d{4}$/u,
+	'Do MMMM YYYY': /^(\d{1,2})(st|nd|rd|th|\.|er|ème|te|º|ª|-й|वां|日|일|z|день)?\s+[\p{L}\p{M}]+\s+\d{4}$/u,
+	'DD MMMM YYYY dddd': /^(0?[1-9]|[12][0-9]|3[01]) \p{L}+ (17|18|19|20|21)\d\d \p{L}+$/u,
+	// One day group, no "+": the former "([1-9]|[12][0-9]|3[01])+" let ambiguous digit runs
+	// backtrack exponentially (a 54-character input blocked the event loop for ~20 s).
+	'dddd, DD MMMM YYYY': /^[\p{L}\p{M}]+, (0?[1-9]|[12][0-9]|3[01]) [\p{L}\p{M}]+ (17|18|19|20|21)\d\d$/u,
+	'DD MMMM dddd, YYYY': /^(0?[1-9]|[12][0-9]|3[01]) [\p{L}\p{M}]+ [\p{L}\p{M}]+, (17|18|19|20|21)\d\d$/u,
 	'MMMM YYYY': /^\p{L}+ (17|18|19|20|21)\d\d$/u,
 	'DD MMMM dddd YYYY': /^[0-3]?[0-9] [\p{L}\p{M}]+ [\p{L}\p{M}]+ (17|18|19|20|21)\d\d$/u,
 	'HH:mm:ss': /^([01]\d|2[0-9]):([0-5]\d):([0-5]\d)$/,
@@ -273,32 +277,38 @@ const cached_dateTimeFormat = {
 		month: 'long',
 	}),
 	MMM: new Intl.DateTimeFormat('en', { month: 'short' }),
+	// per-instance-locale formatters (instance .config({ locale })), locale -> Intl.DateTimeFormat
 	temp: {
-		dddd: {},
-		ddd: {},
-		dd: {},
-		MMMM: {},
-		MMM: {},
+		dddd: new Map(),
+		ddd: new Map(),
+		dd: new Map(),
+		MMMM: new Map(),
+		MMM: new Map(),
 	},
 };
 
+// `${locale}_${timezone}` -> { value: Intl.DateTimeFormat, id } per name token (bounded)
 const cached_dateTimeFormat_with_locale = {
-	dddd: {},
-	ddd: {},
-	dd: {},
-	MMMM: {},
-	MMM: {},
+	dddd: new Map(),
+	ddd: new Map(),
+	dd: new Map(),
+	MMMM: new Map(),
+	MMM: new Map(),
 };
 
 const global_config = {
 	locale: 'en',
+	// true once config({ locale }) ran: toLocale*() then use the configured locale instead of
+	// the runtime default (which they used before any configuration, and still do)
+	localeConfigured: false,
 	timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 	userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 	rtf: {},
 	weekStartDay: 0,
 };
 
-const cached_converter_int = {};
+// timezone -> Intl.DateTimeFormat used by converter() (bounded)
+const cached_converter_int = new Map();
 const converter_results_cache = new Map();
 const formatter_cache = new Map();
 

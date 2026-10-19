@@ -218,7 +218,7 @@ describe('calendar-aware diff for months and years', () => {
 		expect(new kk_date('2024-08-23 00:00:00').diff('2024-08-23 00:01:30', 'seconds')).toBe(90);
 	});
 
-	test('diff_range keeps its fixed-average stepping (characterization)', () => {
-		expect(new kk_date('2024-01-01').diff_range('2024-03-15', 'months')).toEqual(['2024-01-01', '2024-01-31', '2024-03-01']);
+	test('diff_range steps by calendar months (was a 30.44-day average that skipped February)', () => {
+		expect(new kk_date('2024-01-01').diff_range('2024-03-15', 'months')).toEqual(['2024-01-01', '2024-02-01', '2024-03-01']);
 	});
 });
