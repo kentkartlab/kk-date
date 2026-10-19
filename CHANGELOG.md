@@ -1,5 +1,45 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- **`diff_range()` with `days`, `weeks`, `months` or `years` lists every step whose date is on or
+  before the end's date** in the instance's timezone; the time of day no longer matters. A start
+  time later than the end time dropped the last date (`2024-01-01 10:00 → 2024-01-03 09:00` listed
+  two dates; the same for weeks, months and years), and so did a range starting on a day whose
+  midnight is skipped by DST, which begins at 01:00 (America/Santiago `2024-09-08`,
+  America/Sao_Paulo `2018-11-04`, Asia/Beirut `2024-03-31`). A month-end step that would land after
+  the end's date is still left out. `hours`, `minutes` and `seconds` still step up to the end instant.
+- **`diff_range()` lists every date once**: after a date the timezone skipped entirely, 5.1.0
+  repeated the next date (Pacific/Apia has no `2011-12-30` and `2011-12-31` appeared twice — a
+  regression from 5.0.x; also Pacific/Fakaofo, Kiritimati, Enderbury and Kwajalein). A skipped date
+  is not listed by `days`; a `weeks`/`months`/`years` step on it keeps `add()`'s next date, so the
+  period is still listed. When the start's time of day falls in a DST gap that `add()` would carry
+  into the next date (America/Nuuk skips 23:00–24:00 on 2024-03-30; Greenland every March, and
+  older transitions in a dozen zones), that entry moves back by the gap instead (23:30 → 22:30), so
+  it keeps its date and the next date is not listed twice.
+
+### Documentation
+
+- `diff(…, 'days' | 'weeks')` is unchanged: it counts whole days between the two wall-clock times,
+  like moment — the docs wrongly called this "calendar days". From the 01:00 start of a day without
+  a midnight to the next midnight is 23 hours, so `0` days (Luxon and Temporal agree there). For
+  date-only values `Math.round(a.diff(b, 'days', true))` is the calendar-day difference in every
+  timezone; `diff_range()` lists the dates.
+- Timezone guide: runtimes ship different tzdata versions (Node 22: 2025c, Node 24+: 2026b), and a
+  V8 issue in Node 24 and later can give the wrong local offset inside DST periods shorter than
+  about two weeks; kk-date inherits it only when the timezone is the system timezone.
+
+### Tests
+
+- 1,426 → 1,454 tests. Expected lists come from Temporal and date-fns `eachDayOfInterval`; a Luxon
+  reference scan checks random ranges in seven zones (DST gaps and overlaps, midnight transitions,
+  the 23:00 gap in Nuuk, the skipped Apia day), and the new tests fail on 5.1.0. Offline, ~217,000
+  random ranges around the real transitions of all 418 IANA zones matched Temporal with the global,
+  instance and system timezone; the only differences came from the runtime (tzdata version, the V8
+  issue above).
+
 ## v5.1.0
 
 Correctness release from a full behavior review: every fix below was reproduced first and is

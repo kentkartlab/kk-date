@@ -1509,19 +1509,89 @@ class KkDate {
 	 * Returns an array of formatted date strings between this date (start) and the given end date,
 	 * stepping by the given unit.
 	 * @param {string|Date|KkDate|number} end
-	 * @param {'seconds'|'minutes'|'hours'|'days'|'months'|'years'} type
+	 * @param {'seconds'|'minutes'|'hours'|'days'|'weeks'|'months'|'years'} type
 	 * @param {string} [template='YYYY-MM-DD']
 	 * @returns {string[]}
 	 */
 	diff_range(end, type, template = format_types['YYYY-MM-DD']) {
-		// Calendar stepping: the n-th entry is this date + n units (anchored on this date, so month
-		// ends clamp like add(): Jan 31 -> Feb 29 -> Mar 31), up to the whole number of units to end.
-		const steps = absFloor(diffValue(this, end, type));
+		const endKk = isKkDate(end) ? end : new KkDate(end);
+		if (type !== 'days' && type !== 'weeks' && type !== 'months' && type !== 'years') {
+			// time units: this date + n units, up to the end instant
+			const steps = absFloor(diffValue(this, endKk, type));
+			const rangeDates = [formatter(this, template)];
+			for (let index = 1; index <= steps; index++) {
+				const step = new KkDate(this);
+				step.temp_config = this.temp_config;
+				step.add(index, type);
+				rangeDates.push(formatter(step, template));
+			}
+			return rangeDates;
+		}
+		// Calendar units: the n-th entry is on this date + n units (month ends clamp like add(): Jan 31 ->
+		// Feb 29 -> Mar 31) at this date's time of day, for every such date up to end's date in this
+		// instance's timezone, so the time of day does not drop the last date (10:00 -> 09:00 two days
+		// later lists three dates).
+		const timezone = effectiveTimezone(this);
+		const startWall = wallClockOf(timezone, this.date);
+		const startDay = Math.floor(startWall / DAY_MS);
+		const timeOfDay = startWall - startDay * DAY_MS;
+		const lastDay = Math.floor(wallClockOf(timezone, endKk.date) / DAY_MS);
+		const startDate = new Date(startWall);
+		const year = startDate.getUTCFullYear();
+		const month = startDate.getUTCMonth();
+		const dayOfMonth = startDate.getUTCDate();
+		// a fixed UTC offset never moves a wall clock to another date: no check needed
+		const fixedOffset = isUtcZone(timezone);
+		const system = isSystemZone(timezone);
 		const rangeDates = [formatter(this, template)];
-		for (let index = 1; index <= steps; index++) {
+		for (let index = 1; ; index++) {
+			let day;
+			if (type === 'days') {
+				day = startDay + index;
+			} else if (type === 'weeks') {
+				day = startDay + 7 * index;
+			} else {
+				const months = month + (type === 'months' ? index : 12 * index);
+				const targetYear = year + Math.floor(months / 12);
+				const targetMonth = months % 12;
+				day = daysFromCivil(targetYear, targetMonth, Math.min(dayOfMonth, daysInMonth(targetYear, targetMonth)));
+			}
+			if (day > lastDay) {
+				break;
+			}
 			const step = new KkDate(this);
 			step.temp_config = this.temp_config;
 			step.add(index, type);
+			if (!fixedOffset) {
+				const date = step.date;
+				let moved;
+				if (system) {
+					// the local getters compute the fields the formatter reads next
+					moved = daysFromCivil(date.getFullYear(), date.getMonth(), date.getDate()) !== day;
+				} else {
+					// add() resolved this wall clock with the offsets a day either side of it (cached): when
+					// they agree no offset change is near, so the wall clock and its date were kept
+					const wallMs = day * DAY_MS + timeOfDay;
+					const probe = wallMs - (((wallMs % HOUR_MS) + HOUR_MS) % HOUR_MS);
+					moved =
+						offsetAt(timezone, probe - DAY_MS) !== offsetAt(timezone, probe + DAY_MS) &&
+						Math.floor(toWallClock(timezone, date.getTime()) / DAY_MS) !== day;
+				}
+				if (moved) {
+					// The time of day does not exist on that date and add() moved it forward by the DST gap
+					// into the next date (America/Nuuk skips 23:00-24:00 on 2024-03-30): read it with the
+					// offset after the gap instead, which moves it back by the gap and keeps the date.
+					const time = date.getTime();
+					const earlier = new Date(day * DAY_MS + timeOfDay - (wallClockOf(timezone, date) - time));
+					if (Math.floor(wallClockOf(timezone, earlier) / DAY_MS) === day) {
+						step.date = earlier;
+					} else if (type === 'days') {
+						// the date itself does not exist in this timezone (Pacific/Apia skipped 2011-12-30)
+						continue;
+					}
+					// otherwise a week/month/year keeps add()'s next existing date
+				}
+			}
 			rangeDates.push(formatter(step, template));
 		}
 		return rangeDates;

@@ -1,5 +1,8 @@
 const { describe, test, expect, beforeEach, afterEach, afterAll } = require('@jest/globals');
+const { DateTime } = require('luxon');
+const moment = require('moment-timezone');
 const kk_date = require('../index');
+const { runInZone } = require('./helpers/run-in-zone');
 
 const SYSTEM_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
@@ -57,6 +60,72 @@ describe('diff()', () => {
 			expect(new kk_date(a).diff(b, 'years', true)).toBeCloseTo(years, 10);
 		}
 	});
+
+	// Days are whole days between the two wall clocks, not a count of dates: a day whose midnight is
+	// skipped by DST starts at 01:00, and from there to the next midnight is 23 hours (0 days).
+	// moment-timezone, Luxon and Temporal all agree on these rows; diff_range() lists the dates.
+	test.each([
+		['America/Santiago', '2024-09-08', '2024-09-09', '2024-09-10', '2024-09-15'],
+		['America/Sao_Paulo', '2018-11-04', '2018-11-05', '2018-11-06', '2018-11-11'],
+		['Asia/Beirut', '2024-03-31', '2024-04-01', '2024-04-02', '2024-04-07'],
+	])('%s: days from the day without a midnight (%s) match moment and Luxon', (zone, day, next, after, week) => {
+		kk_date.config({ timezone: zone });
+		for (const [a, b, unit] of [
+			[day, next, 'days'],
+			[day, after, 'days'],
+			[after, day, 'days'],
+			[day, week, 'weeks'],
+		]) {
+			const fromMoment = moment.tz(b, zone).diff(moment.tz(a, zone), unit);
+			const fromLuxon = Math.trunc(DateTime.fromISO(b, { zone }).diff(DateTime.fromISO(a, { zone }), unit).get(unit));
+			expect([a, b, unit, fromLuxon]).toEqual([a, b, unit, fromMoment]);
+			expect([a, b, unit, new kk_date(a).diff(b, unit)]).toEqual([a, b, unit, fromMoment]);
+		}
+		expect(new kk_date(day).diff(next, 'days')).toBe(0);
+		expect(new kk_date(day).diff(after, 'days')).toBe(1);
+	});
+
+	// kk follows moment (the wall-clock difference) also where Luxon and Temporal count one day less:
+	// when the end's time of day does not exist on the start's next day (02:30 -> 03:00 over a gap).
+	test('days follow moment when a DST gap falls between the two times of day', () => {
+		const zone = 'America/New_York';
+		kk_date.config({ timezone: zone });
+		const [a, b] = ['2024-03-09 02:30:00', '2024-03-10 03:00:00'];
+		expect(new kk_date(a).diff(b, 'days')).toBe(moment.tz(b, zone).diff(moment.tz(a, zone), 'days'));
+		expect(new kk_date(a).diff(b, 'days')).toBe(1);
+	});
+
+	// For date-only inputs the rounded fractional difference is the calendar-day difference, also
+	// from a day that starts at 01:00 and across Apia's skipped day (checked against Temporal for
+	// every IANA zone); the expected value here is plain calendar arithmetic.
+	test.each([
+		'America/Santiago',
+		'Asia/Beirut',
+		'Pacific/Apia',
+		'America/Nuuk',
+		'Australia/Lord_Howe',
+		'America/New_York',
+	])('%s: Math.round(diff(…, "days", true)) of date-only inputs counts calendar days', (zone) => {
+		kk_date.config({ timezone: zone });
+		const anchors = [Date.UTC(2024, 8, 8), Date.UTC(2024, 2, 31), Date.UTC(2011, 11, 30), Date.UTC(2024, 2, 30), Date.UTC(2024, 9, 6)];
+		const iso = (ms) => new Date(ms).toISOString().slice(0, 10);
+		let seed = 7;
+		const random = () => {
+			seed = (seed * 1664525 + 1013904223) >>> 0;
+			return seed / 4294967296;
+		};
+		let checked = 0;
+		for (let index = 0; index < 300; index++) {
+			const a = anchors[Math.floor(random() * anchors.length)] + (Math.floor(random() * 7) - 3) * 86400000;
+			const b = a + (Math.floor(random() * 120) - 60) * 86400000;
+			const [start, end] = [new kk_date(iso(a)), new kk_date(iso(b))];
+			// a date the zone skipped (Apia 2011-12-30) reads as the next one: not a date-only pair
+			if (start.format('YYYY-MM-DD') !== iso(a) || end.format('YYYY-MM-DD') !== iso(b)) continue;
+			checked++;
+			expect([iso(a), iso(b), Math.round(start.diff(end, 'days', true))]).toEqual([iso(a), iso(b), (b - a) / 86400000]);
+		}
+		expect(checked).toBeGreaterThan(250);
+	});
 });
 
 describe('diff_range()', () => {
@@ -105,6 +174,189 @@ describe('diff_range()', () => {
 	test('weeks are supported, and an end before the start yields only the start', () => {
 		expect(new kk_date('2024-01-01').diff_range('2024-01-22', 'weeks')).toEqual(['2024-01-01', '2024-01-08', '2024-01-15', '2024-01-22']);
 		expect(new kk_date('2024-01-10').diff_range('2024-01-01', 'days')).toEqual(['2024-01-10']);
+	});
+
+	// The expected lists below were computed with Temporal (ZonedDateTime.add: wall clock kept, month
+	// ends constrained, a gap moves forward) and, for days, also with date-fns eachDayOfInterval.
+	test("calendar units ignore the time of day: an end time earlier than the start's keeps the last date", () => {
+		expect(new kk_date('2024-01-01 10:00:00').diff_range('2024-01-03 09:00:00', 'days')).toEqual(['2024-01-01', '2024-01-02', '2024-01-03']);
+		expect(new kk_date('2024-01-01 10:00:00').diff_range('2024-01-15 09:00:00', 'weeks')).toEqual(['2024-01-01', '2024-01-08', '2024-01-15']);
+		expect(new kk_date('2024-01-15 10:00:00').diff_range('2024-03-15 09:00:00', 'months')).toEqual(['2024-01-15', '2024-02-15', '2024-03-15']);
+		expect(new kk_date('2024-06-01 10:00:00').diff_range('2026-06-01 09:00:00', 'years')).toEqual(['2024-06-01', '2025-06-01', '2026-06-01']);
+		// every entry keeps the start's time of day
+		expect(new kk_date('2024-01-01 10:00:00').diff_range('2024-01-03 09:00:00', 'days', 'MM-DD HH:mm')).toEqual([
+			'01-01 10:00',
+			'01-02 10:00',
+			'01-03 10:00',
+		]);
+	});
+
+	test("a month-end step that lands after the end's date is not listed", () => {
+		expect(new kk_date('2024-01-31').diff_range('2024-03-15', 'months')).toEqual(['2024-01-31', '2024-02-29']);
+		expect(new kk_date('2024-02-29').diff_range('2025-02-27', 'years')).toEqual(['2024-02-29']);
+	});
+
+	test('time units still step by elapsed time up to the end instant', () => {
+		expect(new kk_date('2024-01-01 10:30:00').diff_range('2024-01-01 12:15:00', 'hours', 'HH:mm')).toEqual(['10:30', '11:30']);
+		expect(new kk_date('2024-01-01 10:30:00').diff_range('2024-01-01 12:30:00', 'hours', 'HH:mm')).toEqual(['10:30', '11:30', '12:30']);
+	});
+
+	// DST starts at midnight here, so the day begins at 01:00 and '<day>' reads as 01:00
+	test.each([
+		['America/Santiago', '2024-09-08', ['2024-09-08', '2024-09-09', '2024-09-10']],
+		['America/Sao_Paulo', '2018-11-04', ['2018-11-04', '2018-11-05', '2018-11-06']],
+		['Asia/Beirut', '2024-03-31', ['2024-03-31', '2024-04-01', '2024-04-02']],
+	])('%s: a range starting on the day without a midnight (%s) lists every date', (zone, day, expected) => {
+		kk_date.config({ timezone: zone });
+		expect(new kk_date(day).format('HH:mm')).toBe('01:00');
+		expect(new kk_date(day).diff_range(expected[2], 'days')).toEqual(expected);
+	});
+
+	test('Pacific/Apia: the skipped 2011-12-30 is not listed and 2011-12-31 appears once', () => {
+		kk_date.config({ timezone: 'Pacific/Apia' });
+		expect(new kk_date('2011-12-29').diff_range('2012-01-01', 'days')).toEqual(['2011-12-29', '2011-12-31', '2012-01-01']);
+		expect(new kk_date('2011-12-28').diff_range('2011-12-31', 'days')).toEqual(['2011-12-28', '2011-12-29', '2011-12-31']);
+		expect(new kk_date('2011-12-29 12:00:00').diff_range('2012-01-01 08:00:00', 'days', 'MM-DD HH:mm')).toEqual([
+			'12-29 12:00',
+			'12-31 12:00',
+			'01-01 12:00',
+		]);
+		// a week or month step on the skipped date keeps add()'s next date, so that period is still listed
+		expect(new kk_date('2011-12-23').diff_range('2012-01-06', 'weeks')).toEqual(['2011-12-23', '2011-12-31', '2012-01-06']);
+		expect(new kk_date('2011-11-30').diff_range('2012-01-30', 'months')).toEqual(['2011-11-30', '2011-12-31', '2012-01-30']);
+	});
+
+	test.each([
+		['Pacific/Kiritimati', '1994-12-30', '1995-01-01', ['1994-12-30', '1995-01-01']],
+		['Pacific/Kwajalein', '1993-08-20', '1993-08-22', ['1993-08-20', '1993-08-22']],
+	])('%s: a skipped date is not listed', (zone, start, end, expected) => {
+		kk_date.config({ timezone: zone });
+		expect(new kk_date(start).diff_range(end, 'days')).toEqual(expected);
+	});
+
+	// America/Nuuk skips 23:00-24:00 on 2024-03-30: add() moves 23:30 forward into the next date, so
+	// the entry for that date is read with the offset after the gap instead (22:30, Temporal's
+	// 'earlier' disambiguation) and every date is listed once (date-fns eachDayOfInterval agrees).
+	test('America/Nuuk: a time of day the gap pushes into the next date stays on its own date', () => {
+		kk_date.config({ timezone: 'America/Nuuk' });
+		const F = 'YYYY-MM-DD HH:mm';
+		expect(new kk_date('2024-03-29 23:30:00').add(1, 'days').format(F)).toBe('2024-03-31 00:30');
+		expect(new kk_date('2024-03-29 23:30:00').diff_range('2024-04-01', 'days')).toEqual(['2024-03-29', '2024-03-30', '2024-03-31', '2024-04-01']);
+		expect(new kk_date('2024-03-29 23:30:00').diff_range('2024-04-01', 'days', F)).toEqual([
+			'2024-03-29 23:30',
+			'2024-03-30 22:30',
+			'2024-03-31 23:30',
+			'2024-04-01 23:30',
+		]);
+		expect(new kk_date('2024-03-23 23:30:00').diff_range('2024-04-06', 'weeks', F)).toEqual([
+			'2024-03-23 23:30',
+			'2024-03-30 22:30',
+			'2024-04-06 23:30',
+		]);
+		expect(new kk_date('2024-01-30 23:30:00').diff_range('2024-04-30', 'months', F)).toEqual([
+			'2024-01-30 23:30',
+			'2024-02-29 23:30',
+			'2024-03-30 22:30',
+			'2024-04-30 23:30',
+		]);
+	});
+
+	test('the system-timezone fast path gives the same lists', () => {
+		expect(runInZone('America/Santiago', "return new kk_date('2024-09-08').diff_range('2024-09-10', 'days');")).toEqual([
+			'2024-09-08',
+			'2024-09-09',
+			'2024-09-10',
+		]);
+		expect(runInZone('Pacific/Apia', "return new kk_date('2011-12-29').diff_range('2012-01-01', 'days');")).toEqual([
+			'2011-12-29',
+			'2011-12-31',
+			'2012-01-01',
+		]);
+		expect(runInZone('Europe/Istanbul', "return new kk_date('2024-01-15 10:00:00').diff_range('2024-03-15 09:00:00', 'months');")).toEqual([
+			'2024-01-15',
+			'2024-02-15',
+			'2024-03-15',
+		]);
+		expect(runInZone('America/Nuuk', "return new kk_date('2024-03-29 23:30:00').diff_range('2024-04-01', 'days', 'YYYY-MM-DD HH:mm');")).toEqual([
+			'2024-03-29 23:30',
+			'2024-03-30 22:30',
+			'2024-03-31 23:30',
+			'2024-04-01 23:30',
+		]);
+	});
+
+	// Luxon as the reference (DateTime.plus keeps the wall clock and the offset side, clamps month ends
+	// and moves a gap forward; an entry the gap pushes into the next date is read with the offset after
+	// the gap), over random ranges around DST gaps and overlaps, midnight transitions, the gap at 23:00
+	// in Nuuk and the skipped Apia day. In CI the suite also runs with TZ set to several of these zones
+	// (system-zone fast path). An offline fuzz against Temporal covered every IANA zone.
+	test.each([
+		'America/Santiago',
+		'Asia/Beirut',
+		'Pacific/Apia',
+		'America/Nuuk',
+		'America/New_York',
+		'Australia/Lord_Howe',
+		'Europe/Istanbul',
+	])('%s: random ranges match the Luxon reference', (zone) => {
+		kk_date.config({ timezone: zone });
+		const anchors = [
+			'2024-09-08',
+			'2018-11-04',
+			'2024-03-31',
+			'2011-12-30',
+			'2024-03-10',
+			'2024-11-03',
+			'2024-04-06',
+			'2024-02-29',
+			'2024-01-31',
+			'2024-03-30',
+		];
+		const spans = { days: 45, weeks: 200, months: 900, years: 3000 };
+		let seed = 20261019;
+		const random = () => {
+			seed = (seed * 1664525 + 1013904223) >>> 0;
+			return seed / 4294967296;
+		};
+		const pick = (list) => list[Math.floor(random() * list.length)];
+		const text = (base, days) => {
+			const date = DateTime.fromISO(base, { zone: 'UTC' }).plus({ days }).toFormat('yyyy-MM-dd');
+			return random() < 0.5 ? date : `${date} ${DateTime.fromMillis(Math.floor(random() * 86400) * 1000, { zone: 'UTC' }).toFormat('HH:mm:ss')}`;
+		};
+		const LUXON_FORMAT = 'yyyy-MM-dd HH:mm:ss ZZ';
+		const luxonRange = (start, end, unit) => {
+			const parse = (value) => DateTime.fromFormat(value, value.length > 10 ? 'yyyy-MM-dd HH:mm:ss' : 'yyyy-MM-dd', { zone });
+			const first = parse(start);
+			const lastDate = parse(end).toISODate();
+			const firstDate = DateTime.fromObject({ year: first.year, month: first.month, day: first.day }, { zone: 'UTC' });
+			const out = [first.toFormat(LUXON_FORMAT)];
+			for (let n = 1; ; n++) {
+				const date = firstDate.plus({ [unit]: n }).toISODate();
+				if (date > lastDate) return out;
+				let step = first.plus({ [unit]: n });
+				if (step.toISODate() !== date) {
+					const earlier = DateTime.fromMillis(Date.parse(`${date}T${first.toFormat('HH:mm:ss.SSS')}Z`) - step.offset * 60000, { zone });
+					if (earlier.toISODate() === date) {
+						step = earlier;
+					} else if (unit === 'days') {
+						continue;
+					}
+				}
+				out.push(step.toFormat(LUXON_FORMAT));
+			}
+		};
+		for (let index = 0; index < 250; index++) {
+			const unit = pick(['days', 'weeks', 'months', 'years']);
+			const base = pick(anchors);
+			const start = text(base, Math.floor(random() * 9) - 4);
+			const end = text(base, Math.floor(random() * spans[unit]) - 3);
+			expect([start, end, unit, new kk_date(start).diff_range(end, unit, 'YYYY-MM-DD HH:mm:ss Z')]).toEqual([
+				start,
+				end,
+				unit,
+				luxonRange(start, end, unit),
+			]);
+		}
 	});
 });
 

@@ -160,9 +160,11 @@ declare class KkDate {
 
 	/**
 	 * Calculates the difference from this date to `end` (positive when `end` is later — the
-	 * opposite sign of moment). Seconds/minutes/hours are elapsed time; days/weeks are calendar days in
-	 * this instance's timezone (a 23- or 25-hour DST day counts as one); months/years are calendar-aware
-	 * (moment's anchor arithmetic: `a.diff(b, unit, true) === -moment(a).diff(b, unit, true)`).
+	 * opposite sign of moment). Seconds/minutes/hours are elapsed time; days/weeks are whole days between
+	 * the wall-clock times in this instance's timezone (a 23- or 25-hour DST day counts as one, like
+	 * moment; for date-only values Math.round(diff(end, 'days', true)) counts calendar days);
+	 * months/years are calendar-aware (moment's anchor arithmetic:
+	 * `a.diff(b, unit, true) === -moment(a).diff(b, unit, true)`).
 	 * @param end - End date
 	 * @param type - Unit for the result
 	 * @param is_decimal - Whether to return the fractional value (default: truncated toward zero)
@@ -171,7 +173,10 @@ declare class KkDate {
 
 	/**
 	 * Returns this date and every date `n` units after it (anchored on this date, so month ends clamp
-	 * like add()), up to the whole number of units to `end`, formatted with `template`.
+	 * like add()), formatted with `template`. Days/weeks/months/years: every step whose date is on or
+	 * before `end`'s date in this instance's timezone; the time of day does not matter and each step
+	 * stays on its own date (a time a DST gap would carry into the next date moves back by the gap; a
+	 * date the timezone skipped is not listed by days). Hours/minutes/seconds: every step up to `end`.
 	 * @param end - End date
 	 * @param type - Unit for stepping
 	 * @param template - Format template for output (default 'YYYY-MM-DD')

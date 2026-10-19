@@ -2,7 +2,7 @@
 
 [![npm version](https://badge.fury.io/js/kk-date.svg)](https://badge.fury.io/js/kk-date)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests](https://img.shields.io/badge/Tests-1426%20passed-brightgreen)](https://github.com/kentkartlab/kk-date)
+[![Tests](https://img.shields.io/badge/Tests-1454%20passed-brightgreen)](https://github.com/kentkartlab/kk-date)
 
 A blazing-fast JavaScript date library with intelligent caching, automatic DST detection, and zero-config timezone handling. Perfect for high-performance applications, real-time systems, and data-intensive operations where speed and accuracy matter most.
 
@@ -20,7 +20,7 @@ A blazing-fast JavaScript date library with intelligent caching, automatic DST d
 - **🛡️ Fail-Fast Design** - Invalid dates immediately throw errors, preventing silent bugs in production
 - **🎯 Type Safety** - Rejects malformed dates instead of returning unexpected results
 - **✅ Predictable Behavior** - Never continues with invalid dates, unlike libraries that return "Invalid Date"
-- **🔒 Production Tested** - 1,426 tests covering edge cases and DST transitions, with expected values checked against moment, Luxon and `Intl`
+- **🔒 Production Tested** - 1,454 tests covering edge cases and DST transitions, with expected values checked against moment, Luxon and `Intl`
 
 ### Features & Compatibility
 - **🌍 Accurate Timezone Handling** - Fast, DST-aware timezone conversions and calendar arithmetic (a day stays a day across DST changes)
@@ -516,7 +516,7 @@ kk_date.caching({ status: true, defaultTtl: 3600 });
 - **⚙️ ~33% less time** with smart caching enabled
 - **🌍 Over 50x faster** than Day.js in timezone conversions (Day.js takes ≈4972% more time)
 <!-- /BENCH:readme-advantages -->
-- **✅ Production tested** with 1,426 tests
+- **✅ Production tested** with 1,454 tests
 
 ## 🤝 Contributing
 

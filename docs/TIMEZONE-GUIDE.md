@@ -119,8 +119,14 @@ else the global one) and follow the same rules as moment, Luxon and the native `
   Luxon do the same); a parsed time that exists twice is the earlier instant.
 - `startOf('days')` on a day whose midnight is skipped (America/Santiago, Asia/Beirut,
   America/Havana) is the first existing instant (`01:00`); `endOf()` is the next period's start − 1 ms.
-- `diff()` in `days`/`weeks` counts calendar days in the receiver's timezone; `hours` and smaller
-  units count elapsed time.
+- `diff()` in `days`/`weeks` counts whole days between the two wall-clock times in the receiver's
+  timezone, like moment (a 23- or 25-hour day is one day); `hours` and smaller units count elapsed
+  time. From the `01:00` start of a day without a midnight to the next midnight is 23 hours, so `0`
+  days. For date-only values, `Math.round(a.diff(b, 'days', true))` counts calendar days.
+- `diff_range(end, 'days')` lists dates: the time of day does not matter, every date is listed
+  once (a time the DST gap would push into the next date moves back by the gap instead, e.g.
+  23:30 on America/Nuuk's 2024-03-30), and a date the timezone skipped is not listed (Pacific/Apia
+  jumped from 2011-12-29 to 2011-12-31).
 
 ```javascript
 kk_date.setTimezone('America/New_York');
@@ -451,6 +457,18 @@ console.log(fallBack.tz('America/New_York').format('YYYY-MM-DD HH:mm'));      //
 const timezones = kk_date.getAvailableTimezones();
 console.log('Available timezones:', timezones.length);
 ```
+
+Runtimes ship different timezone databases: Node 22 (tzdata 2025c) and Node 24 and later (2026b)
+disagree, for example, on America/Vancouver from late 2026 and on Moldova's 2024 transition times.
+Compare `process.versions.tz` when two machines disagree.
+
+**Known engine issue (Node 24 and later):** V8's local-time cache can return the wrong offset inside
+a DST period shorter than about two weeks once it has computed instants on both sides of it, e.g.
+north-eastern Brazil in October 2000, America/Argentina/Tucuman in June 2004, and tzdata's prediction
+for Asia/Gaza and Asia/Hebron in late October 2040. kk-date reads the engine's local time when the
+timezone is the system timezone, so it inherits this, as `Date` and the local mode of other libraries
+do. With a global or instance timezone other than the system timezone (for example a server running
+on UTC), kk-date uses `Intl` and is not affected.
 
 #### 4. Performance Issues
 
